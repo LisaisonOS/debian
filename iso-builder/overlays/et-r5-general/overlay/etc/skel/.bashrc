@@ -120,5 +120,3 @@ if ! shopt -oq posix; then
   fi
 fi
 
-# Set xterm colors for the default terminal profile
-/opt/emcomm-tools/bin/et-term

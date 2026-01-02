@@ -117,7 +117,7 @@ GRID=$(jq -r '.grid' ${USER_CONF})
 WINLINK_PASSWORD=$(jq -r '.winlinkPasswd' ${USER_CONF})
 
 # Check password status for secure display
-if [ "$WINLINK_PASSWORD" == "null" ] || [ -z "$WINLINK_PASSWORD" ]; then
+if [ "$WINLINK_PASSWORD" == "null" ] || [ "$WINLINK_PASSWORD" == "" ] || [ -z "$WINLINK_PASSWORD" ] || [ "$WINLINK_PASSWORD" == "N0CALL" ]; then
     PASSWORD_STATUS="not set"
     PASSWORD_STATUS_FR="non défini"
 else

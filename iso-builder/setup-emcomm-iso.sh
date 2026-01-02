@@ -276,6 +276,35 @@ fi
 echo ""
 echo "=== Wine Prefix Selection ==="
 
+# Check if wine-sources exists and has content
+if [ ! -d "$WINE_SOURCE_DIR" ] || [ -z "$(ls -A "$WINE_SOURCE_DIR" 2>/dev/null)" ]; then
+    echo ""
+    echo "Wine-sources directory is empty or missing."
+    echo "This contains VARA, VarAC, and other Windows apps for Wine."
+    echo ""
+    read -p "Download wine-sources from SourceForge? (~860MB) (y/n): " DOWNLOAD_WINE
+    
+    if [ "${DOWNLOAD_WINE,,}" = "y" ]; then
+        mkdir -p "$WINE_SOURCE_DIR"
+        echo "Downloading wine-sources-general.tar.gz..."
+        wget -O /tmp/wine-sources-general.tar.gz \
+            "https://sourceforge.net/projects/emcomm-tools/files/wine-sources-general.tar.gz/download"
+        
+        if [ $? -eq 0 ]; then
+            echo "Extracting..."
+            tar -xzf /tmp/wine-sources-general.tar.gz -C "$WINE_SOURCE_DIR/"
+            rm /tmp/wine-sources-general.tar.gz
+            echo "Wine-sources downloaded and extracted!"
+        else
+            echo "ERROR: Download failed."
+            exit 1
+        fi
+    else
+        echo "Skipping wine-sources download."
+        echo "You can manually add Wine prefixes to: $WINE_SOURCE_DIR"
+    fi
+fi
+
 if [ -d "$WINE_SOURCE_DIR" ]; then
     # Find all folders in wine-sources
     WINE_FOLDERS=()
@@ -571,25 +600,6 @@ chmod +x config/includes.chroot/opt/emcomm-tools/bin/et-term
 echo "Removing et-aircraft..."
 rm -f config/includes.chroot/opt/emcomm-tools/bin/et-aircraft
 rm -f config/includes.chroot/usr/share/applications/et-aircraft.desktop
-
-# Move Navit from Accessories to main System menu (alongside Terminal, File Manager)
-echo "Moving Navit to System menu..."
-mkdir -p config/includes.chroot/usr/share/applications
-cat > config/includes.chroot/usr/share/applications/navit.desktop << 'EOF'
-[Desktop Entry]
-Type=Application
-Name=Navit
-Name[fr]=Navit - Navigation GPS
-GenericName=GPS Navigation
-GenericName[fr]=Navigation GPS
-Comment=Offline GPS Navigation System
-Comment[fr]=Système de navigation GPS hors-ligne
-Exec=navit
-Icon=navit
-Terminal=false
-Categories=System;
-Keywords=gps;navigation;map;offline;
-EOF
 
 # Remove et-user-* variants, keep only et-user
 echo "Cleaning et-user variants..."
@@ -1600,6 +1610,7 @@ mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-20
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-21
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-22
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-23
+mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-24
 
 # Thunar (file manager) launcher
 cat > config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-4/thunar.desktop << 'EOF'
@@ -1673,6 +1684,20 @@ Icon=/usr/share/pixmaps/wsjtx_icon.png
 Terminal=false
 Type=Application
 Categories=HamRadio;
+EOF
+
+# Navit launcher (GPS navigation)
+cat > config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-24/navit.desktop << 'EOF'
+[Desktop Entry]
+Name=Navit
+Name[fr]=Navigation GPS
+Comment=Offline GPS Navigation
+Comment[fr]=Navigation GPS hors-ligne
+Exec=navit
+Icon=navit
+Terminal=false
+Type=Application
+Categories=Navigation;
 EOF
 
 # XFCE panel config to add the launchers
@@ -1754,6 +1779,7 @@ cat > config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/x
         <value type="int" value="21"/>
         <value type="int" value="23"/>
         <value type="int" value="22"/>
+        <value type="int" value="24"/>
         <value type="int" value="6"/>
         <value type="int" value="7"/>
         <value type="int" value="8"/>
@@ -1795,6 +1821,11 @@ cat > config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/x
     <property name="plugin-22" type="string" value="launcher">
       <property name="items" type="array">
         <value type="string" value="fldigi.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-24" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="navit.desktop"/>
       </property>
     </property>
     <property name="plugin-6" type="string" value="separator"/>
@@ -1914,14 +1945,9 @@ if [ $BUILD_STATUS -eq 0 ]; then
             echo "Starting QEMU..."
             qemu-system-x86_64 \
                 -enable-kvm \
-                -m 4096 \
-                -smp 2 \
+                -m 4G \
                 -cdrom "$ISO_FILE" \
-                -boot d \
-                -vga virtio \
-                -display gtk \
-                -usb \
-                -device usb-tablet &
+                -boot d &
             echo "QEMU started in background."
         fi
     else
