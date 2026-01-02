@@ -1,0 +1,38 @@
+# Author   : Gaston Gonzalez
+# Date     : 21 May 2025
+# Updated  : 16 May 2025
+# Purpose  : udev rules for the Yaesu FTX-1 via USB-C
+#
+# Preconditions:
+# 1. Yaesu FTX-1 is selected via et-radio
+# 2. Yaesu FTX-1 is connected via USB-C cable
+#
+# Postconditions:
+# 1. /dev/et-cat created
+# 2. /dev/et-audio created
+# 3. rigctld is started
+# 
+# Note: As of 05/21/25 Yaesu has not published their CAT control command specification. This is a
+#       temporary integration that does not include CAT control support. It will only key the PTT
+#       and provide audio in/out. You MUST set the frequency and mode yourself.
+
+# Special rule to ensure that the second serial interface (/dev/ttyUSB5) is tagged as ET_DEVICE=FTX-1 so
+# that it can be used in the next CAT control rule. 
+KERNEL=="ttyUSB[0-9]*", SUBSYSTEM=="tty", PROGRAM="/opt/emcomm-tools/sbin/udev-tester.sh yaesu-ftx1", \
+    ATTRS{bInterfaceNumber}=="01", \
+    ENV{ET_DEVICE}="FTX-1"
+
+# CAT control device will only match if PROGRAM above matches (exit status=0)
+SUBSYSTEM=="tty", ENV{ET_DEVICE}=="FTX-1", \
+    ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea70",\
+    ACTION=="add", \
+    ENV{ET_SUBDEVICE}="CAT", GROUP="dialout", MODE="0660", SYMLINK+="et-cat", \
+    RUN+="/usr/bin/systemctl start rigctld"
+
+# Audio device will only match if PROGRAM above matches (exit status=0)
+SUBSYSTEM=="sound", ATTRS{idVendor}=="0d8c", ATTRS{idProduct}=="0016", \
+    PROGRAM="/opt/emcomm-tools/sbin/udev-tester.sh yaesu-ftx1", \
+    ACTION=="add", \
+    ENV{ET_DEVICE}="FTX-1", \
+    ATTR{id}="ET_AUDIO", \
+    ENV{ET_SUBDEVICE}="AUDIO", GROUP="audio", MODE="0660", SYMLINK+="et-audio"

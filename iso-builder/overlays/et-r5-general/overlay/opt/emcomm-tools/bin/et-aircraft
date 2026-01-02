@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+# Author  : Gaston Gonzalez
+# Date    : 4 June 2025
+# Update  : 8 July 2025
+# Purpose : Wrapper script around ADS-B integration
+#
+# Preconditions:
+# 1. RTL-SDR v2 is connected and detected
+#
+# Postconditions:
+# 1. dump1099 systemd service is launched
+# 2. et-aircraft-app launched
+
+source /opt/emcomm-tools/bin/et-common
+
+CLEAN_UP=1
+
+cleanup() {
+  if [[ ${CLEAN_UP} -eq 1 ]]; then
+    et-log "Stopping dump1099 service"
+    systemctl --user stop et-service-dump1090
+  fi
+}
+
+# Stop dump1099 on exit
+trap cleanup EXIT
+
+if [[ ! -e ${ET_DEVICE_SDR} ]]; then
+  notify-user "No ${ET_DEVICE_SDR} detected. Reconnect your SDR."
+  CLEAN_UP=0
+  exit 1
+fi
+
+systemctl --user restart et-service-dump1090
+if [[ $? -eq 0 ]]; then
+  start_and_wait_for_service et-service-dump1090
+  et-aircraft-app
+fi

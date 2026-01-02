@@ -1,0 +1,23 @@
+# EmComm-Tools Data Drive Symlink Service
+# Author: Sylvain Deguire (VA2OPS)
+# Date: December 2025
+#
+# This service is triggered by udev when the EMCOMM-DATA drive is inserted.
+# It waits for the drive to be mounted and then creates symlinks.
+#
+# Install to: /etc/systemd/system/emcomm-data-symlinks@.service
+
+[Unit]
+Description=EmComm-Tools Data Drive Symlink Setup for %i
+After=udisks2.service
+Wants=udisks2.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/emcomm-tools/bin/et-data-symlinks
+RemainAfterExit=yes
+# Give udisks time to mount the drive
+ExecStartPre=/bin/sleep 3
+
+[Install]
+WantedBy=multi-user.target

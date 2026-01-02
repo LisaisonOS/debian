@@ -1,0 +1,107 @@
+144 MHz (2 metres)
+
+Frequency		Modes and Possible Uses
+
+(please see the Notes below)
+
+144.000 – 144.100	EME, Narrow Band Digital, CW, Weak Signal Modes. See Notes 1 and 2 below.	
+			JT65 centred on 144.085 JA Window. See Note 3.
+
+144.100 – 144.180	CW, SSB, Narrow Band Digital, EME, Weak Signal Modes. See Note 1.	
+			144.174 FT8, 144.144/144.150 MSK 144 Meteor Scatter, 144.115 – 144.135 Digital EME centred on 144.125 MHz. See Note 3
+
+144.180 – 144.265	CW, SSB, Narrow Band Digital, EME, Weak Signal and other Narrow Band Modes. See Note 1. 
+			Other modes with bandwidths less than 3 kHz, including FAX and SSTV.
+			144.200 SSB and CW Calling Frequency. See Note 4.
+
+144.265 – 144.270	No transmissions – Guard Band to protect Beacon Network.
+
+144.270 – 144.300	Propagation Beacon Network Exclusive.
+			Note that 144.300 is the IARU Region 1 Calling Frequency and could be used for Transatlantic attempts.
+
+144.300 – 144.310	No transmissions – Guard Band to protect Beacon Network.
+			Note that 144.300 is the IARU Region 1 Calling Frequency and could be used for Transatlantic attempts.
+
+144.310 – 144.500	Wide Band Digital Modes (e.g.: Packet, APRS). See Notes 1 and 5.
+			144.340 – National ATV Voice Coordination Frequency FM.
+			144.390 – National APRS Frequency. See Note 6.
+			144.450 – National AM Frequency
+			144.489 – National WSPR Frequency.
+
+144.500 – 144.900	FM / Digital / Linear Repeater Inputs. See Note 7.
+
+144.900 – 145.100	Wide Band Digital. See Notes 1 and 8.
+
+145.100 – 145.500	FM / Digital / Linear Repeater Outputs. See Note 7.
+
+145.500 – 145.590	ARISS Links – Space Communication Exclusive.
+
+145.590 – 145.790	Wide Band Digital Modes. See Notes 1 and 9.
+
+145.790 – 145.800	No transmissions. Guard Band to protect Satellite Sub-band.
+
+145.800 – 146.000	Amateur Satellite Uplink / Downlink and ARISS Exclusive.
+
+146.000 – 146.010	No transmissions. Guard Band to protect Satellite Sub-band.
+
+146.010 – 146.370	FM / Digital / Linear Repeater Inputs. See Note 7.
+
+146.400 – 146.595	FM Simplex. See Notes 10 and 11.
+			146.520 – National FM Calling Frequency. See Note 4.
+
+146.610 – 147.390	FM / Digital / Linear Repeater Outputs. See Note 7.
+
+147.420 – 147.570	FM Simplex and Digital Hotspots using a 30 kHz raster. See Notes 12 and 13. 
+			Note that Digital channels are interwoven between these FM Simplex channels.
+
+147.435 – 147.585	Wide Band Digital. See Notes 1 and 14. 
+			Note that these Digital channels are interwoven between the FM Simplex channels at 147.420 – 147.570.
+
+147.600 – 147.990	FM / Digital / Linear Repeater inputs. See Note 7.
+
+
+Notes for the 2m Band Plan:
+
+
+Note 1: Narrow Band Digital 2m modes are those with bandwidths of 3 kHz or less; for example, WSJT modes. Wide Band Digital 2m modes are those with bandwidths greater than 3 kHz but less than 30 kHz; for example, Packet.
+
+
+Note 2: Although 144.000 – 144.025 MHz is listed as a satellite sub-band in the IARU Region 2 Band Plan, there are currently no satellites operating there, and the IARU Satellite Coordinator has confirmed that there is no plan to use that segment for satellites in the foreseeable future. Accordingly, the RAC band plan will continue to use that part of the band for weak signal modes. Should satellites be assigned spectrum in that part of the band in the future, then the RAC band plan will be re-evaluated as necessary.
+
+
+Note 3: Consult with the WSJT community regarding frequencies for EME and Terrestrial operations as these change with modulation schemes.
+
+
+Note 4: Once contact is established on a Calling Frequency, operators should QSY to another frequency. For 144.200 MHz it is generally down for CW, and up for SSB. For 146.520 MHz FM, it is to any other clear FM simplex channel.
+
+
+Note 5: Seven frequencies on a 20 kHz channel raster: 144.37, 144.39, 144.41, 14`4.43, 144.45, 144.47 and 144.49. Occupancy is to occur onlywhen available Digital frequencies within the sub-bands 144.9 – 145.1 MHz and 145.59 – 145.79 MHz are exhausted. Consult with your local digital coordination body regarding maximum ERP, Bandwidth and coverage area within this sub-band. Operation may occur on 144.31 MHz provided operating bandwidth and ERP do not cause harmful interference within the propagation beacon network sub-band.
+
+
+Note 6: Consult with your local coordination body.
+
+
+Note 7: Repeaters include FM, Digital (DMR, Fusion, DSTAR and related) and linear modes. Consult with your local coordination body for frequencies and modulation scheme allocations specific to your area, if available. Hotspots are not to be used on Repeater frequencies.
+
+
+Note 8: Ten frequencies on a 20 kHz channel raster: 144.91, 144.93, 144.95, 144.97, 144.99, 145.01, 145.03, 145.05, 145.07 and 145.09. Consult with your local coordination body.
+
+
+Note 9: Eleven frequencies on a 20 kHz channel raster: 145.59, 145.61, 145.63, 145.65, 145.67, 145.69, 145.71, 145.73, 145.75, 145.77 and 145.79 MHz. Consult with your local coordination body.
+
+
+Note 10: The frequencies 146.40, 146.43 and 146.46 MHz continue to be used as repeater inputs in some areas. Consult with your local coordination body.
+
+
+Note 11: Thirteen channels on a 15 kHz channel raster: 146.415, 146.430, 146.445, 146.460, 146.475, 146.490, 146.505, 146.520, 146.535, 146.550, 146.565, 146.580 and 146.595 MHz.
+
+
+Note 12: Six channels on a 30 kHz channel raster, 147.420, 147.450, 147.480, 147.510, 147.540, 147.570 MHz.
+
+
+Note 13: The use of Digital Hotspots is not recommended on 2m. If they are used however, maximum power output should not exceed 500 mW. Gain antennas should not be used. The control operator must monitor the Hotspot whenever it is operating.
+
+
+Note 14: Six channels on a 30 kHz channel raster: 147.435, 147.465, 147.495, 147.525, 147.555 and 147.585 MHz. Consult your local coordination body for available frequencies, ERP and bandwidth.
+
+>>EOF

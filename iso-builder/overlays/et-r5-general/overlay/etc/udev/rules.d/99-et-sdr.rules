@@ -1,0 +1,25 @@
+# Author   : Gaston Gonzalez
+# Author   : William McKeehan
+# Date     : 7 June 2025
+# Updated  : 5 October 2025
+# Purpose  : udev rules for supported SDRs
+#
+# Supported Devices
+# 1. RTL-SDR Blog v2
+#
+# Preconditions:
+# 1. SDR connected via USB cable
+#
+# Postconditions:
+# 1. /dev/et-sdr created
+
+KERNEL=="swradio0", \
+   GROUP="dialout", MODE="0660", SYMLINK+="et-sdr"
+
+# RTL-SDR v2, v3 and v4
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", \
+    GROUP="dialout", MODE="0660", SYMLINK+="et-sdr"
+
+# ADS-B Exchange SDR
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2832", \
+    GROUP="dialout", MODE="0660", SYMLINK+="et-sdr"

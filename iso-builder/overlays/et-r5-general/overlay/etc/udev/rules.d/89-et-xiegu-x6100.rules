@@ -1,0 +1,26 @@
+# Author   : Gaston Gonzalez
+# Date     : 5 October 2025
+# Purpose  : udev rules for the Xiegu X6100
+#
+# Preconditions:
+# 1. Xiegu X6100 connected via USB cable
+#
+# Postconditions:
+# 1. /dev/et-cat created
+# 2. rigctld is started
+# 3. /dev/et-audio created
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d2", ENV{ET_DEVICE}=="", \
+    PROGRAM="/opt/emcomm-tools/sbin/udev-tester.sh xiegu-x6100", \
+    ACTION=="add", \
+    ENV{ET_DEVICE}="X6100", ENV{ET_SUBDEVICE}="CAT", GROUP="dialout", MODE="0660", SYMLINK+="et-cat", \
+    RUN+="/usr/bin/systemctl start rigctld"
+
+# This soundcard will collide with the DigiRig, so we need to ensure that this 
+# rule is ordered before it and that we guard the match with the PROGRAM check.
+SUBSYSTEM=="sound", ATTRS{idVendor}=="0d8c", ATTRS{idProduct}=="0012", \
+    PROGRAM="/opt/emcomm-tools/sbin/udev-tester.sh xiegu-x6100", \
+    ACTION=="add", \
+    ENV{ET_DEVICE}="X6100", \
+    ATTR{id}="ET_AUDIO", \
+    ENV{ET_SUBDEVICE}="AUDIO", GROUP="audio", MODE="0660", SYMLINK+="et-audio"

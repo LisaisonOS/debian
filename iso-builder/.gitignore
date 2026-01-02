@@ -1,0 +1,24 @@
+# Build output
+build/
+*.iso
+*.log
+
+# Personal/Club stuff
+overlays/et-r5-va2ops/
+overlays/*-va2ops/
+overlays/*-va2gcu/
+
+backgrounds/va2ops-*
+backgrounds/va2gcu-*
+motd/va2ops-*
+motd/va2gcu-*
+wine-sources/Personal/
+wine-sources/Private/
+
+# System files
+*.bak
+*.tmp
+*~
+wine-sources/
+wine-sources/
+overlays/*/overlay/etc/skel/.local/share/emcomm-tools/bbs-server/apps/

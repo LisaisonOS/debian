@@ -1,0 +1,63 @@
+0 - 3OMHz Band Plan
+
+220 Meters (135.7 - 137.8kHz)
+135.7 cw 137.4 dig 137.6 cw-qrss 137.8
+
+630 Meters (472 - 479 kHz)
+472 cw 475 cw-dig 479
+
+160 Metres (1.8 - 2.0 MHz)
+1.800 cw-dig 1.810 cw 1840 phone 2.000
+
+80 Metres (3.5 - 4.0 MHz)
+3.500 cw 3.850 dig 3.583 cw 3.589 dig 3.600 phone 3.842 tv 3.845 phone 4.000
+
+60 Meters (5.3 - 5.4 MHz)
+5.330.5 5.333.5  cw-dig-phone	
+5.346.5 5.349.5	 cw-dig-phone	
+5.351.5	5.366.5	 cw-dig-phone	
+5.371.5 5.374.5	 cw-dig-phone	
+5.403.5 5.406.5	 cw-dig-phone
+
+40 Metres (7.0 - 7.3 MHz)
+7.000 cw 7.035 cw-dig 7.7040 phone 7.070 dig-phone 7.125 phone 7.165 tv 7.175 phone 7.300
+
+30 Metres (10.10 -10.15 MHz)
+10.100 cw 10.130 dig 10.140 cw-dig 10.150
+
+20 Metres (14.00 -14.35 MHz)
+14.000 cw 14.070 dig 14.073 cw-dig 14.1005 dig 14.112 phone 14.230 tv 14.236 phone 14.350
+
+17 Metres (18.068 -18.168 MHz)
+18.068 cw 18.095 cw-dig 18.100 dig 18.110 phone 18.168
+
+15 Metres (21.00 -21.45 MHz)
+21.000 cw 21.070 cw-dig 21.080 dig 21.083 cw-dig 21.090 dig 21.125 cw 21.150 phone 21.340 tv 21.343 phone 21.450
+
+12 Metres (24.89 -24.99 MHz)
+24.890 cw 24.920 cw-dig 24.925 cw-dig 24.940 phone 24.975 tv 24.978 phone 24.990
+
+10 Metres (28.0 -29.7 MHz)
+28.000 cw 28.070 cw-dig 28.1895 b 28.2005 b-cw 28.30 cw-dig 28.320 phone 28.680 tv 28.683 phone 29.300 sat 29.520 fm 29.700
+28.3	28 680
+29.300	29.520
+29.700
+ 
+1.	Not all permissible modes/activities are represented.
+
+2.	LSB is used on 160,80 and 40m. USB is used on all other bands that permit SSB,including 60m.
+
+3.	Consult various online resources for detailed information on what digital modes are used.
+
+4.	Maximum bandwidth permitted on 2200m is 100 Hz. Maximum power is 1 Watt EIRP.
+
+5.	Canadian Amateurs are allowed a maximum of five watts EIRP on the 630m band, using emissions with a maximum bandwidth of 1 kHz.
+
+6.	Canadian Amateurs are allowed a maximum of 100 watts ERP, using emissions with a maximum bandwidth of 2.8 kHz on the 60m band. 
+	Refer to the 5MGH-60M.txt file for full details before operating on the 60m band.
+
+7.	Remember not to allow your signal to spill over into adjoining band segments when operating close to the edges. During major weekend contests, activity in certain modes can spill over into other segments. Operators should avoid NCDXF beacons on 14.100,18.110, 21.150, 24.930 and 28.200 MHz.
+
+8.	This graphic is a living document and will be reviewed and updated periodically to reflect changes in the band plans and operating habits.
+
+>>EOF

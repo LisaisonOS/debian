@@ -1,0 +1,41 @@
+#!/bin/bash
+#
+# Author  : Gaston Gonzalez
+# Date    : 5 July 2025
+# Updated : 1 September 2025
+# Purpose : Wrapper script for starting the raster tile server
+#
+# Preconditions:
+# 1. At least one .mbtiles files exist in the tileset directory
+#
+# Postconditions:
+# 1. mbtileserver is started
+# 2. Tile server available at http://localhost:1982/services
+
+TILESERVER_HOME="${HOME}/.local/share/emcomm-tools/mbtileserver"
+TILESERVER_TILE_DIR="${TILESERVER_HOME}/tilesets"
+
+start() {
+  CWD_DIR=$(pwd)
+
+  cd ${TILESERVER_HOME}
+  CMD="mbtileserver --port 1982"
+  et-log "Starting raster tile server in ${TILESERVER_HOME} with: ${CMD}"
+
+  ${CMD}
+
+  cd ${CWD_DIR}
+}
+
+if [[ ! -e ${TILESERVER_TILE_DIR} ]]; then
+  et-log "Tile set directory does not exist: ${TILESERVER_TILE_DIR}."
+  exit 1
+fi
+
+ls ${TILESERVER_TILE_DIR}/*.mbtiles
+if [[ $? -ne 0 ]]; then
+  et-log "Can't start tile server. No .mbtiles in ${TILESERVER_TILE_DIR}"
+  exit 1
+fi
+
+start

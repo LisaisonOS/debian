@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Author  : Gaston Gonzalez
+# Date    : 17 August 2025
+# Purpose : Wrapper script for VOACAP
+
+VOACAP_DIR=${HOME}/.local/share/emcomm-tools/voacap
+CWD_DIR=$(pwd)
+
+cd ${VOACAP_DIR}
+
+./et-voacap.sh $@
+
+cd ${CWD_DIR}

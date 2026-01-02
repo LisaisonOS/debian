@@ -1,0 +1,268 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2025
+# Purpose : Wrapper script for starting VarAC with PnP support
+#
+# Based on et-js8call by Gaston Gonzalez
+#
+# Preconditions
+# 1. Supported radio and audio interface are connected and properly detected
+# 2. VARA modem and VarAC are installed in Wine prefix
+#
+# Postconditions
+# 1. Stop all running EmComm Tools modes
+# 2. VarAC configuration updated (callsign, grid, audio)
+# 3. VARA modem started
+# 4. VarAC started
+
+. /opt/emcomm-tools/bin/et-common
+
+# Wine prefix
+if [ -n "$WINEPREFIX" ]; then
+    WINE_PREFIX="$WINEPREFIX"
+elif [ -d "${HOME}/.wine32" ]; then
+    WINE_PREFIX="${HOME}/.wine32"
+else
+    WINE_PREFIX="${HOME}/.wine32"
+fi
+
+export WINEPREFIX="${WINE_PREFIX}"
+
+VARAC_DIR="${WINE_PREFIX}/drive_c/VarAC"
+VARAC_INI="${VARAC_DIR}/VarAC.ini"
+VARAC_EXE="${VARAC_DIR}/VarAC.exe"
+VARA_DIR="${WINE_PREFIX}/drive_c/VARA"
+VARA_EXE="${VARA_DIR}/VARA.exe"
+
+usage() {
+  echo "usage: $(basename $0) <command>"
+  echo "  start           - Update config and start VarAC"
+  echo "  update-config   - Update config only"
+  echo "  status          - Show installation status"
+}
+
+if [ $# -ne 1 ]; then
+  usage
+  exit 1
+fi
+
+notify_user() {
+  notify-send \
+   -t 5000 \
+   --app-name="EmComm Tools" \
+   "$1"
+}
+
+check_installation() {
+  local varac_ok=false
+  local vara_ok=false
+    
+  [ -f "${VARAC_EXE}" ] && varac_ok=true
+  [ -f "${VARA_EXE}" ] && vara_ok=true
+    
+  if [ "$varac_ok" = false ]; then
+    et-log "VarAC not installed at ${VARAC_EXE}"
+    notify_user "VarAC not installed. Run: et-get-vara"
+    
+    # Offer to install
+    if [ -x "/opt/emcomm-tools/bin/et-get-vara" ]; then
+      echo ""
+      echo "VarAC is not installed."
+      read -p "Install VARA/VarAC now? [Y/n]: " response
+      if [ -z "$response" ] || [ "$response" = "y" ] || [ "$response" = "Y" ]; then
+        /opt/emcomm-tools/bin/et-get-vara
+        # Re-check after install
+        [ -f "${VARAC_EXE}" ] && return 0
+      fi
+    fi
+    return 1
+  fi
+    
+  if [ "$vara_ok" = false ]; then
+    et-log "VARA modem not installed at ${VARA_EXE}"
+    notify_user "Warning: VARA modem not installed. VarAC needs VARA to function."
+    # Continue anyway - user might want to configure first
+  fi
+    
+  return 0
+}
+
+show_status() {
+  echo ""
+  echo "=== VarAC/VARA Installation Status ==="
+  echo "Wine Prefix: ${WINE_PREFIX}"
+  echo ""
+  
+  if [ -f "${VARAC_EXE}" ]; then
+    echo "VarAC:   INSTALLED"
+  else
+    echo "VarAC:   NOT INSTALLED"
+  fi
+  
+  if [ -f "${VARA_EXE}" ]; then
+    echo "VARA HF: INSTALLED"
+  else
+    echo "VARA HF: NOT INSTALLED"
+  fi
+  
+  if [ -f "${WINE_PREFIX}/drive_c/VARA FM/VARAFM.exe" ]; then
+    echo "VARA FM: INSTALLED"
+  else
+    echo "VARA FM: NOT INSTALLED"
+  fi
+  
+  echo ""
+  
+  # Show user config
+  [ -z "$ET_USER_CONFIG" ] && ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
+  if [ -f "${ET_USER_CONFIG}" ]; then
+    CALLSIGN=$(cat ${ET_USER_CONFIG} | jq -r .callsign 2>/dev/null)
+    GRID=$(cat ${ET_USER_CONFIG} | jq -r .grid 2>/dev/null)
+    echo "User Config (user.json):"
+    echo "  Callsign: ${CALLSIGN:-not set}"
+    echo "  Grid:     ${GRID:-not set}"
+  else
+    echo "User Config: NOT CONFIGURED"
+    echo "  Run 'et-user' to configure"
+  fi
+  
+  echo ""
+  
+  # Show audio status
+  if [ -e /dev/et-audio ]; then
+    ET_DEVICE=$(udevadm info /dev/et-audio 2>/dev/null | grep ET_DEVICE | cut -d"=" -f2)
+    echo "Audio Device: ${ET_DEVICE:-Connected}"
+  else
+    echo "Audio Device: Not connected"
+  fi
+  
+  echo ""
+}
+
+start() {
+
+  # Check if VarAC is installed
+  if ! check_installation; then
+    exit 1
+  fi
+
+  # Ensure that we have a pre-initialized CAT control connection for select radios
+  prime_rigctld_conn
+
+  # Kill other modes, update config, start VARA then VarAC
+  /opt/emcomm-tools/bin/et-kill-all && update-config && start_vara_and_varac &
+
+  if [ ! -e /dev/et-gps ]; then
+    notify-send -u critical -i \
+      /usr/share/icons/Yaru/48x48/status/dialog-information.png \
+      "No GPS. Ensure your time is accurate."
+  fi
+
+}
+
+start_vara_and_varac() {
+  # Start VARA modem first if it exists
+  if [ -f "${VARA_EXE}" ]; then
+    et-log "Starting VARA modem..."
+    cd "${VARA_DIR}"
+    wine "${VARA_EXE}" &
+    sleep 3  # Give VARA time to start
+  fi
+  
+  # Start VarAC
+  et-log "Starting VarAC..."
+  cd "${VARAC_DIR}"
+  wine "${VARAC_EXE}" &
+}
+
+update-config() {
+
+    [ -z "$ET_USER_CONFIG" ] && ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
+
+    # Update configuration with current callsign and grid
+    CALLSIGN=$(cat ${ET_USER_CONFIG} | jq -r .callsign 2>/dev/null)
+    GRID=$(et-system-info grid 2>/dev/null)
+    
+    # Fallback to user.json grid if et-system-info fails
+    if [ -z "${GRID}" ]; then
+      GRID=$(cat ${ET_USER_CONFIG} | jq -r .grid 2>/dev/null)
+    fi
+
+    if [ "${CALLSIGN}" = "N0CALL" ] || [ -z "${CALLSIGN}" ] || [ "${CALLSIGN}" = "null" ]; then
+      notify_user "Can't start VarAC. No callsign set. Run: et-user."
+      exit 1
+    fi
+
+    # Update VarAC.ini if it exists
+    if [ -f "${VARAC_INI}" ]; then
+      # Backup
+      cp "${VARAC_INI}" "${VARAC_INI}.bak"
+      
+      # Update Mycall
+      if grep -qi "^Mycall=" "${VARAC_INI}"; then
+        sed -i "s|^Mycall=.*|Mycall=${CALLSIGN}|i" ${VARAC_INI}
+      elif grep -qi "^\[MY_INFO\]" "${VARAC_INI}"; then
+        sed -i "/^\[MY_INFO\]/a Mycall=${CALLSIGN}" ${VARAC_INI}
+      else
+        echo -e "\n[MY_INFO]\nMycall=${CALLSIGN}" >> ${VARAC_INI}
+      fi
+      
+      # Update MyLocator
+      if grep -qi "^MyLocator=" "${VARAC_INI}"; then
+        sed -i "s|^MyLocator=.*|MyLocator=${GRID}|i" ${VARAC_INI}
+      elif grep -qi "^\[MY_INFO\]" "${VARAC_INI}"; then
+        sed -i "/^\[MY_INFO\]/a MyLocator=${GRID}" ${VARAC_INI}
+      fi
+
+      et-log "Updated VarAC configuration with callsign '${CALLSIGN}' and grid: '${GRID}'"
+    else
+      et-log "VarAC.ini not found. Will be created on first run."
+    fi
+
+    # 1. Check if the symlink was created by the udev rules
+    if [ -e /dev/et-audio ]; then
+
+       # 2. Check that this device was properly tagged with the ET_AUDIO env variable with a udev rule
+       APLAY_OUT=$(arecord -l | grep ET_AUDIO)
+       if [ $? -eq 0 ]; then
+         AUDIO_CARD=$(echo $APLAY_OUT | cut -d":" -f1 | awk '{print $2}')
+         AUDIO_DEVICE=$(echo $APLAY_OUT | cut -d"," -f2 | cut -d":" -f1 | awk '{print $2}')
+
+         et-log "Using audio card ${AUDIO_CARD}, device ${AUDIO_DEVICE} for VarAC/VARA"
+
+         # Configure ALSA settings for sound card
+         /opt/emcomm-tools/bin/et-audio update-config
+
+         # Note: VarAC/VARA audio is configured through Wine/ALSA
+         # The et-audio script sets up the ALSA mixer levels
+
+       else
+         et-log "No ET_AUDIO device detected."
+         notify_user "Can't start VarAC. No ET_AUDIO device detected."
+         exit 1
+       fi
+    else
+      et-log "No ET_AUDIO device plugged in."
+      notify_user "Can't start VarAC. No supported audio device plugged in."
+      exit 1
+    fi
+
+}
+
+case $1 in
+  start)
+    start
+    ;;
+  update-config)
+    update-config
+    ;;
+  status)
+    show_status
+    ;;
+  *)
+    echo "Invalid command."
+    usage
+    exit 1
+  ;;
+esac

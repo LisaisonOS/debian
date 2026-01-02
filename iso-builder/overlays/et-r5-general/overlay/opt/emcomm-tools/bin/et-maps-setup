@@ -1,0 +1,495 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2025
+# Purpose : EmComm-Tools Map Setup Utility
+#          Downloads and configures offline maps for field deployment
+#
+
+SCRIPT_VERSION="1.1.0"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# Download URLs
+ET_RELEASE_URL="https://github.com/thetechprepper/emcomm-tools-os-community/releases/download"
+ET_RELEASE_TAG="emcomm-tools-os-community-20251128-r5-final-5.0.0"
+GEOFABRIK_URL="http://download.geofabrik.de/north-america/canada"
+KIWIX_URL="http://download.kiwix.org/zim/wikipedia"
+
+# These will be set after drive selection
+MOUNT_POINT=""
+MBTILES_DIR=""
+OSM_DIR=""
+WIKIPEDIA_DIR=""
+NAVIT_MAPS_DIR="${HOME}/.navit/maps"
+
+# Local symlink targets
+MBTILES_LOCAL_DIR="${HOME}/.local/share/emcomm-tools/mbtileserver/tilesets"
+WIKIPEDIA_LOCAL_DIR="${HOME}/wikipedia"
+OSM_LOCAL_DIR="${HOME}/my-maps"
+
+check_dependencies() {
+    local missing=()
+    for cmd in dialog curl maptool; do
+        if ! command -v $cmd &> /dev/null; then
+            missing+=($cmd)
+        fi
+    done
+    
+    if [ ${#missing[@]} -ne 0 ]; then
+        log_error "Missing dependencies: ${missing[*]}"
+        log_info "Install with: sudo apt install ${missing[*]}"
+        read -p "Press Enter to exit..."
+        exit 1
+    fi
+}
+
+select_drive() {
+    # Find mounted drives in /media/$USER/
+    local drives=()
+    local menu_items=()
+    local i=1
+    
+    if [ -d "/media/${USER}" ]; then
+        for d in /media/${USER}/*; do
+            if [ -d "$d" ] && mountpoint -q "$d" 2>/dev/null; then
+                local avail=$(df -h "$d" 2>/dev/null | tail -1 | awk '{print $4}')
+                local name=$(basename "$d")
+                drives+=("$d")
+                menu_items+=("$i" "$name ($avail free)")
+                ((i++))
+            fi
+        done
+    fi
+    
+    if [ ${#drives[@]} -eq 0 ]; then
+        dialog --title "No External Drive Found" --msgbox \
+"No external drives detected in /media/${USER}/
+
+Please insert a USB drive or SD card and try again.
+
+The drive should auto-mount when inserted." 12 55
+        clear
+        return 1
+    fi
+    
+    # Show drive selection menu
+    local choice
+    choice=$(dialog --title "Select External Drive" \
+        --menu "Choose a drive for EmComm-Tools data:" 15 55 ${#drives[@]} \
+        "${menu_items[@]}" 2>&1 >/dev/tty)
+    
+    local ret=$?
+    clear
+    
+    if [ $ret -ne 0 ] || [ -z "$choice" ]; then
+        return 1
+    fi
+    
+    MOUNT_POINT="${drives[$((choice-1))]}"
+    MBTILES_DIR="${MOUNT_POINT}/mbtiles"
+    OSM_DIR="${MOUNT_POINT}/osm-pbf"
+    WIKIPEDIA_DIR="${MOUNT_POINT}/wikipedia"
+    
+    return 0
+}
+
+create_directory_structure() {
+    log_info "Creating directory structure on ${MOUNT_POINT}..."
+    
+    mkdir -p "${MBTILES_DIR}"
+    mkdir -p "${OSM_DIR}"
+    mkdir -p "${WIKIPEDIA_DIR}"
+    
+    # Create README
+    cat > "${MOUNT_POINT}/README.txt" << EOF
+EmComm-Tools Data Drive
+=======================
+Created: $(date)
+
+This drive contains offline data for EmComm-Tools:
+
+/mbtiles/    - Pre-rendered map tiles for mbtileserver
+/wikipedia/  - Offline Wikipedia (.zim files)
+/osm-pbf/    - OpenStreetMap data for Navit navigation
+
+To manage this data, run: et-maps-setup
+EOF
+
+    log_info "Directory structure created."
+}
+
+setup_symlinks() {
+    log_info "Setting up symlinks..."
+    
+    # Create parent directories
+    mkdir -p "$(dirname ${MBTILES_LOCAL_DIR})"
+    mkdir -p "$(dirname ${WIKIPEDIA_LOCAL_DIR})"
+    mkdir -p "$(dirname ${OSM_LOCAL_DIR})"
+    
+    # Backup and replace existing directories
+    for dir in "${MBTILES_LOCAL_DIR}" "${WIKIPEDIA_LOCAL_DIR}" "${OSM_LOCAL_DIR}"; do
+        if [ -d "$dir" ] && [ ! -L "$dir" ]; then
+            if [ "$(ls -A $dir 2>/dev/null)" ]; then
+                log_warn "Backing up existing data in $dir"
+                mv "$dir" "${dir}.backup.$(date +%Y%m%d)"
+            else
+                rmdir "$dir" 2>/dev/null || true
+            fi
+        fi
+        [ -L "$dir" ] && rm "$dir"
+    done
+    
+    # Create symlinks
+    ln -s "${MBTILES_DIR}" "${MBTILES_LOCAL_DIR}"
+    log_info "Linked: ${MBTILES_LOCAL_DIR} -> ${MBTILES_DIR}"
+    
+    ln -s "${WIKIPEDIA_DIR}" "${WIKIPEDIA_LOCAL_DIR}"
+    log_info "Linked: ${WIKIPEDIA_LOCAL_DIR} -> ${WIKIPEDIA_DIR}"
+    
+    ln -s "${OSM_DIR}" "${OSM_LOCAL_DIR}"
+    log_info "Linked: ${OSM_LOCAL_DIR} -> ${OSM_DIR}"
+}
+
+download_mbtiles() {
+    if [ -z "$MOUNT_POINT" ]; then
+        dialog --msgbox "Please select a drive first (Option 2)" 8 45
+        clear
+        return
+    fi
+    
+    local files=(
+        "osm-us-zoom0to11-20251120.mbtiles:United States (zoom 0-11):~2.0GB"
+        "osm-ca-zoom0to10-20251120.mbtiles:Canada (zoom 0-10):~500MB"
+        "osm-world-zoom0to7-20251121.mbtiles:World (zoom 0-7):~200MB"
+    )
+    
+    local options=()
+    local i=1
+    for file_info in "${files[@]}"; do
+        IFS=':' read -r filename description size <<< "$file_info"
+        if [ -f "${MBTILES_DIR}/${filename}" ]; then
+            options+=("$i" "[INSTALLED] ${description} (${size})" off)
+        else
+            options+=("$i" "${description} (${size})" off)
+        fi
+        ((i++))
+    done
+    
+    local selected
+    selected=$(dialog --title "Download Map Tiles" \
+        --checklist "Select map tilesets to download:\n(Space to select, Enter to confirm)" \
+        18 65 5 "${options[@]}" 2>&1 >/dev/tty)
+    
+    local ret=$?
+    clear
+    
+    [ $ret -ne 0 ] && return
+    [ -z "$selected" ] && return
+    
+    for sel in $selected; do
+        local file_info="${files[$((sel-1))]}"
+        IFS=':' read -r filename description size <<< "$file_info"
+        local url="${ET_RELEASE_URL}/${ET_RELEASE_TAG}/${filename}"
+        
+        if [ -f "${MBTILES_DIR}/${filename}" ]; then
+            log_info "${filename} already exists, skipping..."
+            continue
+        fi
+        
+        log_info "Downloading ${description}..."
+        log_info "URL: ${url}"
+        log_info "Destination: ${MBTILES_DIR}/${filename}"
+        
+        curl -L -f --progress-bar -o "${MBTILES_DIR}/${filename}" "${url}"
+        
+        if [ $? -eq 0 ]; then
+            log_info "Successfully downloaded ${filename}"
+        else
+            log_error "Failed to download ${filename}"
+        fi
+    done
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+download_osm_canada() {
+    if [ -z "$MOUNT_POINT" ]; then
+        dialog --msgbox "Please select a drive first (Option 2)" 8 45
+        clear
+        return
+    fi
+    
+    log_info "Fetching list of Canadian provinces..."
+    
+    local html_file="/tmp/geofabrik-canada.html"
+    curl -s -L -f -o "${html_file}" "${GEOFABRIK_URL}.html"
+    
+    if [ $? -ne 0 ]; then
+        log_error "Cannot fetch province list from Geofabrik"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    # Parse available provinces
+    local provinces=()
+    local menu_items=()
+    
+    while IFS= read -r line; do
+        local prov_file=$(echo "$line" | grep -oP 'href="\K[^"]*-latest\.osm\.pbf' | head -1)
+        if [ -n "$prov_file" ]; then
+            local prov_name=$(echo "$prov_file" | sed 's/-latest.osm.pbf//')
+            provinces+=("$prov_name")
+            if [ -f "${OSM_DIR}/${prov_file}" ]; then
+                menu_items+=("$prov_name" "[INSTALLED]" off)
+            else
+                menu_items+=("$prov_name" "" off)
+            fi
+        fi
+    done < <(grep -E '\.osm\.pbf"' "${html_file}" | grep -v 'canada-latest' | sort -u)
+    
+    if [ ${#provinces[@]} -eq 0 ]; then
+        log_error "No provinces found"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    local selected
+    selected=$(dialog --title "Download OSM Data (Canada)" \
+        --checklist "Select provinces to download:\n(These are used for Navit offline navigation)" \
+        20 60 12 "${menu_items[@]}" 2>&1 >/dev/tty)
+    
+    local ret=$?
+    clear
+    
+    [ $ret -ne 0 ] && return
+    [ -z "$selected" ] && return
+    
+    for prov in $selected; do
+        # Remove quotes
+        prov=$(echo "$prov" | tr -d '"')
+        local download_file="${prov}-latest.osm.pbf"
+        local download_url="${GEOFABRIK_URL}/${download_file}"
+        local dest_file="${OSM_DIR}/${download_file}"
+        
+        if [ -f "${dest_file}" ]; then
+            log_info "${download_file} already exists, skipping download..."
+        else
+            log_info "Downloading ${download_file}..."
+            log_info "URL: ${download_url}"
+            log_info "Destination: ${dest_file}"
+            
+            curl -L -f --progress-bar -o "${dest_file}" "${download_url}"
+            
+            if [ $? -ne 0 ]; then
+                log_error "Failed to download ${download_file}"
+                continue
+            fi
+        fi
+        
+        # Convert to Navit format
+        local navit_file="${prov}-latest.bin"
+        if [ -f "${dest_file}" ]; then
+            log_info "Converting to Navit format: ${navit_file}..."
+            mkdir -p "${NAVIT_MAPS_DIR}"
+            maptool --protobuf -i "${dest_file}" "${NAVIT_MAPS_DIR}/${navit_file}"
+            
+            if [ $? -eq 0 ]; then
+                log_info "Successfully converted ${navit_file}"
+            else
+                log_error "Failed to convert ${download_file} to Navit format"
+            fi
+        fi
+    done
+    
+    rm -f "${html_file}"
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+download_wikipedia() {
+    if [ -z "$MOUNT_POINT" ]; then
+        dialog --msgbox "Please select a drive first (Option 2)" 8 45
+        clear
+        return
+    fi
+    
+    # Predefined useful Wikipedia archives
+    local files=(
+        "wikipedia_en_simple_all_nopic_2024-06.zim:Simple English (all):~500MB"
+        "wikipedia_en_medicine_nopic_2024-06.zim:English Medicine:~1.2GB"
+        "wikipedia_en_computer_nopic_2024-05.zim:English Computer:~800MB"
+    )
+    
+    local options=()
+    local i=1
+    for file_info in "${files[@]}"; do
+        IFS=':' read -r filename description size <<< "$file_info"
+        if [ -f "${WIKIPEDIA_DIR}/${filename}" ]; then
+            options+=("$i" "[INSTALLED] ${description} (${size})" off)
+        else
+            options+=("$i" "${description} (${size})" off)
+        fi
+        ((i++))
+    done
+    
+    local selected
+    selected=$(dialog --title "Download Wikipedia Archives" \
+        --checklist "Select Wikipedia archives to download:\n(nopic = no pictures, smaller size)" \
+        16 60 5 "${options[@]}" 2>&1 >/dev/tty)
+    
+    local ret=$?
+    clear
+    
+    [ $ret -ne 0 ] && return
+    [ -z "$selected" ] && return
+    
+    for sel in $selected; do
+        local file_info="${files[$((sel-1))]}"
+        IFS=':' read -r filename description size <<< "$file_info"
+        local url="${KIWIX_URL}/${filename}"
+        local dest_file="${WIKIPEDIA_DIR}/${filename}"
+        
+        if [ -f "${dest_file}" ]; then
+            log_info "${filename} already exists, skipping..."
+            continue
+        fi
+        
+        log_info "Downloading ${description}..."
+        log_info "URL: ${url}"
+        log_info "Destination: ${dest_file}"
+        
+        curl -L -f --progress-bar -o "${dest_file}" "${url}"
+        
+        if [ $? -eq 0 ]; then
+            log_info "Successfully downloaded ${filename}"
+        else
+            log_error "Failed to download ${filename}"
+        fi
+    done
+    
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+show_status() {
+    local status=""
+    
+    if [ -n "$MOUNT_POINT" ]; then
+        local drive_space=$(df -h "${MOUNT_POINT}" | tail -1 | awk '{print $4}')
+        status+="Selected Drive: $(basename ${MOUNT_POINT})\n"
+        status+="Free Space: ${drive_space}\n\n"
+    else
+        status+="No drive selected\n\n"
+    fi
+    
+    status+="Map Tiles (mbtiles):\n"
+    if [ -d "${MBTILES_DIR}" ]; then
+        local count=$(ls -1 "${MBTILES_DIR}"/*.mbtiles 2>/dev/null | wc -l)
+        status+="  Files: ${count}\n"
+        for f in "${MBTILES_DIR}"/*.mbtiles; do
+            [ -f "$f" ] && status+="  - $(basename $f)\n"
+        done
+    else
+        status+="  Not configured\n"
+    fi
+    
+    status+="\nOSM Data (Navit):\n"
+    if [ -d "${OSM_DIR}" ]; then
+        local count=$(ls -1 "${OSM_DIR}"/*.pbf 2>/dev/null | wc -l)
+        status+="  PBF Files: ${count}\n"
+    else
+        status+="  Not configured\n"
+    fi
+    
+    status+="\nWikipedia Archives:\n"
+    if [ -d "${WIKIPEDIA_DIR}" ]; then
+        local count=$(ls -1 "${WIKIPEDIA_DIR}"/*.zim 2>/dev/null | wc -l)
+        status+="  ZIM Files: ${count}\n"
+    else
+        status+="  Not configured\n"
+    fi
+    
+    status+="\nSymlinks:\n"
+    for link in "${MBTILES_LOCAL_DIR}" "${WIKIPEDIA_LOCAL_DIR}" "${OSM_LOCAL_DIR}"; do
+        if [ -L "$link" ]; then
+            status+="  $(basename $link) -> $(readlink $link)\n"
+        fi
+    done
+    
+    dialog --title "EmComm-Tools Data Status" --msgbox "$(echo -e "$status")" 24 65
+    clear
+}
+
+main_menu() {
+    while true; do
+        local drive_status="NOT SELECTED"
+        [ -n "$MOUNT_POINT" ] && drive_status="$(basename ${MOUNT_POINT})"
+        
+        local choice
+        choice=$(dialog --title "EmComm-Tools Map Setup v${SCRIPT_VERSION}" \
+            --menu "Drive: ${drive_status}\n\nSelect an option:" 18 55 8 \
+            1 "Show Status" \
+            2 "Select External Drive" \
+            3 "Setup Drive Structure" \
+            4 "Download Map Tiles (mbtiles)" \
+            5 "Download OSM Data (Canada)" \
+            6 "Download Wikipedia Archives" \
+            7 "Setup Symlinks" \
+            8 "Exit" \
+            2>&1 >/dev/tty)
+        
+        local ret=$?
+        clear
+        
+        [ $ret -ne 0 ] && break
+        
+        case $choice in
+            1) show_status ;;
+            2) select_drive ;;
+            3)
+                if [ -n "$MOUNT_POINT" ]; then
+                    create_directory_structure
+                    read -p "Press Enter to continue..."
+                else
+                    dialog --msgbox "Please select a drive first (Option 2)" 8 45
+                    clear
+                fi
+                ;;
+            4) download_mbtiles ;;
+            5) download_osm_canada ;;
+            6) download_wikipedia ;;
+            7)
+                if [ -n "$MOUNT_POINT" ]; then
+                    setup_symlinks
+                    dialog --msgbox "Symlinks configured!" 8 40
+                    clear
+                else
+                    dialog --msgbox "Please select a drive first (Option 2)" 8 45
+                    clear
+                fi
+                ;;
+            8|"") break ;;
+        esac
+    done
+}
+
+# =============================================================================
+# Entry Point
+# =============================================================================
+
+clear
+check_dependencies
+main_menu
+clear
+echo "EmComm-Tools Map Setup closed."

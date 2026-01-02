@@ -1,0 +1,19 @@
+# Author  : Gaston Gonzalez
+# Date    : 5 July 2025
+# Purpose : User systemd unit file for EmComm Tools raster tile service
+#
+# Usage: 
+#  Check status       : systemctl --user status et-service-mbtileservice
+#  Start service      : systemctl --user start et-service-mbtileservice
+#  Stop service       : systemctl --user stop et-service-mbtileservice
+#  Reload this config : systemctl --user daemon-reload
+
+[Unit]
+Description=EmComm Tools raster tile service
+
+[Service]
+ExecStart=/opt/emcomm-tools/bin/et-mbtileserver
+Restart=always
+
+[Install]
+WantedBy=default.target

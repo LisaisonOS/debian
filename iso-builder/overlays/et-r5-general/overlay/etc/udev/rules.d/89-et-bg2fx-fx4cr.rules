@@ -1,0 +1,23 @@
+# Author   : Gaston Gonzalez
+# Date     : 18 September 2025
+# Purpose  : udev rules for the FX-4CR by BG2FX
+#
+# Preconditions:
+# 1. FX-4CR connected via USB cable
+#
+# Postconditions:
+# 1. /dev/et-cat created
+# 2. rigctld is started
+# 3. /dev/et-audio created
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", ENV{ET_DEVICE}=="", \
+    ACTION=="add", \
+    ENV{ET_DEVICE}="FX-4CR", ENV{ET_SUBDEVICE}="CAT", GROUP="dialout", MODE="0660", SYMLINK+="et-cat", \
+    RUN+="/usr/bin/systemctl start rigctld"
+
+#    PROGRAM="/opt/emcomm-tools/sbin/udev-tester.sh digirig-mobile", \
+SUBSYSTEM=="sound", ATTRS{idVendor}=="4c4a", ATTRS{idProduct}=="4155", \
+    ACTION=="add", \
+    ENV{ET_DEVICE}="FX-4CR", \
+    ATTR{id}="ET_AUDIO", \
+    ENV{ET_SUBDEVICE}="AUDIO", GROUP="audio", MODE="0660", SYMLINK+="et-audio"

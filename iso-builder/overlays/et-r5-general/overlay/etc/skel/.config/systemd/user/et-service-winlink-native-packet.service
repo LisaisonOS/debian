@@ -1,0 +1,19 @@
+# Author  : Gaston Gonzalez
+# Date    : 3 February 2025
+# Purpose : User systemd unit file for EmComm Tools Winlink over packet
+#
+# Usage: 
+#  Check status       : systemctl --user status et-service-winlink-native-packet
+#  Start service      : systemctl --user start et-service-winlink-native-packet
+#  Stop service       : systemctl --user stop et-service-winlink-native-packet
+#  Reload this config : systemctl --user daemon-reload
+
+[Unit]
+Description=EmComm Tools Winlink native AX.25 packet service
+
+[Service]
+ExecStart=/opt/emcomm-tools/bin/et-winlink start-native-packet
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

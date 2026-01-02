@@ -1,0 +1,425 @@
+#!/bin/bash
+#
+# Author   : Gaston Gonzalez
+# Date     : 6 November 2024
+# Updated  : 25 March 2025
+# Purpose  : Configures the system for a specific mode of operation
+#
+# Modified by: Sylvain Deguire - VA2OPS
+# Date       : 16 November 2025
+# Changes    : Added Vara Option HF and FM for BBS-SERVER
+#              Added bilingual French/English support
+#
+
+# Read user language preference (default to English)
+USER_CONF=~/.config/emcomm-tools/user.json
+if [ -f ${USER_CONF} ]; then
+    LANGUAGE=$(jq -r '.language // "en"' ${USER_CONF})
+else
+    LANGUAGE="en"
+fi
+
+# Set language-specific strings
+if [ "$LANGUAGE" == "fr" ]; then
+    # French translations
+    MENU_TITLE="Sélectionner un mode:"
+    MODE_LABEL_NONE="Aucun mode sélectionné"
+    MODE_LABEL_APRS_CLIENT="Client APRS (YAAC)"
+    MODE_LABEL_BBS_CLIENT="Client BBS (Paracon)"
+    MODE_LABEL_BBS_CLIENT2="Client BBS (QtTermTCP)"
+    MODE_LABEL_BBS_SERVER="Serveur BBS (LinBPQ)"
+    MODE_LABEL_CHAT="Clavardage (chattervox)"
+    MODE_LABEL_APRS_DIGI="Digipeater APRS"
+    MODE_LABEL_PACKET_DIGI="Digipeater Packet"
+    MODE_LABEL_WINLINK_PACKET="Winlink sur VHF/UHF (Paquet AX.25)"
+    MODE_LABEL_WINLINK_VARA_FM="Winlink sur VHF/UHF (VARA FM)"
+    MODE_LABEL_WINLINK_ARDOP="Winlink sur HF (ARDOP)"
+    MODE_LABEL_WINLINK_VARA_HF="Winlink sur HF (VARA HF)"
+    
+    MODEM_MENU_TITLE="Sélectionner un modem"
+    MODEM_1200_LABEL="1200 baud (par défaut pour VHF/UHF)"
+    MODEM_1200_SHORT="1200 baud"
+    MODEM_9600_LABEL="9600 baud (VHF/UHF)"
+    MODEM_9600_SHORT="9600 baud"
+    MODEM_300_LABEL="300 baud (HF)"
+    MODEM_300_SHORT="300 baud"
+    MODEM_VARA_FM_LABEL="VARA FM"
+    MODEM_VARA_HF_LABEL="VARA HF"
+    
+    NOTE_9600_TITLE="Note sur 9600 Baud"
+    NOTE_9600_MSG="9600 baud est supporté seulement sur certaines radios et nécessite généralement un câble spécial.\n\nN'oubliez pas de configurer les paramètres packet à 9600 sur la radio."
+    
+    VARA_ACTION_TITLE="Action de l'utilisateur requise"
+    VARA_FM_MSG="VARA FM n'est pas un mode plug and play. Vous devez configurer VARA manuellement."
+    VARA_HF_MSG="VARA HF n'est pas un mode plug and play. Vous devez configurer VARA manuellement."
+    
+    MSG_NO_MODE="Aucun mode sélectionné"
+    MSG_NO_MODEM="Aucun modem sélectionné. Le mode ne sera pas démarré."
+    MSG_APRS_DIGI_RUNNING="Digipeater APRS en cours d'exécution."
+    MSG_PACKET_DIGI_RUNNING="Digipeater Packet en cours d'exécution."
+    MSG_USING_MODEM="Utilisation de"
+    MSG_AS_MODEM_SPEED="comme vitesse de modem."
+    MSG_AS_MODEM="comme modem."
+    MSG_STARTING="Démarrage de"
+    MSG_STARTING_BBS="Démarrage du serveur BBS."
+    MSG_MODE_NOT_SUPPORTED="Mode non supporté"
+else
+    # English translations
+    MENU_TITLE="Select a mode:"
+    MODE_LABEL_NONE="No mode selected"
+    MODE_LABEL_APRS_CLIENT="APRS Client (YAAC)"
+    MODE_LABEL_BBS_CLIENT="BBS Client (Paracon)"
+    MODE_LABEL_BBS_CLIENT2="BBS Client (QtTermTCP)"
+    MODE_LABEL_BBS_SERVER="BBS Server (LinBPQ)"
+    MODE_LABEL_CHAT="Chat (chattervox)"
+    MODE_LABEL_APRS_DIGI="APRS Digipeater"
+    MODE_LABEL_PACKET_DIGI="Packet Digipeater"
+    MODE_LABEL_WINLINK_PACKET="Winlink over VHF/UHF (AX.25 Packet)"
+    MODE_LABEL_WINLINK_VARA_FM="Winlink over VHF/UHF (VARA FM)"
+    MODE_LABEL_WINLINK_ARDOP="Winlink over HF (ARDOP)"
+    MODE_LABEL_WINLINK_VARA_HF="Winlink over HF (VARA HF)"
+    
+    MODEM_MENU_TITLE="Select a modem"
+    MODEM_1200_LABEL="1200 baud (default for VHF/UHF)"
+    MODEM_1200_SHORT="1200 baud"
+    MODEM_9600_LABEL="9600 baud (VHF/UHF)"
+    MODEM_9600_SHORT="9600 baud"
+    MODEM_300_LABEL="300 baud (HF)"
+    MODEM_300_SHORT="300 baud"
+    MODEM_VARA_FM_LABEL="VARA FM"
+    MODEM_VARA_HF_LABEL="VARA HF"
+    
+    NOTE_9600_TITLE="Note on 9600 Baud"
+    NOTE_9600_MSG="9600 baud is only supported on limited radios and typically requires a special cable.\n\nDon't forget to set the packet settings to 9600 on the radio."
+    
+    VARA_ACTION_TITLE="User Action Required"
+    VARA_FM_MSG="VARA FM is not a plug and play mode. You must configure VARA manually."
+    VARA_HF_MSG="VARA HF is not a plug and play mode. You must configure VARA manually."
+    
+    MSG_NO_MODE="No mode selected"
+    MSG_NO_MODEM="No modem selected. Mode will not be started."
+    MSG_APRS_DIGI_RUNNING="APRS digipeater now running."
+    MSG_PACKET_DIGI_RUNNING="Packet digipeater now running."
+    MSG_USING_MODEM="Using"
+    MSG_AS_MODEM_SPEED="as the modem speed."
+    MSG_AS_MODEM="as the modem."
+    MSG_STARTING="Starting"
+    MSG_STARTING_BBS="Starting BBS server."
+    MSG_MODE_NOT_SUPPORTED="Mode not yet supported"
+fi
+
+# Use a simple text file to save the state of the last mode selected
+MODE_STATUS_FILE="${HOME}/.config/emcomm-tools/et-mode"
+
+QTTERMTCP_CONF_FILE="${HOME}/.config/QtTermTCP.ini"
+
+# List of supported modes of operation
+MODE_ID_NONE="none"
+MODE_ID_APRS_DIGIPEATER="aprs-digipeater" 
+MODE_ID_APRS_CLIENT="aprs-client" 
+MODE_ID_BBS_CLIENT="bbs-client" 
+MODE_ID_BBS_CLIENT2="bbs-client2" 
+MODE_ID_BBS_SERVER="bbs-server" 
+MODE_ID_CHAT_CLIENT="chat-chattervox" 
+MODE_ID_PACKET_DIGIPEATER="packet-digipeater" 
+MODE_ID_WINLINK_ARDOP="winlink-ardop" 
+MODE_ID_WINLINK_PACKET="winlink-packet" 
+MODE_ID_WINLINK_VARA_HF="winlink-vara-hf" 
+MODE_ID_WINLINK_VARA_FM="winlink-vara-fm" 
+
+# Default to 1200 baud packet for terminal sessions
+TERM_MODE=1200
+
+# Attempt to stop all EmComm Tools services regardless if they are running.
+stop_all_services() {
+  et-kill-all 
+}
+
+exit_on_service_failure() {
+  local systemd_unit_name="$1"
+  systemctl is-active --user --quiet "${systemd_unit_name}"
+  if [ $? -ne 0 ]; then
+    et-log "Can't start mode. ${systemd_unit_name} failed to start."
+    exit 1
+  fi
+}
+
+TIMEOUT=15  # Total time to wait in seconds
+INTERVAL=2  # Interval between checks in seconds
+
+start_and_wait_for_service() {
+  local systemd_unit_name="$1"
+  local elapsed=0
+
+  et-log "Starting ${systemd_unit_name}..."
+  systemctl --user start ${systemd_unit_name}
+
+  et-log "Waiting for ${systemd_unit_name} to become active..."
+
+  while ! systemctl is-active --user --quiet "${systemd_unit_name}"; do
+      sleep "$INTERVAL"
+      elapsed=$((elapsed + INTERVAL))
+      if [ "$elapsed" -ge "$TIMEOUT" ]; then
+          et-log "Timeout reached. ${systemd_unit_name} failed to start."
+          exit 1
+      fi
+      et-log "Waiting for ${systemd_unit_name} to become active..."
+  done
+
+  # Some applications even when started still need a bit of extra time to be available. 
+  ##et-service-direwolf-300  # Add a short think time of 2 seconds. The ARDOP modem requies extra time.
+  sleep 2
+
+  # Do one more check to ensure that we are running, otherwise exit.
+  exit_on_service_failure ${systemd_unit_name}
+}
+
+start_and_wait_for_vara() {
+  local vara_cmd="$1"
+  local elapsed=0
+
+  et-log "Starting ${vara_cmd}..."
+  ${vara_cmd} &
+
+  et-log "Waiting for ${vara_cmd} to become active..."
+  
+  while true; do
+    CHECK_VARA=$(ps -ef | grep "[V]ARA")
+    if [ $? -eq 0 ]; then
+      break
+    fi  
+
+    sleep "$INTERVAL"
+    elapsed=$((elapsed + INTERVAL))
+    if [ "$elapsed" -ge "$TIMEOUT" ]; then
+        et-log "Timeout reached. ${systemd_unit_name} failed to start."
+        exit 1
+    fi
+    et-log "Waiting for ${vara_cmd} to become active..."
+  done
+}
+
+select_term_mode () {
+  term_mode=()
+  term_mode+=("1200" "$MODEM_1200_LABEL")
+  term_mode+=("9600" "$MODEM_9600_LABEL")
+  term_mode+=("300" "$MODEM_300_LABEL")
+
+  # Only allow VARA terminal modes when using QtTermTCP
+  if [[ "${SELECTED_MODE}" == "${MODE_ID_BBS_CLIENT2}" ]]; then
+    if [ -e "${HOME}/.wine32/drive_c/VARA FM/VARAFM.exe" ]; then
+      term_mode+=("vara-fm" "$MODEM_VARA_FM_LABEL")
+    fi
+
+    if [ -e "${HOME}/.wine32/drive_c/VARA/VARA.exe" ]; then
+      term_mode+=("vara-hf" "$MODEM_VARA_HF_LABEL")
+    fi
+  fi
+
+  TERM_MODE=$(dialog --clear --menu "$MODEM_MENU_TITLE" 13 60 10 "${term_mode[@]}" 3>&1 1>&2 2>&3)
+  exit_status=$?
+
+  if [ "${TERM_MODE}" == "9600" ]; then
+    dialog --title "$NOTE_9600_TITLE" --msgbox "$NOTE_9600_MSG" 0 0
+  fi 
+
+  tput sgr 0 && clear
+
+  if [ ${exit_status} -ne 0 ]; then
+    et-log "$MSG_NO_MODEM"
+    exit 1
+  fi  
+}
+
+select_term_mode_bbs_server () {
+  term_mode=()
+  term_mode+=("1200" "$MODEM_1200_SHORT")
+  term_mode+=("9600" "$MODEM_9600_SHORT")
+  term_mode+=("300" "$MODEM_300_SHORT")
+  term_mode+=("vara-fm" "$MODEM_VARA_FM_LABEL")
+  term_mode+=("vara-hf" "$MODEM_VARA_HF_LABEL")
+
+  TERM_MODE=$(dialog --clear --menu "$MODEM_MENU_TITLE" 13 60 10 "${term_mode[@]}" 3>&1 1>&2 2>&3)
+  exit_status=$?
+
+  if [ "${TERM_MODE}" == "9600" ]; then
+   dialog --title "$NOTE_9600_TITLE" --msgbox "$NOTE_9600_MSG" 0 0
+  fi
+
+  tput sgr 0 && clear
+
+  if [ ${exit_status} -ne 0 ]; then
+    et-log "$MSG_NO_MODEM"
+    exit 1
+  fi
+}
+
+
+
+# Build list of options
+options=()
+options+=("${MODE_ID_NONE}" "$MODE_LABEL_NONE")
+options+=("${MODE_ID_APRS_CLIENT}" "$MODE_LABEL_APRS_CLIENT")
+options+=("${MODE_ID_BBS_CLIENT}" "$MODE_LABEL_BBS_CLIENT")
+options+=("${MODE_ID_BBS_CLIENT2}" "$MODE_LABEL_BBS_CLIENT2")
+options+=("${MODE_ID_BBS_SERVER}" "$MODE_LABEL_BBS_SERVER")
+options+=("${MODE_ID_CHAT_CLIENT}" "$MODE_LABEL_CHAT")
+options+=("${MODE_ID_APRS_DIGIPEATER}" "$MODE_LABEL_APRS_DIGI")
+options+=("${MODE_ID_PACKET_DIGIPEATER}" "$MODE_LABEL_PACKET_DIGI")
+options+=("${MODE_ID_WINLINK_PACKET}" "$MODE_LABEL_WINLINK_PACKET")
+
+if [ -e "${HOME}/.wine32/drive_c/VARA FM/VARAFM.exe" ]; then
+  options+=("${MODE_ID_WINLINK_VARA_FM}" "$MODE_LABEL_WINLINK_VARA_FM")
+fi
+
+options+=("${MODE_ID_WINLINK_ARDOP}" "$MODE_LABEL_WINLINK_ARDOP")
+
+if [ -e "${HOME}/.wine32/drive_c/VARA/VARA.exe" ]; then
+  options+=("${MODE_ID_WINLINK_VARA_HF}" "$MODE_LABEL_WINLINK_VARA_HF")
+fi
+
+# Prompt user for option and save exit status
+SELECTED_MODE=$(dialog --clear --menu "$MENU_TITLE" 18 65 10 "${options[@]}" 3>&1 1>&2 2>&3)
+exit_status=$?
+
+tput sgr 0 && clear
+
+if [ $exit_status -eq 0 ]; then
+
+  stop_all_services
+
+  echo ${SELECTED_MODE} > ${MODE_STATUS_FILE}
+
+  case ${SELECTED_MODE} in
+    ${MODE_ID_NONE})
+      et-log "$MSG_NO_MODE"
+    ;;
+    ${MODE_ID_APRS_DIGIPEATER})
+      systemctl --user start et-service-direwolf-aprs-digipeater
+      et-log "$MSG_APRS_DIGI_RUNNING"
+    ;;
+    ${MODE_ID_APRS_CLIENT})
+      start_and_wait_for_service et-service-direwolf-simple
+      et-yaac start
+    ;;
+    ${MODE_ID_BBS_CLIENT})
+      select_term_mode
+      et-log "$MSG_USING_MODEM ${TERM_MODE} $MSG_AS_MODEM_SPEED"
+
+      case "${TERM_MODE}" in
+        "1200")
+          start_and_wait_for_service et-service-direwolf-simple
+        ;;
+        "9600")
+          start_and_wait_for_service et-service-direwolf-9600
+        ;;
+        "300")
+          start_and_wait_for_service et-service-direwolf-300
+        ;;
+      esac
+        
+      et-log "$MSG_STARTING Paracon."
+      et-paracon start
+    ;;
+    ${MODE_ID_BBS_CLIENT2})
+      select_term_mode
+      et-log "$MSG_USING_MODEM ${TERM_MODE} $MSG_AS_MODEM"
+
+      case "${TERM_MODE}" in
+        "1200")
+          start_and_wait_for_service et-service-direwolf-simple
+        ;;
+        "9600")
+          start_and_wait_for_service et-service-direwolf-9600
+        ;;
+        "300")
+          start_and_wait_for_service et-service-direwolf-300
+        ;;
+        "vara-fm")
+          sed -i "s|^VARAFM=.*|VARAFM=1|g" ${QTTERMTCP_CONF_FILE}
+          sed -i "s|^VARAHF=.*|VARAHF=0|g" ${QTTERMTCP_CONF_FILE}
+          start_and_wait_for_vara et-vara-fm
+        ;;
+        "vara-hf")
+          sed -i "s|^VARAFM=.*|VARAFM=0|g" ${QTTERMTCP_CONF_FILE}
+          sed -i "s|^VARAHF=.*|VARAHF=1|g" ${QTTERMTCP_CONF_FILE}
+          start_and_wait_for_vara et-vara-hf
+        ;;
+      esac
+
+      et-log "$MSG_STARTING QtTermTCP."
+      et-qttermtcp start
+    ;;
+    ${MODE_ID_BBS_SERVER})
+      select_term_mode_bbs_server
+      et-log "$MSG_USING_MODEM ${TERM_MODE} $MSG_AS_MODEM"
+
+      case "${TERM_MODE}" in
+        "1200")
+          start_and_wait_for_service et-service-direwolf-simple
+        ;;
+        "9600")
+          start_and_wait_for_service et-service-direwolf-9600
+        ;;
+        "300")
+          start_and_wait_for_service et-service-direwolf-300
+        ;;
+        "vara-fm")
+          start_and_wait_for_vara et-vara-fm
+        ;;
+        "vara-hf")
+          start_and_wait_for_vara et-vara-hf
+        ;;
+      esac
+
+      ##start_and_wait_for_service et-service-direwolf-simple
+      et-log "$MSG_STARTING_BBS"
+      et-bbs-server ${TERM_MODE} start
+    ;;
+    ${MODE_ID_CHAT_CLIENT})
+      start_and_wait_for_service et-service-direwolf-simple
+      et-log "$MSG_STARTING chattervox"
+      et-chattervox start
+    ;;
+    ${MODE_ID_PACKET_DIGIPEATER})
+      systemctl --user start et-service-direwolf-packet-digipeater
+      et-log "$MSG_PACKET_DIGI_RUNNING"
+    ;;
+    ${MODE_ID_WINLINK_ARDOP}) 
+      et-log "$MSG_USING_MODEM ARDOP $MSG_AS_MODEM"
+      start_and_wait_for_service et-service-ardop
+      start_and_wait_for_service et-service-winlink-ardop
+      min http://localhost:8080
+    ;;
+    ${MODE_ID_WINLINK_PACKET})
+      start_and_wait_for_service et-service-direwolf-simple 
+      start_and_wait_for_service et-service-winlink-packet
+      min http://localhost:8080
+    ;;
+    ${MODE_ID_WINLINK_VARA_FM})
+      dialog --title "$VARA_ACTION_TITLE" --msgbox "$VARA_FM_MSG" 10 50
+      tput sgr 0 && clear
+      start_and_wait_for_vara et-vara-fm
+      et-winlink start-vara-fm &
+      sleep 1
+      min http://localhost:8080 2>/dev/null
+    ;;
+    ${MODE_ID_WINLINK_VARA_HF})
+      dialog --title "$VARA_ACTION_TITLE" --msgbox "$VARA_HF_MSG" 10 50
+      tput sgr 0 && clear
+      start_and_wait_for_vara et-vara-hf
+      et-winlink start-vara-hf &
+      sleep 1
+      min http://localhost:8080 2>/dev/null
+    ;;
+    *)
+      et-log "$MSG_MODE_NOT_SUPPORTED"
+      exit 1
+    ;;
+  esac
+
+else
+  et-log "$MSG_NO_MODE"
+  echo ${MODE_ID_NONE} > ${MODE_STATUS_FILE}
+  exit 1
+fi

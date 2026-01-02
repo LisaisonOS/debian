@@ -1,0 +1,147 @@
+#!/bin/bash
+#
+# Author  : Gaston Gonzalez
+# Date    : 31 October 2024
+# Updated : 13 October 2025
+# Purpose : Configures ET audio device with sane defaults
+#
+# Preconditions
+# 1. Supported audio interface is connected and properly detected
+#
+# Postconditions
+# 1. ALSA settings set on ET audio device
+. /opt/emcomm-tools/bin/et-common
+
+usage() {
+  echo "usage: $(basename $0) <command>"
+  echo "  update-config   - Update amixer config"
+}
+
+if [ $# -ne 1 ]; then
+  usage
+  exit 1
+fi
+
+start() {
+  update-config
+}
+
+update-config () {
+
+  # 1. Check if the symlink was created by the udev rules
+  if [ -e /dev/et-audio ]; then
+
+     # 2. Check that this device was properly tagged with the ET_AUDIO env variable with a udev rule
+     APLAY_OUT=$(arecord -l | grep ET_AUDIO)
+     if [ $? -eq 0 ]; then
+
+       # Use device descriptor assigned by udev rules
+       ET_DEVICE=$(udevadm info /dev/et-audio | grep ET_DEVICE)
+       if [ $? -ne 0 ]; then
+         et-log "ET_DEVICE not set by udev rule. Can't set ALSA settings"
+         exit 1
+       fi
+
+       ET_DEVICE_NAME=$(udevadm info /dev/et-audio | grep ET_DEVICE | cut -d"=" -f2)
+       AUDIO_CARD=$(echo $APLAY_OUT | cut -d":" -f1 | awk '{print $2}')
+       AUDIO_DEVICE=$(echo $APLAY_OUT | cut -d"," -f2 | cut -d":" -f1 | awk '{print $2}')
+       FULL_AUDIO_DEVICE="$AUDIO_CARD,$AUDIO_DEVICE"
+
+       et-log "Updating audio device: '${ET_DEVICE_NAME}' (${FULL_AUDIO_DEVICE})' for ALSA PnP configuration."
+
+       # Handle audio settings specifically if defined in the radio configuration
+       AUDIO_INIT_SCRIPT=$(jq -r -e '.audio.script' ${ET_ACTIVE_RADIO_CONF})
+       if [[ $? -eq 0 ]]; then
+         et-log "Executing audio configuration script: ${AUDIO_INIT_SCRIPT}"
+
+         CMD="${AUDIO_INIT_SCRIPT} ${AUDIO_CARD} ${AUDIO_DEVICE}"
+         et-log "Running command: ${CMD}"
+         ${CMD}
+
+         if [[ $? -ne 0 ]]; then
+           et-log "Audio init script ${AUDIO_INIT_SCRIPT} failed. Can't start application."
+           notify-user "Audio init script failed. Can't start application."
+           exit 1
+         fi
+	 
+         exit 0
+       fi
+
+       # Handle audio generically for most sound card interfaces
+       case ${ET_DEVICE_NAME} in
+         "DIGIRIG_MOBILE")
+           # Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
+           amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 42% unmute
+           # Unmute Mic
+           amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 52% unmute
+           # Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
+           amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 31% unmute
+           # Disable Auto Gain Control
+           amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
+
+           et-log "Applied amixer settings for ${ET_DEVICE_NAME}"
+         ;;
+         "DIGIRIG_LITE")
+           # Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
+           amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 42% unmute
+           # Unmute Mic
+           amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 52% unmute
+           # Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
+           amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 31% unmute
+           # Disable Auto Gain Control
+           amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
+
+           et-log "Applied amixer settings for ${ET_DEVICE_NAME}"
+         ;;
+         "FT-891")
+           # Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
+           amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 42% unmute
+           # Unmute Mic
+           amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 52% unmute
+           # Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
+           amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 31% unmute
+           # Disable Auto Gain Control
+           amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
+
+           et-log "Applied amixer settings for ${ET_DEVICE_NAME}"
+         ;;
+         "FTX-1")
+           # Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
+           amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 42% unmute
+           # Unmute Mic
+           amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 52% unmute
+           # Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
+           amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 31% unmute
+           # Disable Auto Gain Control
+           amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
+
+           et-log "Applied amixer settings for ${ET_DEVICE_NAME}"
+         ;;
+         *)
+           et-log "No ALSA configuration specified for this ET_DEVICE."
+         ;;
+       esac
+
+     else
+       et-log "No ET_AUDIO device detected. Can't change ALSA settings."
+       exit 1
+     fi
+  else
+    et-log "No ET_AUDIO device plugged in. Can't change ALSA settings."
+    exit 1
+  fi
+}
+
+case $1 in
+  start)
+    start
+    ;;
+  update-config)
+    update-config
+    ;;
+  *)
+    echo "Invalid command."
+    usage
+    exit 1
+  ;;
+esac

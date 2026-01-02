@@ -1,0 +1,122 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : December 2025
+# Purpose : Auto-setup symlinks when EMCOMM-DATA drive is mounted
+#          Called by systemd service triggered by udev
+#
+
+DRIVE_LABEL="EMCOMM-DATA"
+LOG_TAG="emcomm-data"
+
+# Find mount point for the drive
+find_mount_point() {
+    # Check common mount points
+    for user_dir in /media/*/; do
+        if [ -d "${user_dir}${DRIVE_LABEL}" ]; then
+            echo "${user_dir}${DRIVE_LABEL}"
+            return 0
+        fi
+    done
+    
+    # Check /mnt
+    if [ -d "/mnt/${DRIVE_LABEL}" ]; then
+        echo "/mnt/${DRIVE_LABEL}"
+        return 0
+    fi
+    
+    # Try using findmnt
+    local mp=$(findmnt -n -o TARGET -S LABEL="${DRIVE_LABEL}" 2>/dev/null)
+    if [ -n "$mp" ]; then
+        echo "$mp"
+        return 0
+    fi
+    
+    return 1
+}
+
+# Setup symlinks for a specific user
+setup_user_symlinks() {
+    local username="$1"
+    local mount_point="$2"
+    local home_dir=$(getent passwd "$username" | cut -d: -f6)
+    
+    [ -z "$home_dir" ] && return 1
+    [ ! -d "$home_dir" ] && return 1
+    
+    logger -t "$LOG_TAG" "Setting up symlinks for user: $username"
+    
+    # Define symlink mappings: local_path:remote_subdir
+    local mappings=(
+        ".local/share/emcomm-tools/mbtileserver/tilesets:mbtiles"
+        "wikipedia:wikipedia"
+        "my-maps:osm-pbf"
+    )
+    
+    for mapping in "${mappings[@]}"; do
+        local local_rel="${mapping%%:*}"
+        local remote_subdir="${mapping##*:}"
+        local local_path="${home_dir}/${local_rel}"
+        local remote_path="${mount_point}/${remote_subdir}"
+        
+        # Skip if remote directory doesn't exist
+        [ ! -d "$remote_path" ] && continue
+        
+        # Create parent directory
+        local parent_dir=$(dirname "$local_path")
+        if [ ! -d "$parent_dir" ]; then
+            mkdir -p "$parent_dir"
+            chown "$username:$username" "$parent_dir"
+        fi
+        
+        # Backup existing directory if it's not a symlink
+        if [ -d "$local_path" ] && [ ! -L "$local_path" ]; then
+            if [ "$(ls -A "$local_path" 2>/dev/null)" ]; then
+                mv "$local_path" "${local_path}.backup.$(date +%Y%m%d%H%M%S)"
+                logger -t "$LOG_TAG" "Backed up existing directory: $local_path"
+            else
+                rmdir "$local_path" 2>/dev/null
+            fi
+        fi
+        
+        # Remove existing symlink if pointing elsewhere
+        if [ -L "$local_path" ]; then
+            local current_target=$(readlink "$local_path")
+            if [ "$current_target" != "$remote_path" ]; then
+                rm "$local_path"
+            else
+                continue  # Already correct
+            fi
+        fi
+        
+        # Create symlink
+        ln -s "$remote_path" "$local_path"
+        chown -h "$username:$username" "$local_path"
+        logger -t "$LOG_TAG" "Created symlink: $local_path -> $remote_path"
+    done
+}
+
+# Main
+main() {
+    logger -t "$LOG_TAG" "EmComm data drive symlink setup starting..."
+    
+    local mount_point=$(find_mount_point)
+    
+    if [ -z "$mount_point" ]; then
+        logger -t "$LOG_TAG" "ERROR: Could not find mount point for ${DRIVE_LABEL}"
+        exit 1
+    fi
+    
+    logger -t "$LOG_TAG" "Found drive at: $mount_point"
+    
+    # Setup symlinks for all users with UID >= 1000 (regular users)
+    while IFS=: read -r username _ uid _ _ home_dir _; do
+        if [ "$uid" -ge 1000 ] && [ "$uid" -lt 65534 ] && [ -d "$home_dir" ]; then
+            setup_user_symlinks "$username" "$mount_point"
+        fi
+    done < /etc/passwd
+    
+    logger -t "$LOG_TAG" "Symlink setup complete"
+}
+
+main "$@"

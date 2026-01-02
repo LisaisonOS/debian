@@ -1,0 +1,108 @@
+Important Math Formulas
+
+First, a chart of the different important formulas to make things easier! 
+If you want more details for each one, continue reading below. 
+
+Formula Name			Formula	Application
+Area of Rectangle		Area = length × width		Used to find the area of a rectangle.
+Perimeter of Rectangle		Perimeter = 2(l + b)		Used to find the total outer length of a rectangle.
+Area of Square			Area = a²			Used to find the area of a square.
+Perimeter of Square		Perimeter = 4 × a		Used to find the total perimeter of a square.
+Area of Circle			Area = π × r²			Used to calculate the area of a circular shape.
+Circumference of Circle		Circumference = 2π × r		Used to determine the boundary length of a circle.
+Average				Average = (Sum ) / (Number)	Determines the average of a data set.
+Quadratic Formula		x = −b ± √(b²-4ac) / 2a		Solves quadratic equations in algebra.
+Probability			Prob = (Favorable) / (Total)	Calculates the likelihood of an event occurring.
+Distance Formula		d = √((x₁ – x₂)² + (y₁ – y₂)²)	Finds the distance between two points in a plane.
+Slope Formula			Slope = (y₂ – y₁) / (x₂ – x₁)	Finds the slope of a line connecting two points.
+Slope Intercept Formula		y = mx + b			Finds the slope-intercept form of a line.
+Area of Triangle		Area = ½ × base × height	Calculates the area of a triangle.
+Sine (SOH)			sin(θ) = opposite / hypotenuse	Finds unknown angles in a right triangle.
+Cosine (CAH)			cos(θ) = adjacent / hypotenuse	Finds unknown angles in a right triangle.
+Tangent (TOA)			tan(θ) = opposite / adjacent	Finds unknown angles in a right triangle.
+Pythagorean Theorem		a² + b² = c²			Finds the length of a hypotenuse in a right triangle.
+Standard Form of Complex Number	z = a + bi			Represents a complex number.
+Modulus of a Complex Number	|z| = √(a² + b²)		Finds the modulus (magnitude) of a complex number.
+Conjugate of a Complex Number	z̄ = a - bi			Finds the conjugate of a complex number.
+Volume of a Cube		Volume = a³			Finds total space occupied by a cube
+Volume of a Cylinder		Volume = π × r² × h	 	Calculates the space inside a cylinder
+Surface Area of a Sphere	Surface Area = 4π × r²		Finds total outer surface area of a sphere
+
+1. Area of Rectangle: area = length x width
+Kids will need to know this one in pre-algebra and later math classes. 
+
+2. Perimeter of a rectangle: 2(l + b)
+This will calculate the total of the outer lines of a rectangle. 
+
+3. Area of a square: a² 
+Square the length of both sides to find the area of a square. 
+
+4. Perimeter of a square: 4 x a
+Multiply the length of the side of the square by 4 to find the perimeter. 
+
+5. Area of a circle: π x r²
+Use this to find the total area of a circle. 
+
+6. Circumference of a circle: 2π x  r
+This formula calculates the length of the outside of a circle.
+
+7. Find the Average: Sum of total numbers divided by the number of values. 
+Useful in statistics and many more math word problems. 
+
+These math formulas will come in handy in geometry, algebra, calculus and more. 
+
+8. The Quadratic Formula: x = −b ± √b²-4ac/2a
+Students will need this to solve quadratic equations in algebra II and beyond. As an added pneumonic bonus, it’s easier to remember this one to the tune of “Pop Goes the Weasel”. 
+
+9. Probability: Number of favorable outcomes divided by the total number of favorable outcomes.
+To determine the probability of an event, this equation will determine the odds of something happening. 
+
+10. Distance formula: d=√(x₁ – x₂)² + (y₁ – y₂)²
+This equation will calculate the distance between two points, which will be necessary in geometry and algebra.
+
+11. Slope Formula: Slope = y₂ – y₁ /  x₂ – x₁
+Use this to find the angle that joins two points on a graph. 
+
+12. Slope Intercept Formula: y=mx+b
+In algebra, this will find the slope intercept of a straight line. 
+
+13. Area of Triangle: Area = (1/2) (base) (height)
+Use this in geometry to find the total area of a triangle. 
+
+14. Sine (SOH): Sine = opposite / hypotenuse
+This equation calculates the unknown angles of a triangle. 
+
+15. Cosine (CAH): Cosine = adjacent / hypotenuse
+Use this equation to find the unknown angles of a triangle. 
+
+16. Tangent (TOA): Tangent = opposite / adjacent
+This equation also can be used to calculate the unknown angles of a triangle. 
+
+17. The Pythagorean Theorem: a²+b²=c²
+This is used to find the length of a hypotenuse in a right triangle. In any right triangle, the square of the length of the hypotenuse equals the sum of the squares of the lengths of the legs of the right triangle.
+
+Complex Number Formulas
+These complex number formulas are essential for mastering advanced algebra, trigonometry, and geometry. Whether tackling high school math, preparing for the SAT®, or exploring higher-level math concepts, these tools will simplify challenging problems and build a strong foundation.
+
+18. Standard Form of a Complex Number: z = a +bi
+Where a is the real part, and b is the imaginary part.
+
+19. Modulus of a Complex Number: |z| = √a²+b²
+This equation calculates the distance of the complex number from the origin in the complex plane.
+
+20. Conjugate of a Complex Number: z̄ = a - bi 
+This formula is useful in rationalizing denominators or simplifying expressions.
+
+Mensuration Formulas (Essential Geometry Measurements)
+Mensuration is an important branch of mathematics that deals with the measurement of different shapes and figures. Whether calculating area, perimeter, or volume, these formulas are required for solving real-world problems in geometry.
+
+21. Volume of a Cube: Volume = a³
+Use this formula to find the total space occupied by a cube, where a represents the length of a side.
+
+22. Volume of a Cylinder: Volume = π × r² × h
+This formula calculates the space inside a cylinder, where r is the radius of the base and h is the height.
+
+23. Surface Area of a Sphere: Surface Area = 4π × r²
+Use this to find the total outer surface area of a sphere.
+
+>>EOF

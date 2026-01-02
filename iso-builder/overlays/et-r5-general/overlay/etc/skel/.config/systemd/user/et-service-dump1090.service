@@ -1,0 +1,21 @@
+# Author  : Gaston Gonzalez
+# Date    : 7 June 2025
+# Purpose : User systemd unit file for EmComm Tools dump1090 service
+#
+# Usage: 
+#  Check status       : systemctl --user status et-service-dump1090
+#  Start service      : systemctl --user start et-service-dump1090
+#  Stop service       : systemctl --user stop et-service-dump1090
+#  Reload this config : systemctl --user daemon-reload
+
+[Unit]
+Description=EmComm Tools dump1090 service
+# Disable conditional check for SDR device. Allow et-dump1090 to enforce.
+#ConditionPathExists=/dev/et-sdr
+
+[Service]
+ExecStart=/opt/emcomm-tools/bin/et-dump1090
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

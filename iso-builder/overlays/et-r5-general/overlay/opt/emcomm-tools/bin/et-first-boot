@@ -1,0 +1,157 @@
+#!/bin/bash
+#
+# Author : Sylvain Deguire (VA2OPS)
+# Date   : January 2026
+# Purpose: EmComm-Tools First Boot Configuration Wizard
+#          Runs on first boot to configure user, radio, and maps
+#
+# This is a temporary CLI solution until a GUI app is developed.
+#
+
+FLAG_FILE="${HOME}/.config/emcomm-tools/.first-boot-done"
+USER_CONF="${HOME}/.config/emcomm-tools/user.json"
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Check if already configured
+if [ -f "${FLAG_FILE}" ]; then
+    exit 0
+fi
+
+# Ensure config directory exists
+mkdir -p "$(dirname ${FLAG_FILE})"
+mkdir -p "$(dirname ${USER_CONF})"
+
+# Copy default user config if not exists
+if [ ! -f "${USER_CONF}" ]; then
+    cp /etc/skel/.config/emcomm-tools/user.json "${USER_CONF}" 2>/dev/null || \
+    echo '{"language":"en","callsign":"N0CALL","grid":"AA00aa","winlinkPasswd":null}' > "${USER_CONF}"
+fi
+
+clear
+
+# =============================================================================
+# Welcome Screen
+# =============================================================================
+echo ""
+echo -e "${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║                                                               ║${NC}"
+echo -e "${GREEN}║          ${CYAN}EmComm-Tools OS - Initial Configuration${GREEN}            ║${NC}"
+echo -e "${GREEN}║                                                               ║${NC}"
+echo -e "${GREEN}║   Welcome! This wizard will help you configure:              ║${NC}"
+echo -e "${GREEN}║                                                               ║${NC}"
+echo -e "${GREEN}║     1. User Settings (callsign, grid, Winlink password)      ║${NC}"
+echo -e "${GREEN}║     2. Radio Configuration (select your transceiver)         ║${NC}"
+echo -e "${GREEN}║     3. Offline Maps (optional - requires USB drive)          ║${NC}"
+echo -e "${GREEN}║                                                               ║${NC}"
+echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${YELLOW}Bienvenue! Cet assistant vous aidera à configurer EmComm-Tools.${NC}"
+echo ""
+read -p "Press Enter to begin / Appuyez sur Entrée pour commencer... "
+
+# =============================================================================
+# Step 1: User Configuration
+# =============================================================================
+clear
+echo ""
+echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  STEP 1/3: User Configuration / Configuration utilisateur${NC}"
+echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+echo ""
+
+if [ -x /opt/emcomm-tools/bin/et-user ]; then
+    /opt/emcomm-tools/bin/et-user
+else
+    echo "Warning: et-user not found, skipping..."
+    sleep 2
+fi
+
+echo ""
+read -p "Press Enter to continue to Radio Configuration... "
+
+# =============================================================================
+# Step 2: Radio Configuration
+# =============================================================================
+clear
+echo ""
+echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  STEP 2/3: Radio Configuration / Configuration radio${NC}"
+echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+echo ""
+
+if [ -x /opt/emcomm-tools/bin/et-radio ]; then
+    /opt/emcomm-tools/bin/et-radio
+else
+    echo "Warning: et-radio not found, skipping..."
+    sleep 2
+fi
+
+echo ""
+read -p "Press Enter to continue to Maps Setup... "
+
+# =============================================================================
+# Step 3: External Maps Setup
+# =============================================================================
+clear
+echo ""
+echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}  STEP 3/3: Offline Maps Setup / Configuration des cartes${NC}"
+echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+echo ""
+echo "This step configures offline maps stored on an external USB drive."
+echo "Cette étape configure les cartes hors-ligne sur une clé USB externe."
+echo ""
+echo -e "${YELLOW}Note: You can skip this step and run it later with 'et-maps-setup'${NC}"
+echo -e "${YELLOW}Note: Vous pouvez passer cette étape et l'exécuter plus tard${NC}"
+echo ""
+read -p "Configure maps now? / Configurer les cartes maintenant? (y/n): " maps_choice
+
+if [ "${maps_choice,,}" == "y" ] || [ "${maps_choice,,}" == "o" ]; then
+    if [ -x /opt/emcomm-tools/bin/et-maps-setup ]; then
+        /opt/emcomm-tools/bin/et-maps-setup
+    else
+        echo "Warning: et-maps-setup not found, skipping..."
+        sleep 2
+    fi
+fi
+
+# =============================================================================
+# Completion Screen
+# =============================================================================
+clear
+echo ""
+echo -e "${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}║                                                               ║${NC}"
+echo -e "${GREEN}║              ${CYAN}Configuration Complete! / Terminé!${GREEN}              ║${NC}"
+echo -e "${GREEN}║                                                               ║${NC}"
+echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${YELLOW}To modify your settings later, use these commands:${NC}"
+echo -e "${YELLOW}Pour modifier vos paramètres plus tard, utilisez:${NC}"
+echo ""
+echo -e "  ${CYAN}et-user${NC}        - Change callsign, grid, Winlink password"
+echo -e "                   Changer indicatif, grille, mot de passe Winlink"
+echo ""
+echo -e "  ${CYAN}et-radio${NC}       - Change radio/transceiver selection"
+echo -e "                   Changer la sélection de radio"
+echo ""
+echo -e "  ${CYAN}et-maps-setup${NC}  - Download and configure offline maps"
+echo -e "                   Télécharger et configurer les cartes hors-ligne"
+echo ""
+echo -e "  ${CYAN}et-mode${NC}        - Select operating mode (JS8Call, VarAC, etc.)"
+echo -e "                   Sélectionner le mode d'opération"
+echo ""
+echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+echo ""
+echo "73 de VA2OPS!"
+echo ""
+
+# Create flag file to prevent running again
+touch "${FLAG_FILE}"
+
+read -p "Press Enter to close this wizard... "

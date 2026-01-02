@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=VarAC
+Comment=VarAC application
+Exec=bash -c "$HOME/varac.sh"
+Icon=varac
+Type=Application
+Categories=HamRadio;Network;
+Terminal=false

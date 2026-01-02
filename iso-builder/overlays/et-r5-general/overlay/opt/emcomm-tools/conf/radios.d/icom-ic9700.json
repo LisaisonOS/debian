@@ -1,0 +1,13 @@
+{
+  "id": "icom-ic9700",
+  "vendor": "Icom",
+  "model": "IC-9700",
+  "rigctrl": {
+    "id": "3081",
+    "baud": "57600",
+    "ptt": "RIG"
+  },
+  "notes": [
+    "Enable GPS: [MENU] > [SET] > [Connectors] > [USB (B) Function] > GPS Out = ON"
+  ]
+}

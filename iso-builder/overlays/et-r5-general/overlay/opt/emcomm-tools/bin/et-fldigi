@@ -1,0 +1,194 @@
+#!/bin/bash
+#
+# Author  : Gaston Gonzalez
+# Date    : 2 October 2025
+# Updated : 5 October 2025
+# Purpose : Wrapper script for starting fldigi with PnP support
+#
+# Preconditions
+# 1. Supported radio and audio interface are connected and properly detected
+#
+# Postconditions
+# 1. Stop all running EmComm Tools modes
+# 2. fldigi core settings updated (e.g., CAT, audio, user config and ETC defaults)
+# 3. fldigi started
+
+usage() {
+  echo "usage: $(basename $0) <command>"
+  echo "  start           - Update config and start fldigi"
+  echo "  update-config   - Update config"
+}
+
+if [[ $# -ne 1 ]]; then
+  usage
+  exit 1
+fi
+
+notify_user() {
+  notify-send \
+   -t 5000 \
+   --app-name="EmComm Tools" \
+   "$1"
+}
+
+start() {
+  /opt/emcomm-tools/bin/et-kill-all && update-config && /usr/local/bin/fldigi &
+}
+
+update-config () {
+
+    # 1. Check if the audio device symlink was created by the udev rules
+    if [[ -e /dev/et-audio ]]; then
+
+       # 2. Check that this device was properly tagged with the ET_AUDIO env variable 
+       APLAY_OUT=$(arecord -l | grep ET_AUDIO)
+       if [[ $? -eq 0 ]]; then
+
+         ## Configure ALSA settings for sound card
+         /opt/emcomm-tools/bin/et-audio update-config
+
+       else
+         et-log "No ET_AUDIO device detected."
+         notify_user "Can't start fldigi. No ET_AUDIO device detected."
+         exit 1
+       fi
+    else
+      et-log "No ET_AUDIO device plugged in."
+      notify_user "Can't start fldigi. No supported audio device plugged in."
+      exit 1
+    fi
+
+    PORT_AUDIO_CONF=/tmp/conf.tmp
+    GEO_CONF=/tmp/geo.tmp
+    FLDIGI_CONF_DIR="${HOME}/.fldigi"
+    FLDIGI_CONF_FILE="${FLDIGI_CONF_DIR}/fldigi_def.xml"
+
+    if [[ ! -e ${FLDIGI_CONF_DIR} ]]; then
+      et-log "${FLDIGI_CONF_DIR} does not exist. Creating it from template."
+      mkdir -v ${FLDIGI_CONF_DIR}
+      cp -v /etc/skel/.fldigi/fldigi_def.xml ${FLDIGI_CONF_DIR}
+    fi
+
+    [ -z "$ET_USER_CONFIG" ] && ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
+
+    # clean up temporary config that may exist
+    [[ -e ${PORT_AUDIO_CONF} ]] && rm ${PORT_AUDIO_CONF}
+
+    et-portaudio 2>/dev/null > ${PORT_AUDIO_CONF}
+
+    if [[ $? -ne 0 ]]; then
+      et-log "No supported ET_AUDIO device found"
+      exit 1
+    fi
+
+    DEVICE=$(jq -r -e '.device' ${PORT_AUDIO_CONF})
+    if [[ $? -ne 0 ]]; then
+      et-log "Error getting PulseAudio device name for ET_AUDIO device"
+      exit 1
+    fi
+
+    INDEX=$(jq -r -e '.index' ${PORT_AUDIO_CONF})
+    if [[ $? -ne 0 ]]; then
+      et-log "Error getting PulseAudio device index for ET_AUDIO device"
+      exit 1
+    fi
+
+    ##############################################
+    # Map ALSA ET_AUDIO device to PortAudio device
+    ##############################################
+    et-log "Updating PortAudio device configuration..."
+
+    sed -i "s|^<AUDIOIO>.*|<AUDIOIO>1</AUDIOIO>|" ${FLDIGI_CONF_FILE}
+
+    sed -i "s|^<PORTINDEVICE>.*|<PORTINDEVICE>${DEVICE}</PORTINDEVICE>|" ${FLDIGI_CONF_FILE}
+    sed -i "s|^<PORTININDEX>.*|<PORTININDEX>${INDEX}</PORTININDEX>|" ${FLDIGI_CONF_FILE}
+
+    sed -i "s|^<PORTOUTDEVICE>.*|<PORTOUTDEVICE>${DEVICE}</PORTOUTDEVICE>|" ${FLDIGI_CONF_FILE}
+    sed -i "s|^<PORTOUTINDEX>.*|<PORTOUTINDEX>${INDEX}</PORTOUTINDEX>|" ${FLDIGI_CONF_FILE}
+
+    et-log "Using device '${DEVICE}' and device index '${INDEX}' for PortAudio configuration"
+
+
+    #################
+    # Update callsign
+    #################
+    et-log "Updating callsign configuration..."
+    CALLSIGN=$(jq -r -e '.callsign' ${ET_USER_CONFIG})
+
+    if [[ "${CALLSIGN}" = "N0CALL" ]]; then
+       et-log "Exiting early. No callsign set. Run: et-user."
+       exit 1
+    fi
+
+    et-log "Using callsign '${CALLSIGN}'"
+    sed -i "s|^<MYCALL>.*|<MYCALL>${CALLSIGN}</MYCALL>|" ${FLDIGI_CONF_FILE}
+
+
+    ###############################################
+    # Update grid based on ETC geolocation services
+    ###############################################
+    et-log "Updating your grid square..."
+
+    GRID=$(et-system-info grid)
+    et-log "Using grid square '${GRID}' for your location"
+    sed -i "s|^<MYLOC>.*|<MYLOC>${GRID}</MYLOC>|" ${FLDIGI_CONF_FILE}
+
+    #####################################################################
+    # Configure CAT interface using Hamlib's rig control daemon (rigctld)
+    #####################################################################
+    et-log "Updating CAT control configuration..."
+
+    sed -i "s|^<CHKUSEHAMLIBIS>.*|<CHKUSEHAMLIBIS>1</CHKUSEHAMLIBIS>|" ${FLDIGI_CONF_FILE}
+    sed -i "s|^<HAMRIGMODEL>.*|<HAMRIGMODEL>2</HAMRIGMODEL>|" ${FLDIGI_CONF_FILE}
+    sed -i "s|^<HAMLIBCMDPTT>.*|<HAMLIBCMDPTT>1</HAMLIBCMDPTT>|" ${FLDIGI_CONF_FILE}
+    sed -i "s|^<HAMRIGDEVICE>.*|<HAMRIGDEVICE>localhost:4532</HAMRIGDEVICE>|" ${FLDIGI_CONF_FILE}
+
+
+    ######################################
+    # Enable Reed Soloman ID for RX and TX
+    ######################################
+    et-log "Enabling Reed Soloman ID for RX/TX..."
+
+    sed -i "s|^<RECEIVERSID>.*|<RECEIVERSID>1</RECEIVERSID>|" ${FLDIGI_CONF_FILE}
+    sed -i "s|^<TRANSMITRSID>.*|<TRANSMITRSID>1</TRANSMITRSID>|" ${FLDIGI_CONF_FILE}
+
+
+    ###########################
+    # Modem configuration: MT63
+    ###########################
+    et-log "Updating MT63 modem configuration..."
+
+    sed -i "s|^<MT63INTEGRATION>.*|<MT63INTEGRATION>1</MT63INTEGRATION>|" ${FLDIGI_CONF_FILE}
+
+
+    ########################
+    # Repeater configuration
+    ########################
+    et-log "Updating settings for linked repeater systems..."
+
+    # Key up for 2 seconds before transmitting tone. Needed for linked repeater systems.
+    sed -i "s|^<PRETONE>.*|<PRETONE>2</PRETONE>|" ${FLDIGI_CONF_FILE}
+
+
+    #####################
+    # NBEMS configuration
+    #####################
+    et-log "Updating settings for NBEMS..."
+
+    sed -i "s|^<OPEN_NBEMS_FOLDER>.*|<OPEN_NBEMS_FOLDER>1</OPEN_NBEMS_FOLDER>|" ${FLDIGI_CONF_FILE}
+    sed -i "s|^<FLMSG_PATHNAME>.*|<FLMSG_PATHNAME>/usr/local/bin/flmsg</FLMSG_PATHNAME>|" ${FLDIGI_CONF_FILE}
+}
+
+case $1 in
+  start)
+    start
+    ;;
+  update-config)
+    update-config
+    ;;
+  *)
+    echo "Invalid command."
+    usage
+    exit 1
+  ;;
+esac

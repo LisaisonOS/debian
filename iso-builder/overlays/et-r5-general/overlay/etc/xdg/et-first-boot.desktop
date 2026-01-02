@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=EmComm-Tools First Boot Setup
+Name[fr]=Configuration initiale EmComm-Tools
+Comment=Initial configuration wizard for EmComm-Tools
+Comment[fr]=Assistant de configuration initiale pour EmComm-Tools
+Exec=xfce4-terminal --title="EmComm-Tools Setup" --geometry=80x30 --command="/opt/emcomm-tools/bin/et-first-boot"
+Icon=preferences-system
+Terminal=false
+Categories=System;Settings;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

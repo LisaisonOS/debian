@@ -1,0 +1,19 @@
+# Author  : Gaston Gonzalez
+# Date    : 13 August 2025
+# Purpose : User systemd unit file for EmComm Tools API
+#
+# Usage: 
+#  Check status       : systemctl --user status et-service-et-api
+#  Start service      : systemctl --user start et-service-et-api
+#  Stop service       : systemctl --user stop et-service-et-api
+#  Reload this config : systemctl --user daemon-reload
+
+[Unit]
+Description=EmComm Tools API
+
+[Service]
+ExecStart=/opt/emcomm-tools-api/bin/et-api
+Restart=always
+
+[Install]
+WantedBy=default.target

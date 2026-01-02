@@ -1,0 +1,46 @@
+#!/bin/bash
+# Author  : Gaston Gonzalez
+# Date    : 15 January 2025
+# Updated : 17 January 2025
+# Purpose : Restore backup to user's home directory.
+
+BACKUP_FILE_PATTERN="etc-user-backup-*.tar.gz"
+USB_MEDIA_MOUNT=/media
+
+options=()
+
+# 1. Search home directory
+echo "Searching ${HOME} for backup files...."
+while IFS= read -r backup; do
+  options+=("${backup}" "")
+done < <(find ~ -type f -name ${BACKUP_FILE_PATTERN} 2> /dev/null)
+
+# 2. Search attached USB drive
+DF_OUT=$(df -h | grep ${USB_MEDIA_MOUNT})
+if [ $? -eq 0 ]; then
+ echo "Searching ${USB_MEDIA_MOUNT} for backup files...."
+  while IFS= read -r backup; do
+    options+=("${backup}" "")
+  done < <(find ${USB_MEDIA_MOUNT} -type f -name ${BACKUP_FILE_PATTERN} 2> /dev/null)
+fi
+
+selected_file=$(dialog --clear --menu "Select a backup to restore" 20 80 10 "${options[@]}" 3>&1 1>&2 2>&3)
+exit_status=$?
+
+tput sgr 0 && clear
+
+[ ${exit_status} -ne 0 ] && echo "No backup selected. Exiting." && exit 1
+
+[ ! -e "${selected_file}" ] && echo "File ${selected_file} does not exist. Exiting." 
+
+CWD_DIR=$(pwd)
+
+cd ~ && tar -xzf "${selected_file}"
+
+if [ $? -eq 0 ]; then
+  echo "${selected_file} restored to ${HOME}."
+else
+  echo "An error occured while attempting to restore ${selected_file}"
+fi
+
+cd ${CWD}

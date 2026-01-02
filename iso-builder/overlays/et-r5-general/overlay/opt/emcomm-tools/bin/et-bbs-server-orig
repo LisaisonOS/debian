@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# Author  : Gaston Gonzalez
+# Date    : 25 March 2025
+# Purpose : Wrapper script for starting the BBS with PnP support
+#
+# Preconditions:
+# 1. Supported radio and audio interface are connected and properly detected
+#
+# Postconditions:
+# 1. Dire Wolf is started in 1200 baud packet mode
+# 2. LinBPQ is started
+source /opt/emcomm-tools/bin/et-common
+
+BBS_CONF_DIR=${HOME}/.local/share/emcomm-tools/bbs-server
+BBS_CONF_FILE=${BBS_CONF_DIR}/bpq32.cfg
+BBS_CONF_FILE_TEMPLATE=/opt/emcomm-tools/conf/template.d/bbs/bpq32.simple.cfg
+
+usage() {
+  echo "usage: $(basename $0) <command>"
+  echo "  <command>"
+  echo "    start           - Start BBS"
+  echo "    update-config   - Update configuration"
+}
+
+if [[ $# -ne 1 ]]; then
+  usage
+  exit 1
+fi
+
+start() {
+  update-config
+  
+  if [[ $? -eq 0 ]]; then
+
+    PS_OUT=$(ps -ef | grep [d]irewolf)
+    if [[ $? -ne 0 ]]; then
+      echo -e "${RED}Can't start BBS. Dire Wolf not running.${NC}"
+      exit 1
+    fi
+
+    CWD_DIR=$(pwd)
+
+    cd ${BBS_CONF_DIR}
+    CMD="linbpq"
+    et-log "Starting LinBPQ in ${BBS_CONF_DIR} with: ${CMD}"
+
+    ${CMD}
+
+    cd ${CWD_DIR}
+
+  else 
+    et-log "Error updating configuration. Can't start BBS"
+    exit 1
+  fi
+}
+
+update-config () {
+
+    [ -z "$ET_USER_CONFIG" ] && ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
+
+    CALLSIGN=$(cat ${ET_USER_CONFIG} | jq -r .callsign)
+    GRID=$(cat ${ET_USER_CONFIG} | jq -r .grid)
+    WINLINK_PASSWD=$(cat ${ET_USER_CONFIG} | jq -r .winlinkPasswd)
+
+    if [[ "${CALLSIGN}" = "N0CALL" ]]; then
+      echo -e "${RED}Can't start BBS. No callsign set. Run: ${WHITE}et-user${NC}."
+      exit 1
+    fi
+
+    echo "Updating BBS configuration: ${BBS_CONF_FILE}..."
+    cp -v ${BBS_CONF_FILE_TEMPLATE} ${BBS_CONF_FILE}
+    sed -i "s|{{ET_CALLSIGN}}|${CALLSIGN}|g" ${BBS_CONF_FILE}
+    sed -i "s|{{ET_WINLINK_PASSWD}}|${WINLINK_PASSWD}|g" ${BBS_CONF_FILE}
+    sed -i "s|{{ET_GRID}}|${GRID}|g" ${BBS_CONF_FILE}
+}
+
+case $1 in
+  start)
+    start
+    ;;
+  update-config)
+    update-config
+    ;;
+  *)
+    echo "Invalid command."
+    usage
+    exit 1
+  ;;
+esac

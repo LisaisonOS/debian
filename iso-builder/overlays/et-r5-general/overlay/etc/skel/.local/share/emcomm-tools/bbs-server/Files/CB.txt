@@ -1,0 +1,46 @@
+Citizens' Band (CB) Radio Frequency Chart
+
+1	26.9650 MHz	AM and SSB operation allowed in the US	4.0 Watts
+2	26.9750 MHz	4.0 Watts
+3	26.9850 MHz	4.0 Watts
+4	27.0050 MHz	4.0 Watts
+5	27.0150 MHz	4.0 Watts
+6	27.0250 MHz	4.0 Watts
+7	27.0350 MHz	4.0 Watts
+8	27.0550 MHz	4.0 Watts
+9	27.0650 MHz	Emergency use primarily. Monitored in some areas by "REACT" and/or other volunteers.	4.0 Watts
+10	27.0750 MHz	AM and SSB operation allowed in the US	4.0 Watts
+11	27.0850 MHz	4.0 Watts
+12	27.1050 MHz	4.0 Watts
+13	27.1150 MHz	4.0 Watts
+14	27.1250 MHz	4.0 Watts
+15	27.1350 MHz	4.0 Watts
+16	27.1550 MHz	4.0 Watts
+17	27.1650 MHz	Sometimes used by truckers in the western US states	4.0 Watts
+18	27.1750 MHz	AM and SSB operation allowed in the US	4.0 Watts
+19	27.1850 MHz	"Breaker 1 9" Yes, this is the classic trucker's channel (You might not want to let your kids listen)	4.0 Watts
+20	27.2050 MHz	AM and SSB operation allowed in the US	4.0 Watts
+21	27.2150 MHz	4.0 Watts
+22	27.2250 MHz	4.0 Watts
+23	27.2550 MHz	This use to be the highest CB channel - in the "Smokey and the Bandit" days ;-)	4.0 Watts
+24	27.2350 MHz	AM and SSB operation allowed in the US	4.0 Watts
+25	27.2450 MHz	4.0 Watts
+26	27.2650 MHz	4.0 Watts
+27	27.2750 MHz	4.0 Watts
+28	27.2850 MHz	4.0 Watts
+29	27.2950 MHz	4.0 Watts
+30	27.3050 MHz	4.0 Watts
+31	27.3150 MHz	4.0 Watts
+32	27.3250 MHz	4.0 Watts
+33	27.3350 MHz	4.0 Watts
+34	27.3450 MHz	4.0 Watts
+35	27.3550 MHz	4.0 Watts
+36	27.3650 MHz	4.0 Watts
+37	27.3750 MHz	4.0 Watts
+38	27.3850 MHz	4.0 Watts
+39	27.3950 MHz	4.0 Watts
+40	27.4050 MHz	4.0 Watts
+
+DX Frequency: 27.555 MHz
+
+<<EOF

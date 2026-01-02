@@ -1,0 +1,168 @@
+#!/bin/bash
+# Author  : Gaston Gonzalez
+# Date    : 1 February 2025
+# Updated : 7 October 2025
+# Purpose : Common environment variables and functions
+
+# Standardized device paths for supported hardware
+export ET_DEVICE_AUDIO="/dev/et-audio"
+export ET_DEVICE_CAT="/dev/et-cat"
+export ET_DEVICE_GPS="/dev/et-gps"
+export ET_DEVICE_SDR="/dev/et-sdr"
+
+# Standardized configuration locations and files
+export ET_HOME="/opt/emcomm-tools"
+export ET_ACTIVE_RADIO_CONF="${ET_HOME}/conf/radios.d/active-radio.json"
+
+export ESC="\x1B"
+export RED="${ESC}[1;31m"
+export BLUE="${ESC}[1;34m"
+export GREEN="${ESC}[1;32m"
+export WHITE="${ESC}[97m"
+export YELLOW="${ESC}[1;33m"
+export NC="${ESC}[0m"
+
+# Display an error message in the terminal
+show-err-dialog() {
+  local message="$1"
+  dialog --title "Notification" --msgbox "$message" 8 60
+}
+
+# Display a notification message as a UI popup in the desktop
+notify-user() {
+  notify-send -t 5000 --app-name="EmComm Tools" "$1"
+}
+
+exit_if_no_sdr() {
+  if [[ ! -e ${ET_DEVICE_SDR} ]]; then
+    et-log "No ${ET_DEVICE_SDR} detected."
+    exit 1
+  fi
+}
+
+exit_on_service_failure() {
+  local systemd_unit_name="$1"
+  systemctl is-active --user --quiet "${systemd_unit_name}"
+  if [ $? -ne 0 ]; then
+    et-log "Can't start mode. ${systemd_unit_name} failed to start."
+    exit 1
+  fi
+}
+
+start_and_wait_for_service() {
+  local timeout=15  # Total time to wait in seconds
+  local interval=2  # Interval between checks in seconds
+  local systemd_unit_name="$1"
+  local elapsed=0
+
+  et-log "Starting ${systemd_unit_name}..."
+  systemctl --user start ${systemd_unit_name}
+
+  et-log "Waiting for ${systemd_unit_name} to become active..."
+
+  while ! systemctl is-active --user --quiet "${systemd_unit_name}"; do
+      sleep "$interval"
+      elapsed=$((elapsed + interval))
+      if [ "$elapsed" -ge "$timeout" ]; then
+          et-log "Timeout reached. ${systemd_unit_name} failed to start."
+          exit 1
+      fi
+      et-log "Waiting for ${systemd_unit_name} to become active..."
+  done
+
+  # Some applications even when started still need a bit of extra time to be available.
+  # Add a short think time of 2 seconds. The ARDOP modem requies extra time.
+  sleep 2
+
+  # Do one more check to ensure that we are running, otherwise exit.
+  exit_on_service_failure ${systemd_unit_name}
+}
+
+
+# download_with_retries downloads a file from a URL with retry and checksum support.
+#
+# This function attempts to download a file up to a maximum number of retries.
+# If a checksum is provided, the downloaded file will be verified against it.
+# On checksum mismatch, the file is deleted and the download retried.
+#
+# Args:
+#   url: The URL of the file to download. (required)
+#   filename: The local filename to save the file as. (required)
+#   checksum: Optional sha256 checksum string to validate the downloaded file.
+#   max_retries: Optional max number of retries (default: 3).
+#   wait_seconds: Optional wait time in seconds between retries (default: 2).
+#
+# Returns:
+#   0 if the file was successfully downloaded (and checksum verified if given).
+#   1 if arguments are missing, download fails after all retries,
+#     or checksum verification fails.
+#
+# Example:
+#   download_with_retries "https://example.com/file.tar.gz" "file.tar.gz"
+#   download_with_retries "https://example.com/file.tar.gz" "file.tar.gz" "abc123..." 5 3
+download_with_retries() {
+  local url="$1"
+  local filename="$2"
+  local checksum="$3"          # expected checksum (sha256)
+  local max_retries="${4:-3}"  # default = 3 retries
+  local wait_seconds="${5:-2}" # default = 2s wait between retries
+
+  # Require at least URL and filename
+  if [[ -z "$url" || -z "$filename" ]]; then
+    echo "Usage: download_with_retries <url> <filename> [checksum] [max_retries] [wait_seconds]"
+    return 1
+  fi
+
+  for ((i=1; i<=max_retries; i++)); do
+    echo "Attempt $i of $max_retries to download $url..."
+
+    if curl -L -f -o "$filename" "$url"; then
+      echo "Download successful: $filename"
+
+      if [[ -n "$checksum" ]]; then
+        echo "Verifying checksum..."
+        local file_checksum
+        file_checksum=$(sha256sum "$filename" | awk '{print $1}')
+
+        if [[ "$file_checksum" == "$checksum" ]]; then
+          echo "Checksum OK"
+          return 0
+        else
+          echo "Checksum mismatch (expected $checksum, got $file_checksum)"
+          rm -f "$filename"
+        fi
+      else
+        # no checksum provided, just succeed
+        return 0
+      fi
+    else
+      echo "Download failed (attempt $i)."
+    fi
+
+    sleep "$wait_seconds"
+  done
+
+  echo "Download failed after $max_retries attempts."
+  return 1
+}
+
+# prime_rigctld_conn makes a connection to the rig control daemon (rigctld)
+# and requests the radio's frequency in an effort to initialize CAT control.
+#
+# For example, it takes almost 6 seconds for rig control clients (including 
+# the rigctl client) to connect the first time with the Xiegu X6100 to rigctld.
+# JS8Call will fail to handle this properly if this "priming" task is not
+# executed before it starts up..
+prime_rigctld_conn() {
+ 
+  ACTIVE_RADIO=$(jq -r -e '.rigctrl.primeRig' ${ET_ACTIVE_RADIO_CONF})
+  if [[ $? -eq 0 ]]; then
+    if [[ "${ACTIVE_RADIO}" = "true" ]]; then
+      et-log "Priming rig control client connection"
+      notify_user "Please be patient. Priming connection to radio."
+      rigctl -m 2 f > /dev/null
+    else
+      et-log "No rigctld priming needed" 
+    fi
+  fi
+}

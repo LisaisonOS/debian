@@ -1,0 +1,125 @@
+#!/bin/bash
+#
+# Author : Gaston Gonzalez
+# Date   : 25 October 2024
+# Updated: 4 November 2024 
+# Purpose: Set which radio to use with EmComm Tools.
+#
+# Modified by: Sylvain Deguire - VA2OPS
+# Date       : 16 November 2025
+# Changes    : Added bilingual French/English support
+#
+
+. /opt/emcomm-tools/bin/et-common
+
+# Read user language preference (default to English)
+USER_CONF=~/.config/emcomm-tools/user.json
+if [ -f ${USER_CONF} ]; then
+    LANGUAGE=$(jq -r '.language // "en"' ${USER_CONF})
+else
+    LANGUAGE="en"
+fi
+
+# Set language-specific strings
+if [ "$LANGUAGE" == "fr" ]; then
+    MENU_TITLE="Sélection de radio"
+    MENU_TEXT="Choisissez la radio à utiliser avec EmComm Tools:"
+    NO_RADIO_LABEL="Aucune radio"
+    SELECTED_MSG="Radio sélectionnée:"
+    CONFIG_NOTES_MSG="Notes de configuration:"
+    INSTRUCTIONS_TITLE="Instructions:"
+    INSTR_1="1. Exécutez 'et-mode' pour appliquer les paramètres de la radio."
+    INSTR_2="2. Branchez ou reconnectez le câble USB de votre radio."
+    INSTR_3="3. Exécutez 'et-mode' pour sélectionner le mode de fonctionnement."
+    ERROR_NO_SELECTION="Aucune radio sélectionnée."
+else
+    MENU_TITLE="Radio Selection"
+    MENU_TEXT="Choose the radio to use with EmComm Tools:"
+    NO_RADIO_LABEL="No radio"
+    SELECTED_MSG="Selected radio:"
+    CONFIG_NOTES_MSG="Configuration notes:"
+    INSTRUCTIONS_TITLE="Instructions:"
+    INSTR_1="1. Run 'et-mode' to apply radio settings."
+    INSTR_2="2. Plug in or reconnect your radio's USB cable."
+    INSTR_3="3. Run 'et-mode' to select operating mode."
+    ERROR_NO_SELECTION="No radio selected."
+fi
+
+RADIOS_DIR=/opt/emcomm-tools/conf/radios.d
+ACTIVE_RADIO_LINK=${RADIOS_DIR}/active-radio.json
+
+menu=()
+
+# Add "No radio" option
+menu+=("none" "$NO_RADIO_LABEL")
+
+for file in ${RADIOS_DIR}/*.json; do
+    [ "$file" = "${RADIOS_DIR}/*.json" ] && continue
+    [ "$file" = "${ACTIVE_RADIO_LINK}" ] && continue
+
+    RADIO_ID=$(basename $file .json)
+    MODEL=$(jq -r '.model' $file)
+    
+    menu+=("$RADIO_ID" "$MODEL")
+done
+
+choice=$(dialog --clear --title "$MENU_TITLE" \
+    --menu "$MENU_TEXT" 15 50 10 \
+    "${menu[@]}" \
+    2>&1 >/dev/tty)
+
+clear
+
+if [ -z "$choice" ]; then
+    echo "$ERROR_NO_SELECTION"
+    exit 1
+fi
+
+# Set active radio (or remove symlink for "none")
+if [ "$choice" == "none" ]; then
+    rm -f ${ACTIVE_RADIO_LINK}
+else
+    # Reconstruct full path from radio ID
+    RADIO_FILE="${RADIOS_DIR}/${choice}.json"
+    ln -sf $RADIO_FILE ${ACTIVE_RADIO_LINK}
+fi
+
+# Kill any running Bluetooth TNC processes to avoid conflicts
+bt_procs=$(ps aux | grep "[d]ire.*kissattach" | awk '{print $2}')
+if [ ! -z "$bt_procs" ]; then
+    kill $bt_procs
+fi
+
+# Display selected radio info and instructions
+echo ""
+echo "$SELECTED_MSG"
+if [ "$choice" == "none" ]; then
+    echo "  $NO_RADIO_LABEL"
+else
+    RADIO_ID="$choice"
+    RADIO_FILE="${RADIOS_DIR}/${choice}.json"
+    VENDOR=$(jq -r '.manufacturer // ""' $RADIO_FILE)
+    MODEL=$(jq -r '.model' $RADIO_FILE)
+    CONF_NOTES=$(jq -r '.configNotes // empty' $RADIO_FILE)
+
+    echo "  ID: $RADIO_ID"
+    if [ ! -z "$VENDOR" ] && [ "$VENDOR" != "null" ]; then
+        echo "  $VENDOR $MODEL"
+    else
+        echo "  $MODEL"
+    fi
+
+    if [ ! -z "$CONF_NOTES" ]; then
+        echo ""
+        echo "$CONFIG_NOTES_MSG"
+        echo "$CONF_NOTES" | sed 's/^/  /'
+    fi
+
+    echo ""
+    echo "$INSTRUCTIONS_TITLE"
+    echo "$INSTR_1"
+    echo "$INSTR_2"
+    echo "$INSTR_3"
+fi
+
+echo ""

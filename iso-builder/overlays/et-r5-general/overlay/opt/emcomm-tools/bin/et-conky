@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+# Author  : Gaston Gonzalez
+# Date    : 21 November 2024
+# Updated : 27 December 2025
+# Purpose : Wrapper script for starting conky
+
+/usr/bin/conky -q --daemonize --pause=8 

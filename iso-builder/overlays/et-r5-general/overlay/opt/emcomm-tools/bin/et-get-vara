@@ -1,0 +1,400 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2025
+# Purpose : Download and install VARA modem and VarAC into Wine prefix
+#
+# Note: VARA is proprietary software. This script downloads from official sources.
+#       Users should register VARA for full functionality.
+#
+
+SCRIPT_VERSION="1.0.0"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+log_step() { echo -e "${CYAN}[STEP]${NC} $1"; }
+
+# Wine prefix
+if [ -n "$WINEPREFIX" ]; then
+    WINE_PREFIX="$WINEPREFIX"
+elif [ -d "${HOME}/.wine32" ]; then
+    WINE_PREFIX="${HOME}/.wine32"
+else
+    WINE_PREFIX="${HOME}/.wine32"
+fi
+
+export WINEPREFIX="${WINE_PREFIX}"
+export WINEARCH="win32"
+
+# Download URLs (official sources)
+VARA_HF_URL="https://rosmodem.wordpress.com/"
+VARA_FM_URL="https://rosmodem.wordpress.com/"
+VARAC_URL="https://www.varac-hamradio.com/download"
+
+# Install directories
+VARA_HF_DIR="${WINE_PREFIX}/drive_c/VARA"
+VARA_FM_DIR="${WINE_PREFIX}/drive_c/VARA FM"
+VARAC_DIR="${WINE_PREFIX}/drive_c/VarAC"
+
+DOWNLOAD_DIR="/tmp/vara-install"
+
+check_dependencies() {
+    local missing=()
+    for cmd in wine wget unzip dialog; do
+        if ! command -v $cmd &> /dev/null; then
+            missing+=($cmd)
+        fi
+    done
+    
+    if [ ${#missing[@]} -ne 0 ]; then
+        log_error "Missing dependencies: ${missing[*]}"
+        log_info "Install with: sudo apt install ${missing[*]}"
+        exit 1
+    fi
+}
+
+check_wine_prefix() {
+    if [ ! -d "${WINE_PREFIX}" ]; then
+        log_info "Creating Wine prefix at ${WINE_PREFIX}..."
+        WINEARCH=win32 wineboot --init
+        sleep 3
+    fi
+}
+
+install_wine_dependencies() {
+    log_step "Installing Wine dependencies (this may take a while)..."
+    
+    # Check if winetricks is available
+    if ! command -v winetricks &> /dev/null; then
+        log_warn "winetricks not found, some dependencies may be missing"
+        return
+    fi
+    
+    log_info "Installing Visual C++ runtime..."
+    winetricks -q vcrun2015 2>/dev/null || true
+    
+    log_info "Installing .NET Framework..."
+    winetricks -q dotnet48 2>/dev/null || log_warn "dotnet48 failed, trying dotnet40..."
+    winetricks -q dotnet40 2>/dev/null || true
+    
+    log_info "Installing fonts..."
+    winetricks -q corefonts 2>/dev/null || true
+}
+
+download_vara_hf() {
+    log_step "Downloading VARA HF..."
+    
+    mkdir -p "${DOWNLOAD_DIR}"
+    cd "${DOWNLOAD_DIR}"
+    
+    # VARA HF download page - user needs to download manually due to licensing
+    echo ""
+    log_warn "VARA HF requires manual download due to licensing."
+    echo ""
+    echo "Please visit: https://rosmodem.wordpress.com/"
+    echo "Download: VARA HF vX.X.X (latest version)"
+    echo "Save to: ${DOWNLOAD_DIR}/VARA_HF_setup.exe"
+    echo ""
+    read -p "Press Enter when download is complete (or 's' to skip): " response
+    
+    if [ "$response" = "s" ] || [ "$response" = "S" ]; then
+        log_info "Skipping VARA HF installation"
+        return 1
+    fi
+    
+    if [ -f "${DOWNLOAD_DIR}/VARA_HF_setup.exe" ] || [ -f "${DOWNLOAD_DIR}/VARA HF_setup.exe" ]; then
+        return 0
+    else
+        # Check for any VARA*.exe file
+        local vara_exe=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "VARA*.exe" -type f | head -1)
+        if [ -n "$vara_exe" ]; then
+            return 0
+        fi
+        log_error "VARA HF installer not found"
+        return 1
+    fi
+}
+
+install_vara_hf() {
+    log_step "Installing VARA HF..."
+    
+    local installer=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "VARA*HF*.exe" -o -iname "VARA_setup.exe" -type f 2>/dev/null | head -1)
+    
+    if [ -z "$installer" ]; then
+        installer=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "VARA*.exe" -type f 2>/dev/null | grep -vi FM | head -1)
+    fi
+    
+    if [ -n "$installer" ]; then
+        log_info "Running installer: $(basename $installer)"
+        wine "$installer"
+        
+        if [ -d "${VARA_HF_DIR}" ] || [ -f "${WINE_PREFIX}/drive_c/VARA/VARA.exe" ]; then
+            log_info "VARA HF installed successfully!"
+            return 0
+        fi
+    fi
+    
+    log_error "VARA HF installation failed"
+    return 1
+}
+
+download_vara_fm() {
+    log_step "Downloading VARA FM..."
+    
+    mkdir -p "${DOWNLOAD_DIR}"
+    cd "${DOWNLOAD_DIR}"
+    
+    echo ""
+    log_warn "VARA FM requires manual download due to licensing."
+    echo ""
+    echo "Please visit: https://rosmodem.wordpress.com/"
+    echo "Download: VARA FM vX.X.X (latest version)"
+    echo "Save to: ${DOWNLOAD_DIR}/VARA_FM_setup.exe"
+    echo ""
+    read -p "Press Enter when download is complete (or 's' to skip): " response
+    
+    if [ "$response" = "s" ] || [ "$response" = "S" ]; then
+        log_info "Skipping VARA FM installation"
+        return 1
+    fi
+    
+    local vara_fm=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "*VARA*FM*.exe" -type f | head -1)
+    if [ -n "$vara_fm" ]; then
+        return 0
+    fi
+    
+    log_error "VARA FM installer not found"
+    return 1
+}
+
+install_vara_fm() {
+    log_step "Installing VARA FM..."
+    
+    local installer=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "*VARA*FM*.exe" -type f 2>/dev/null | head -1)
+    
+    if [ -n "$installer" ]; then
+        log_info "Running installer: $(basename $installer)"
+        wine "$installer"
+        
+        if [ -d "${VARA_FM_DIR}" ] || [ -f "${WINE_PREFIX}/drive_c/VARA FM/VARAFM.exe" ]; then
+            log_info "VARA FM installed successfully!"
+            return 0
+        fi
+    fi
+    
+    log_error "VARA FM installation failed"
+    return 1
+}
+
+download_varac() {
+    log_step "Downloading VarAC..."
+    
+    mkdir -p "${DOWNLOAD_DIR}"
+    cd "${DOWNLOAD_DIR}"
+    
+    echo ""
+    log_info "VarAC is free software."
+    echo ""
+    echo "Please visit: https://www.varac-hamradio.com/download"
+    echo "Download the latest VarAC version (ZIP file)"
+    echo "Save to: ${DOWNLOAD_DIR}/"
+    echo ""
+    read -p "Press Enter when download is complete (or 's' to skip): " response
+    
+    if [ "$response" = "s" ] || [ "$response" = "S" ]; then
+        log_info "Skipping VarAC installation"
+        return 1
+    fi
+    
+    local varac_zip=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "VarAC*.zip" -type f | head -1)
+    if [ -n "$varac_zip" ]; then
+        return 0
+    fi
+    
+    log_error "VarAC ZIP not found"
+    return 1
+}
+
+install_varac() {
+    log_step "Installing VarAC..."
+    
+    local varac_zip=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "VarAC*.zip" -type f 2>/dev/null | head -1)
+    
+    if [ -n "$varac_zip" ]; then
+        log_info "Extracting: $(basename $varac_zip)"
+        
+        mkdir -p "${VARAC_DIR}"
+        unzip -o "$varac_zip" -d "${WINE_PREFIX}/drive_c/"
+        
+        # VarAC zip usually extracts to VarAC folder
+        if [ -f "${VARAC_DIR}/VarAC.exe" ]; then
+            log_info "VarAC installed successfully!"
+            return 0
+        fi
+        
+        # Check if extracted to different name
+        local varac_exe=$(find "${WINE_PREFIX}/drive_c" -maxdepth 2 -name "VarAC.exe" -type f | head -1)
+        if [ -n "$varac_exe" ]; then
+            local extracted_dir=$(dirname "$varac_exe")
+            if [ "$extracted_dir" != "$VARAC_DIR" ]; then
+                mv "$extracted_dir" "${VARAC_DIR}"
+            fi
+            log_info "VarAC installed successfully!"
+            return 0
+        fi
+    fi
+    
+    log_error "VarAC installation failed"
+    return 1
+}
+
+show_status() {
+    echo ""
+    echo "=== Installation Status ==="
+    echo ""
+    
+    if [ -f "${WINE_PREFIX}/drive_c/VARA/VARA.exe" ]; then
+        echo -e "VARA HF:  ${GREEN}INSTALLED${NC}"
+    else
+        echo -e "VARA HF:  ${RED}NOT INSTALLED${NC}"
+    fi
+    
+    if [ -f "${WINE_PREFIX}/drive_c/VARA FM/VARAFM.exe" ]; then
+        echo -e "VARA FM:  ${GREEN}INSTALLED${NC}"
+    else
+        echo -e "VARA FM:  ${RED}NOT INSTALLED${NC}"
+    fi
+    
+    if [ -f "${VARAC_DIR}/VarAC.exe" ]; then
+        echo -e "VarAC:    ${GREEN}INSTALLED${NC}"
+    else
+        echo -e "VarAC:    ${RED}NOT INSTALLED${NC}"
+    fi
+    
+    echo ""
+    echo "Wine Prefix: ${WINE_PREFIX}"
+    echo ""
+}
+
+interactive_menu() {
+    while true; do
+        show_status
+        
+        echo "What would you like to install?"
+        echo ""
+        echo "1) Install VARA HF (required for HF digital)"
+        echo "2) Install VARA FM (for VHF/UHF)"
+        echo "3) Install VarAC (chat client)"
+        echo "4) Install ALL (VARA HF + VarAC)"
+        echo "5) Install Wine dependencies (vcrun, dotnet)"
+        echo "6) Show status"
+        echo "7) Exit"
+        echo ""
+        read -p "Choice [1-7]: " choice
+        
+        case $choice in
+            1)
+                download_vara_hf && install_vara_hf
+                ;;
+            2)
+                download_vara_fm && install_vara_fm
+                ;;
+            3)
+                download_varac && install_varac
+                ;;
+            4)
+                download_vara_hf && install_vara_hf
+                download_varac && install_varac
+                ;;
+            5)
+                install_wine_dependencies
+                ;;
+            6)
+                show_status
+                ;;
+            7|"")
+                echo "Goodbye!"
+                exit 0
+                ;;
+            *)
+                echo "Invalid choice"
+                ;;
+        esac
+        
+        echo ""
+        read -p "Press Enter to continue..."
+        clear
+    done
+}
+
+show_help() {
+    echo "et-get-vara - VARA/VarAC Installer for EmComm-Tools"
+    echo ""
+    echo "Usage: et-get-vara [command]"
+    echo ""
+    echo "Commands:"
+    echo "  (none)     Interactive menu"
+    echo "  status     Show installation status"
+    echo "  vara-hf    Install VARA HF"
+    echo "  vara-fm    Install VARA FM"
+    echo "  varac      Install VarAC"
+    echo "  all        Install VARA HF + VarAC"
+    echo "  deps       Install Wine dependencies"
+    echo "  help       Show this help"
+    echo ""
+    echo "Wine Prefix: ${WINE_PREFIX}"
+}
+
+# =============================================================================
+# Entry Point
+# =============================================================================
+
+check_dependencies
+check_wine_prefix
+
+case "${1:-}" in
+    status)
+        show_status
+        ;;
+    vara-hf)
+        download_vara_hf && install_vara_hf
+        ;;
+    vara-fm)
+        download_vara_fm && install_vara_fm
+        ;;
+    varac)
+        download_varac && install_varac
+        ;;
+    all)
+        download_vara_hf && install_vara_hf
+        download_varac && install_varac
+        ;;
+    deps)
+        install_wine_dependencies
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    "")
+        clear
+        echo "========================================"
+        echo " VARA/VarAC Installer v${SCRIPT_VERSION}"
+        echo " EmComm-Tools"
+        echo "========================================"
+        echo ""
+        interactive_menu
+        ;;
+    *)
+        echo "Unknown command: $1"
+        show_help
+        exit 1
+        ;;
+esac

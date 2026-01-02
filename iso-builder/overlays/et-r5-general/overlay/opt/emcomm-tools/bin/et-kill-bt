@@ -1,0 +1,40 @@
+#!/bin/bash
+# Author   : Gaston Gonzalez
+# Date     : 14 March 2025
+# UPdated  : 15 March 2025
+# Purpose  : Stops all services tied to Bluetooth TNC operations
+#
+# Post Conditions:
+# 1. All services started for supporting Bluetooth over serial are stopped.
+#
+# Note: If you try to re-establish a Bluetooth connection, you will needed to:
+#       1. Turn off and turn back on your radio.
+#       2. Wait 30 seconds before reconnecting (i.e. ./et-uv-pro connect)
+       
+source /opt/emcomm-tools/bin/et-common
+
+stop_all_bt_services() {
+  
+  PS_OUT=$(ps -ef | grep "[k]issattach");
+  if [[ $? -eq 0 ]]; then
+    echo "Killing kissattach processes"
+    killall kissattach
+  fi
+
+  PS_OUT=$(ps -ef | grep "[r]fcomm0");
+  if [[ $? -eq 0 ]]; then
+    ps -ef | grep "[r]fcomm0" | awk '{print $2}' | while read pid; do
+      echo "Killing rfcomm process: $pid"
+      kill $pid
+    done
+
+    echo -e "\n${YELLOW}Wait 30 seconds before reconnecting over Bluetooth${NC}\n"
+  fi
+}
+
+if [[ $EUID -ne 0 ]]; then
+    echo "This script must be run as root!"
+    exit 1
+fi
+
+stop_all_bt_services

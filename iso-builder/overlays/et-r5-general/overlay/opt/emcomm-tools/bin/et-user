@@ -1,0 +1,207 @@
+#!/bin/bash
+#
+# Author : Gaston Gonzalez
+# Date   : 25 October 2024
+# Updated: 4 November 2024 
+# Purpose: Set user-specific settings for EmComm Tools.
+#
+# Modified by: Sylvain Deguire - VA2OPS
+# Date       : 16 November 2025
+# Changes    : Added bilingual French/English support and password security improvements
+#
+# Modified by: Sylvain Deguire - VA2OPS
+# Date       : 1 December 2025
+# Changes    : Added PostgreSQL user creation with superuser rights
+#
+. /opt/emcomm-tools/bin/et-common
+
+USER_CONF=~/.config/emcomm-tools/user.json
+
+#-----------------------------------------------------------
+# Function: create_postgres_user
+# Purpose : Create or update PostgreSQL user with superuser rights
+#           Uses callsign as username and Winlink password
+#-----------------------------------------------------------
+create_postgres_user() {
+    local callsign="${1,,}"  # lowercase for PostgreSQL username
+    local password="$2"
+    local lang="$3"
+    
+    # Skip if PostgreSQL is not installed or not running
+    if ! command -v psql &> /dev/null; then
+        return 0
+    fi
+    
+    if ! systemctl is-active --quiet postgresql; then
+        if [ "$lang" == "fr" ]; then
+            echo "Note: PostgreSQL n'est pas en cours d'exécution. L'utilisateur sera créé au prochain démarrage."
+        else
+            echo "Note: PostgreSQL is not running. User will be created on next startup."
+        fi
+        return 0
+    fi
+    
+    # Validate inputs
+    if [ -z "$callsign" ] || [ "$callsign" == "null" ]; then
+        return 0
+    fi
+    
+    if [ -z "$password" ] || [ "$password" == "null" ]; then
+        if [ "$lang" == "fr" ]; then
+            echo "Note: Mot de passe requis pour créer l'utilisateur PostgreSQL."
+        else
+            echo "Note: Password required to create PostgreSQL user."
+        fi
+        return 0
+    fi
+    
+    # Create or update PostgreSQL user with superuser rights
+    sudo -u postgres psql -q -c "DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${callsign}') THEN
+            CREATE USER ${callsign} WITH PASSWORD '${password}' SUPERUSER CREATEDB CREATEROLE;
+        ELSE
+            ALTER USER ${callsign} WITH PASSWORD '${password}' SUPERUSER CREATEDB CREATEROLE;
+        END IF;
+    END \$\$;" 2>/dev/null
+    
+    # Create user's personal database if not exists
+    sudo -u postgres psql -q -tc "SELECT 1 FROM pg_database WHERE datname = '${callsign}'" 2>/dev/null | grep -q 1 || \
+        sudo -u postgres createdb -O "${callsign}" "${callsign}" 2>/dev/null
+    
+    # Grant access to shared emcomm database if it exists
+    sudo -u postgres psql -q -tc "SELECT 1 FROM pg_database WHERE datname = 'emcomm'" 2>/dev/null | grep -q 1 && \
+        sudo -u postgres psql -q -c "GRANT ALL PRIVILEGES ON DATABASE emcomm TO ${callsign};" 2>/dev/null
+    
+    if [ "$lang" == "fr" ]; then
+        echo "Utilisateur PostgreSQL '${callsign}' configuré avec droits superutilisateur."
+    else
+        echo "PostgreSQL user '${callsign}' configured with superuser rights."
+    fi
+}
+
+#-----------------------------------------------------------
+# Main script
+#-----------------------------------------------------------
+
+if [ ! -f ${USER_CONF} ]; then
+    mkdir -p $(dirname ${USER_CONF})
+    cp /etc/skel/.config/emcomm-tools/user.json ${USER_CONF}
+fi
+
+# Read current language (default to English if not set)
+LANGUAGE=$(jq -r '.language // "en"' ${USER_CONF})
+
+# STEP 1: Ask for interface language FIRST
+echo ""
+echo "EmComm menu language / Langue du menu EmComm:"
+read -p "(E)nglish or (F)rançais [${LANGUAGE}]: " lang_input
+lang_input=${lang_input:-$LANGUAGE}
+
+# Normalize input
+case "${lang_input,,}" in
+    f|fr|french|français)
+        LANGUAGE="fr"
+        ;;
+    e|en|english|anglais)
+        LANGUAGE="en"
+        ;;
+    *)
+        LANGUAGE="en"  # Default to English
+        ;;
+esac
+
+# Read other current values
+CALLSIGN=$(jq -r '.callsign' ${USER_CONF})
+GRID=$(jq -r '.grid' ${USER_CONF})
+WINLINK_PASSWORD=$(jq -r '.winlinkPasswd' ${USER_CONF})
+
+# Check password status for secure display
+if [ "$WINLINK_PASSWORD" == "null" ] || [ -z "$WINLINK_PASSWORD" ]; then
+    PASSWORD_STATUS="not set"
+    PASSWORD_STATUS_FR="non défini"
+else
+    PASSWORD_STATUS="***configured***"
+    PASSWORD_STATUS_FR="***configuré***"
+fi
+
+# STEP 2: Display prompts in selected language
+if [ "$LANGUAGE" == "fr" ]; then
+    # French prompts
+    echo ""
+    echo "Configuration actuelle:"
+    echo "  Indicatif: ${CALLSIGN}"
+    echo "  Grille Maidenhead: ${GRID}"
+    echo "  Mot de passe Winlink: ${PASSWORD_STATUS_FR}"
+    echo ""
+
+    read -p "Indicatif [${CALLSIGN}]: " input
+    CALLSIGN=${input:-$CALLSIGN}
+
+    read -p "Grille Maidenhead [${GRID}]: " input
+    GRID=${input:-$GRID}
+
+    read -s -p "Mot de passe Winlink [${PASSWORD_STATUS_FR}]: " input
+    WINLINK_PASSWORD=${input:-$WINLINK_PASSWORD}
+    echo ""
+
+    echo ""
+    echo "Nouvelle configuration:"
+    echo "  Langue: Français"
+    echo "  Indicatif: ${CALLSIGN}"
+    echo "  Grille Maidenhead: ${GRID}"
+    echo "  Mot de passe Winlink: ${PASSWORD_STATUS_FR}"
+    echo ""
+
+    read -p "Sauvegarder la configuration? (o/n): " confirm
+    confirm_yes="o"
+    saved_msg="Configuration sauvegardée."
+    not_saved_msg="Configuration non sauvegardée."
+else
+    # English prompts
+    echo ""
+    echo "Current configuration:"
+    echo "  Callsign: ${CALLSIGN}"
+    echo "  Maidenhead Grid: ${GRID}"
+    echo "  Winlink Password: ${PASSWORD_STATUS}"
+    echo ""
+
+    read -p "Callsign [${CALLSIGN}]: " input
+    CALLSIGN=${input:-$CALLSIGN}
+
+    read -p "Maidenhead Grid [${GRID}]: " input
+    GRID=${input:-$GRID}
+
+    read -s -p "Winlink Password [${PASSWORD_STATUS}]: " input
+    WINLINK_PASSWORD=${input:-$WINLINK_PASSWORD}
+    echo ""
+
+    echo ""
+    echo "New configuration:"
+    echo "  Language: English"
+    echo "  Callsign: ${CALLSIGN}"
+    echo "  Maidenhead Grid: ${GRID}"
+    echo "  Winlink Password: ${PASSWORD_STATUS}"
+    echo ""
+
+    read -p "Save configuration? (y/n): " confirm
+    confirm_yes="y"
+    saved_msg="Configuration saved."
+    not_saved_msg="Configuration not saved."
+fi
+
+# STEP 3: Save with language field included
+if [ "$confirm" == "$confirm_yes" ]; then
+    jq --arg language "$LANGUAGE" \
+       --arg callsign "$CALLSIGN" \
+       --arg grid "$GRID" \
+       --arg winlinkPasswd "$WINLINK_PASSWORD" \
+       '.language = $language | .callsign = $callsign | .grid = $grid | .winlinkPasswd = $winlinkPasswd' \
+       ${USER_CONF} > ${USER_CONF}.tmp && mv ${USER_CONF}.tmp ${USER_CONF}
+    echo "$saved_msg"
+    
+    # Create/update PostgreSQL user
+    create_postgres_user "$CALLSIGN" "$WINLINK_PASSWORD" "$LANGUAGE"
+else
+    echo "$not_saved_msg"
+fi

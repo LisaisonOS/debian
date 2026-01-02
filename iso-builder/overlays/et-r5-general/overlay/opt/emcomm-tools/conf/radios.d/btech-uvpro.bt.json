@@ -1,0 +1,13 @@
+{
+  "id": "btech-uvpro",
+  "vendor": "BTECH",
+  "model": "UV PRO (BT)",
+  "bluetooth": {
+    "mac": ""
+  },
+  "notes": [
+    "Menu > General Settings > KISS TNC > Enable KISS TNC = checked"
+  ],
+  "fieldNotes": [
+  ]
+}

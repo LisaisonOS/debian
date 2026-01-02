@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# Author  : Gaston Gonzalez
+# Date    : 7 June 2025
+# Purpose : Wrapper script around dump1090
+#
+# Preconditions:
+# 1. RTL-SDR v2 is connected and detected
+#
+# Postconditions:
+# 1. dump1099 map is updated with your position if available
+# 2. dump1099 is launched with network and HTTP server support
+
+source /opt/emcomm-tools/bin/et-common
+
+DUMP1090_CONF_DIR="${HOME}/.local/share/emcomm-tools/dump1090"
+DUMP1090_MAP_HTML="${DUMP1090_CONF_DIR}/gmap.html"
+
+exit_if_no_sdr
+
+if [[ ! -e ${DUMP1090_MAP_HTML} ]]; then
+  et-log "Map HTML not found: ${DUMP1090_MAP_HTML}"
+  notify-user "Map HTML not found: ${DUMP1090_MAP_HTML}"
+  exit 1
+fi
+
+CWD_DIR=$(pwd)
+
+cd ${DUMP1090_CONF_DIR}
+
+MY_LAT_LON=$(et-system-info et-gps)
+if [[ $? -eq 0 ]]; then
+  if echo "${MY_LAT_LON}" | grep -Eq '^[-+]?[0-9]+(\.[0-9]+)?\s*,\s*[-+]?[0-9]+(\.[0-9]+)?$'; then
+    LAT=$(echo ${MY_LAT_LON} | cut -d "," -f1)
+    LON=$(echo ${MY_LAT_LON} | cut -d "," -f2)
+    ZOOM=10
+
+    sed -i "s/CenterLat=[^;]*;/CenterLat=${LAT};/g" ${DUMP1090_MAP_HTML}
+    sed -i "s/CenterLon=[^;]*;/CenterLon=${LON};/g" ${DUMP1090_MAP_HTML}
+    sed -i "s/setView(\[.*\], *[0-9]*);/setView([${LAT}, ${LON}], ${ZOOM});/" ${DUMP1090_MAP_HTML}
+
+    et-log "Updated map center with your current location."
+  fi
+fi
+
+CMD="dump1090 --net --net-http-port 1090"
+et-log "Starting dump1090 in ${DUMP1090_CONF_DIR} with: ${CMD}"
+
+${CMD} 
+
+if [[ $? -ne 0 ]]; then
+  et-log "Error starting dump1090."
+fi
+
+cd ${CWD_DIR}
