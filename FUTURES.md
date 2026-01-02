@@ -1,10 +1,26 @@
 # EmComm-Tools OS - Debian Edition
 
-## Vision and Philosophy
+## Vision et Philosophie / Vision and Philosophy
 
 This document outlines the future direction of EmComm-Tools OS Debian Edition, a fork of the original EmComm-Tools OS Community project by Gaston Gonzalez (KT7RUN / TheTechPrepper).
 
 **Maintainer:** Sylvain Deguire (VA2OPS)
+
+### The Ham Radio Spirit
+
+Ham radio has always been about community, sharing knowledge, and helping each other. Most of us are part of a club or community where we share our experiences, learn from one another, and build together.
+
+This project was born from that spirit.
+
+The goal of this "Vanilla" EmComm-Tools Debian Edition is to create a **foundation that can be reused and personalized** by:
+- **Radio clubs** wanting their own branded EmComm solution
+- **Regional groups** needing specific language or regulatory adaptations
+- **Emergency organizations** requiring customized deployment configurations
+- **Individual operators** who want to build upon a solid, tested base
+
+This isn't meant to be a closed, finished product. It's a starting point - a vanilla base that you can flavor to your own needs. Fork it, customize it, make it yours. That's the ham radio way.
+
+*Share the knowledge. Build the community. 73.*
 
 ---
 
