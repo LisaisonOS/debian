@@ -6,6 +6,22 @@ Ce document décrit l'orientation future d'EmComm-Tools OS Édition Debian, un f
 
 **Mainteneur :** Sylvain Deguire (VA2OPS)
 
+### L'Esprit Radioamateur
+
+La radio amateur a toujours été une affaire de communauté, de partage des connaissances, et d'entraide. La plupart d'entre nous font partie d'un club ou d'une communauté où nous partageons nos expériences, apprenons les uns des autres, et construisons ensemble.
+
+Ce projet est né de cet esprit.
+
+L'objectif de cette édition « Vanilla » EmComm-Tools Debian est de créer une **fondation réutilisable et personnalisable** par :
+- **Les clubs radio** voulant leur propre solution EmComm personnalisée
+- **Les groupes régionaux** nécessitant des adaptations linguistiques ou réglementaires spécifiques
+- **Les organisations d'urgence** requérant des configurations de déploiement personnalisées
+- **Les opérateurs individuels** qui veulent construire sur une base solide et testée
+
+Ceci n'est pas destiné à être un produit fermé et fini. C'est un point de départ - une base vanilla que vous pouvez adapter à vos besoins. Forkez-le, personnalisez-le, faites-en le vôtre. C'est ça, l'esprit radioamateur.
+
+*Partagez les connaissances. Bâtissez la communauté. 73.*
+
 ---
 
 ## Pourquoi Debian plutôt qu'Ubuntu ?
