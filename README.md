@@ -28,7 +28,7 @@ Fork d'EmComm-Tools OS Community par TheTechPrepper (KT7RUN).
 
 **Mainteneur :** Sylvain Deguire (VA2OPS)
 
-📖 [Documentation](FUTURES-FR.md)
+📖 [Documentation](FUTURES_fr.md)
 
 💾 [Téléchargements ISO](https://sourceforge.net/p/emcomm-tools/)
 
