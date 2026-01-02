@@ -187,7 +187,7 @@ This is an open-source project. Contributions, bug reports, and feature requests
 
 **Website:** [emcomm-tools.ca](https://emcomm-tools.ca) | [emcomm-tools.com](https://emcomm-tools.com)
 
-**Contact:** VA2OPS
+**Contact:** info@emcomm-tools.ca
 
 ---
 
