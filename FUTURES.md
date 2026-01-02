@@ -1,6 +1,6 @@
 # EmComm-Tools OS - Debian Edition
 
-## Vision et Philosophie / Vision and Philosophy
+## Vision and Philosophy
 
 This document outlines the future direction of EmComm-Tools OS Debian Edition, a fork of the original EmComm-Tools OS Community project by Gaston Gonzalez (KT7RUN / TheTechPrepper).
 
