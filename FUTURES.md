@@ -177,42 +177,6 @@ For advanced users: **Ventoy** - Install it once on your USB drive, then simply 
 
 ---
 
-## Roadmap / Feuille de Route
-
-### Phase 1: Foundation (Current)
-
-- [x] Migration from Ubuntu to Debian Stable
-- [x] Pure `live-build` workflow (replacing Cubic)
-- [x] Wine32 environment ready for VARA HF/FM and VarAC
-- [x] First-boot VARA/VarAC installation wizard
-- [x] Support for restoring Wine backups from Ubuntu/TTP version
-- [x] PostgreSQL and MySQL for BBS server applications
-- [x] Bilingual management scripts (FR/EN)
-- [x] WSJTX integration for FT8/FT4
-
-### Phase 2: Enhanced Digital Modes (Planned)
-
-- [ ] Improved VARA integration with automatic audio routing
-- [ ] JS8Call message templates for EmComm operations
-- [ ] pat-winlink form templates for Canadian EmComm
-- [ ] Tactical Traffic Planner (TTP) integration
-
-### Phase 3: Offline Capabilities (Planned)
-
-- [ ] Expanded offline map coverage
-- [ ] Offline ham radio documentation (ARRL Handbook excerpts where permitted)
-- [ ] Local AI assistant integration (RAG-based)
-- [ ] Mesh networking support (Meshtastic integration)
-
-### Phase 4: Field Deployment (Planned)
-
-- [ ] Power management optimization for Toughpads
-- [ ] Quick-deploy scripts for EmComm exercises
-- [ ] Integration with Canadian ARES/CANWARN procedures
-- [ ] Multi-language support expansion (Indigenous languages for remote communities)
-
----
-
 ## Contributing
 
 This is an open-source project. Contributions, bug reports, and feature requests are welcome.
