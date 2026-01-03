@@ -8,6 +8,11 @@
 # This script is autonomous from et-mode to avoid conflicts with TTP updates.
 #
 
+# Ensure PATH and WINEPREFIX are set (needed when launched from dashboard)
+export PATH="/opt/emcomm-tools/bin:/usr/local/bin:$PATH"
+source /etc/environment 2>/dev/null || true
+export WINEPREFIX="$HOME/.wine32"
+
 # Source common functions
 . /opt/emcomm-tools/bin/et-common
 

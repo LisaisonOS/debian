@@ -3,7 +3,11 @@
 # Author  : Gaston Gonzalez
 # Date    : 17 December 2024
 # Updated : 15 March 2025
-# Purpose : Wrapper script for starting JS8Call with PnP support
+# Purpose : Wrapper script for starting QtTermTCP with PnP support
+#
+# Modified by: Sylvain Deguire (VA2OPS)
+# Date       : January 2026
+# Changes    : Fixed QtTermTCP path from /usr/bin to /usr/local/bin
 #
 # Preconditions
 # 1. Supported radio and audio interface are connected and properly detected
@@ -19,7 +23,7 @@ CONF_FILE="${CONF_DIR}/QtTermTCP.ini"
 
 usage() {
   echo "usage: $(basename $0) <command>"
-  echo "  start           - Update config and start JS8Call"
+  echo "  start           - Update config and start QtTermTCP"
   echo "  update-config   - Update config"
 }
 
@@ -40,7 +44,7 @@ start() {
 
   cd ${CONF_DIR}
 
-  update-config && /usr/bin/QtTermTCP
+  update-config && /usr/local/bin/QtTermTCP
 
   cd ${CWD_DIR}
 }

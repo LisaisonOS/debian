@@ -13,6 +13,10 @@
 # Date       : 1 December 2025
 # Changes    : Added PostgreSQL user creation with superuser rights
 #
+# Modified by: Sylvain Deguire - VA2OPS
+# Date       : January 2026
+# Changes    : Fixed password status display after user input, fixed NOPASS detection
+#
 . /opt/emcomm-tools/bin/et-common
 
 USER_CONF=~/.config/emcomm-tools/user.json
@@ -145,6 +149,11 @@ if [ "$LANGUAGE" == "fr" ]; then
     WINLINK_PASSWORD=${input:-$WINLINK_PASSWORD}
     echo ""
 
+    # Update password status after user input
+    if [ -n "$input" ]; then
+        PASSWORD_STATUS_FR="***sera défini***"
+    fi
+
     echo ""
     echo "Nouvelle configuration:"
     echo "  Langue: Français"
@@ -175,6 +184,11 @@ else
     read -s -p "Winlink Password [${PASSWORD_STATUS}]: " input
     WINLINK_PASSWORD=${input:-$WINLINK_PASSWORD}
     echo ""
+
+    # Update password status after user input
+    if [ -n "$input" ]; then
+        PASSWORD_STATUS="***will be set***"
+    fi
 
     echo ""
     echo "New configuration:"
