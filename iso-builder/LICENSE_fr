@@ -1,0 +1,42 @@
+Licence MIT
+
+Copyright (c) 2025 Sylvain Deguire (VA2OPS)
+
+Basé sur EmComm-Tools OS par Gaston Gonzalez (KT7RUN)
+https://github.com/thetechprepper/emcomm-tools-os-community
+
+L'autorisation est accordée, gratuitement, à toute personne obtenant une copie
+de ce logiciel et des fichiers de documentation associés (le « Logiciel »), de
+traiter le Logiciel sans restriction, notamment les droits d'utiliser, copier,
+modifier, fusionner, publier, distribuer, sous-licencier et/ou vendre des
+copies du Logiciel, et de permettre aux personnes à qui le Logiciel est fourni
+de le faire, sous réserve des conditions suivantes :
+
+L'avis de copyright ci-dessus et cet avis d'autorisation doivent être inclus
+dans toutes les copies ou portions substantielles du Logiciel.
+
+LE LOGICIEL EST FOURNI « TEL QUEL », SANS GARANTIE D'AUCUNE SORTE, EXPRESSE OU
+IMPLICITE, Y COMPRIS, MAIS SANS S'Y LIMITER, LES GARANTIES DE QUALITÉ MARCHANDE,
+D'ADÉQUATION À UN USAGE PARTICULIER ET D'ABSENCE DE CONTREFAÇON. EN AUCUN CAS,
+LES AUTEURS OU LES DÉTENTEURS DU COPYRIGHT NE POURRONT ÊTRE TENUS RESPONSABLES
+DE TOUTE RÉCLAMATION, DOMMAGE OU AUTRE RESPONSABILITÉ, QUE CE SOIT DANS LE CADRE
+D'UN CONTRAT, D'UN DÉLIT OU AUTREMENT, DÉCOULANT DE, OU EN RELATION AVEC LE
+LOGICIEL OU L'UTILISATION OU D'AUTRES TRANSACTIONS DANS LE LOGICIEL.
+
+---
+
+Logiciels tiers
+
+Cette distribution inclut les logiciels tiers suivants :
+
+- VARA HF/FM/SAT par EA5HVK (Propriétaire - Gratuit pour usage amateur)
+- VarAC par Irad Deutsch 4Z1AC (Propriétaire - Gratuit pour usage amateur)
+- Winlink par Winlink Development Team (Propriétaire - Gratuit pour usage amateur)
+- Wine par WineHQ (LGPL)
+- Navit (GPL v2)
+- fldigi, flmsg, flamp par W1HKJ (GPL v3)
+- JS8Call par KN4CRD (GPL v3)
+- WSJT-X par K1JT (GPL v3)
+- Debian GNU/Linux (Diverses licences open source)
+
+Veuillez consulter la licence respective de chaque logiciel pour les conditions d'utilisation.
