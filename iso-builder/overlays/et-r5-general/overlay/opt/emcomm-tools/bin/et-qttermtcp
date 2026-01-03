@@ -40,7 +40,7 @@ start() {
 
   cd ${CONF_DIR}
 
-  update-config && /usr/local/bin/QtTermTCP
+  update-config && /usr/bin/QtTermTCP
 
   cd ${CWD_DIR}
 }

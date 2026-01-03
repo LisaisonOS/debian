@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=fldigi
+Comment=fldigi Digital Modes
+Exec=/opt/emcomm-tools/bin/et-fldigi start
+Icon=fldigi
+Terminal=false
+Type=Application
+Categories=HamRadio;

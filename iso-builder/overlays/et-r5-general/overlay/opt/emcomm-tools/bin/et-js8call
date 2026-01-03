@@ -44,8 +44,7 @@ start() {
   /opt/emcomm-tools/bin/et-kill-all && update-config && /usr/bin/js8call &
 
   if [ ! -e /dev/et-gps ]; then
-    notify-send -u critical -i \
-      /usr/share/icons/Yaru/48x48/status/dialog-information.png \
+    notify-send -u critical \
       "No GPS. Ensure your time is accurate when JS8 starts."
   fi
 

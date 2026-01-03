@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=FT8 (WSJT-X)
+Comment=WSJT-X for FT8/FT4 - Check propagation
+Exec=/opt/emcomm-tools/bin/et-ft8 start
+Icon=/usr/share/pixmaps/wsjtx_icon.png
+Terminal=false
+Type=Application
+Categories=HamRadio;

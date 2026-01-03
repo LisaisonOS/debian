@@ -1,0 +1,45 @@
+#!/bin/bash
+echo "Configuring PostgreSQL for EmComm-Tools..."
+
+# Fix PostgreSQL port to 5432 (default)
+sed -i 's/^port = 5433/port = 5432/' /etc/postgresql/*/main/postgresql.conf 2>/dev/null || true
+
+# Enable services
+systemctl enable postgresql || true
+systemctl enable inetutils-inetd || true
+
+# Create init script for first boot
+cat > /opt/emcomm-tools/bin/init-postgres.sh << 'INITPG'
+#!/bin/bash
+# First-boot PostgreSQL initialization
+until sudo -u postgres pg_isready; do
+    sleep 1
+done
+sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'emcomm'" | grep -q 1 || \
+    sudo -u postgres createdb emcomm
+echo "PostgreSQL initialized for EmComm-Tools"
+INITPG
+chmod +x /opt/emcomm-tools/bin/init-postgres.sh
+
+# Create systemd oneshot service for first-boot initialization
+cat > /etc/systemd/system/emcomm-postgres-init.service << 'PGSVC'
+[Unit]
+Description=EmComm-Tools PostgreSQL Initialization
+After=postgresql.service
+Requires=postgresql.service
+ConditionPathExists=!/var/lib/emcomm-tools/.postgres-initialized
+
+[Service]
+Type=oneshot
+ExecStart=/opt/emcomm-tools/bin/init-postgres.sh
+ExecStartPost=/bin/mkdir -p /var/lib/emcomm-tools
+ExecStartPost=/bin/touch /var/lib/emcomm-tools/.postgres-initialized
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+PGSVC
+
+systemctl enable emcomm-postgres-init.service || true
+
+echo "PostgreSQL configuration complete"

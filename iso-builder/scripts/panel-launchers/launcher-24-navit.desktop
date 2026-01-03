@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Navit
+Name[fr]=Navigation GPS
+Comment=Offline GPS Navigation
+Comment[fr]=Navigation GPS hors-ligne
+Exec=navit
+Icon=navit
+Terminal=false
+Type=Application
+Categories=Navigation;

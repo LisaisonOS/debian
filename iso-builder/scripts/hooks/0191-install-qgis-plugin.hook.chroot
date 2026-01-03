@@ -1,0 +1,15 @@
+#!/bin/bash
+echo "Installing QGIS PlaceMarker plugin..."
+
+PLUGIN_URL="https://plugins.qgis.org/plugins/PlaceMarker/version/1.3.0/download/"
+PLUGIN_DIR="/etc/skel/.local/share/QGIS/QGIS3/profiles/default/python/plugins"
+
+mkdir -p "$PLUGIN_DIR"
+curl -s -L -o /tmp/PlaceMarker.zip "$PLUGIN_URL"
+unzip -o /tmp/PlaceMarker.zip -d "$PLUGIN_DIR"
+rm /tmp/PlaceMarker.zip
+
+echo "Installing npm serve for qgis-web-app..."
+npm install -g serve || true
+
+echo "QGIS plugin installation complete"

@@ -2,17 +2,19 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2025
+# Modified: January 2026
 # Purpose : Wrapper script for starting VarAC with PnP support
 #
-# Based on et-js8call by Gaston Gonzalez
+# VarAC is a Windows app running under Wine.
+# Wine handles audio through Wine/ALSA - no et-audio checks needed!
+# VARA modem handles CAT/PTT directly - no rigctld needed!
 #
 # Preconditions
-# 1. Supported radio and audio interface are connected and properly detected
-# 2. VARA modem and VarAC are installed in Wine prefix
+# 1. VARA modem and VarAC are installed in Wine prefix
 #
 # Postconditions
 # 1. Stop all running EmComm Tools modes
-# 2. VarAC configuration updated (callsign, grid, audio)
+# 2. VarAC configuration updated (callsign, grid)
 # 3. VARA modem started
 # 4. VarAC started
 
@@ -128,16 +130,6 @@ show_status() {
   fi
   
   echo ""
-  
-  # Show audio status
-  if [ -e /dev/et-audio ]; then
-    ET_DEVICE=$(udevadm info /dev/et-audio 2>/dev/null | grep ET_DEVICE | cut -d"=" -f2)
-    echo "Audio Device: ${ET_DEVICE:-Connected}"
-  else
-    echo "Audio Device: Not connected"
-  fi
-  
-  echo ""
 }
 
 start() {
@@ -147,33 +139,19 @@ start() {
     exit 1
   fi
 
-  # Ensure that we have a pre-initialized CAT control connection for select radios
-  prime_rigctld_conn
-
-  # Kill other modes, update config, start VARA then VarAC
-  /opt/emcomm-tools/bin/et-kill-all && update-config && start_vara_and_varac &
-
-  if [ ! -e /dev/et-gps ]; then
-    notify-send -u critical -i \
-      /usr/share/icons/Yaru/48x48/status/dialog-information.png \
-      "No GPS. Ensure your time is accurate."
-  fi
+  # Kill other modes, update config, and start - ALL BACKGROUNDED
+  # The & at the end backgrounds the entire chain so et-kill-all doesn't terminate us
+  /opt/emcomm-tools/bin/et-kill-all && update-config && start_varac &
 
 }
 
-start_vara_and_varac() {
-  # Start VARA modem first if it exists
-  if [ -f "${VARA_EXE}" ]; then
-    et-log "Starting VARA modem..."
-    cd "${VARA_DIR}"
-    wine "${VARA_EXE}" &
-    sleep 3  # Give VARA time to start
-  fi
-  
-  # Start VarAC
+start_varac() {
+  # Start VarAC (it will start VARA modem automatically)
   et-log "Starting VarAC..."
   cd "${VARAC_DIR}"
   wine "${VARAC_EXE}" &
+  
+  notify_user "VarAC started"
 }
 
 update-config() {
@@ -218,34 +196,6 @@ update-config() {
       et-log "Updated VarAC configuration with callsign '${CALLSIGN}' and grid: '${GRID}'"
     else
       et-log "VarAC.ini not found. Will be created on first run."
-    fi
-
-    # 1. Check if the symlink was created by the udev rules
-    if [ -e /dev/et-audio ]; then
-
-       # 2. Check that this device was properly tagged with the ET_AUDIO env variable with a udev rule
-       APLAY_OUT=$(arecord -l | grep ET_AUDIO)
-       if [ $? -eq 0 ]; then
-         AUDIO_CARD=$(echo $APLAY_OUT | cut -d":" -f1 | awk '{print $2}')
-         AUDIO_DEVICE=$(echo $APLAY_OUT | cut -d"," -f2 | cut -d":" -f1 | awk '{print $2}')
-
-         et-log "Using audio card ${AUDIO_CARD}, device ${AUDIO_DEVICE} for VarAC/VARA"
-
-         # Configure ALSA settings for sound card
-         /opt/emcomm-tools/bin/et-audio update-config
-
-         # Note: VarAC/VARA audio is configured through Wine/ALSA
-         # The et-audio script sets up the ALSA mixer levels
-
-       else
-         et-log "No ET_AUDIO device detected."
-         notify_user "Can't start VarAC. No ET_AUDIO device detected."
-         exit 1
-       fi
-    else
-      et-log "No ET_AUDIO device plugged in."
-      notify_user "Can't start VarAC. No supported audio device plugged in."
-      exit 1
     fi
 
 }

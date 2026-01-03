@@ -32,7 +32,7 @@ notify_user() {
 }
 
 start() {
-  /opt/emcomm-tools/bin/et-kill-all && update-config && /usr/local/bin/fldigi &
+  /opt/emcomm-tools/bin/et-kill-all && update-config && /usr/bin/fldigi &
 }
 
 update-config () {
@@ -176,7 +176,7 @@ update-config () {
     et-log "Updating settings for NBEMS..."
 
     sed -i "s|^<OPEN_NBEMS_FOLDER>.*|<OPEN_NBEMS_FOLDER>1</OPEN_NBEMS_FOLDER>|" ${FLDIGI_CONF_FILE}
-    sed -i "s|^<FLMSG_PATHNAME>.*|<FLMSG_PATHNAME>/usr/local/bin/flmsg</FLMSG_PATHNAME>|" ${FLDIGI_CONF_FILE}
+    sed -i "s|^<FLMSG_PATHNAME>.*|<FLMSG_PATHNAME>/usr/bin/flmsg</FLMSG_PATHNAME>|" ${FLDIGI_CONF_FILE}
 }
 
 case $1 in

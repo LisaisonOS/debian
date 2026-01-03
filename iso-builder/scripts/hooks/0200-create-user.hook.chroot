@@ -1,0 +1,14 @@
+#!/bin/bash
+echo "Creating live user account..."
+
+# Create user with all necessary groups
+useradd -m -s /bin/bash -G sudo,cdrom,floppy,audio,video,plugdev,users,dialout,netdev,bluetooth,et-data user
+
+# Set password to "live"
+echo "user:live" | chpasswd
+
+# Allow sudo without password for live session
+echo "user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/user-nopasswd
+chmod 440 /etc/sudoers.d/user-nopasswd
+
+echo "User 'user' created with password 'live'"

@@ -1,0 +1,29 @@
+#!/bin/bash
+echo "Installing Paracon BBS client..."
+
+VERSION="latest"
+APP="paracon"
+PYZ_FILE="paracon.pyz"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
+LINK_PATH="/opt/${APP}"
+
+URL="https://github.com/bpqpkt/paracon/releases/latest/download/${PYZ_FILE}"
+
+mkdir -p ${INSTALL_BIN_DIR}
+curl -s -L -o ${INSTALL_BIN_DIR}/${PYZ_FILE} --fail ${URL}
+chmod 755 ${INSTALL_BIN_DIR}/${PYZ_FILE}
+
+# Create wrapper script
+cat > ${INSTALL_BIN_DIR}/paracon << 'WRAPPER'
+#!/bin/bash
+python3 /opt/paracon/bin/paracon.pyz "$@"
+WRAPPER
+chmod 755 ${INSTALL_BIN_DIR}/paracon
+
+[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+stow -v -d /opt paracon -t /usr/local
+
+echo "Paracon installation complete"

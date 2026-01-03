@@ -1,0 +1,39 @@
+#!/bin/bash
+echo "Installing VOACAP..."
+
+apt-get install -y gfortran
+
+APP="voacapl"
+VERSION="0.7.6"
+REPO="https://github.com/thetechprepper/voacapl"
+SRC_DIR="/opt/src"
+REPO_SRC_DIR="${SRC_DIR}/${APP}"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+LINK_PATH="/opt/${APP}"
+
+mkdir -p ${SRC_DIR}
+cd ${SRC_DIR}
+
+if [ ! -e ${REPO_SRC_DIR} ]; then
+    git clone ${REPO}
+fi
+
+cd ${REPO_SRC_DIR}
+autoreconf -f -i
+./configure --prefix=${INSTALL_DIR}
+make && make install
+
+# Patch prefix location
+sed -i 's|__PREFIX__|/opt/voacapl-0.7.6|' makeitshfbc
+
+# Create itshfbc data
+[ -e /root/itshfbc ] && rm -rf /root/itshfbc
+./makeitshfbc
+mv /root/itshfbc /etc/skel/
+
+[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+stow -v -d /opt ${APP} -t /usr/local
+
+echo "VOACAP installation complete"

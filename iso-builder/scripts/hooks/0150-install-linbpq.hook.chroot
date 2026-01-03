@@ -1,0 +1,33 @@
+#!/bin/bash
+echo "Installing LinBPQ..."
+
+BBS_HOME="/etc/skel/.local/share/emcomm-tools/bbs-server"
+BBS_HOME_FILES="${BBS_HOME}/Files"
+INSTALL_DIR="/opt/linbpq-latest"
+INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
+LINK_PATH="/opt/linbpq"
+
+# Create directories
+mkdir -p ${BBS_HOME_FILES}
+mkdir -p ${INSTALL_BIN_DIR}
+
+# Download HTML web interface
+echo "Downloading LinBPQ web interface..."
+cd ${BBS_HOME}
+curl -L -o HTMLPages.zip "http://www.cantab.net/users/john.wiseman/Downloads/Beta/HTMLPages.zip"
+unzip -o HTMLPages.zip
+rm -f HTMLPages.zip
+
+# Download LinBPQ binary
+echo "Downloading LinBPQ binary..."
+curl -L -o ${INSTALL_BIN_DIR}/linbpq "https://www.cantab.net/users/john.wiseman/Downloads/linbpq"
+chmod 755 ${INSTALL_BIN_DIR}/linbpq
+
+# Create symlink
+[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+# Stow it to /usr/local
+stow -v -d /opt linbpq -t /usr/local
+
+echo "LinBPQ installation complete"

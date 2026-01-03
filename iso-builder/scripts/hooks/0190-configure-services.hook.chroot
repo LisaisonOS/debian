@@ -1,0 +1,28 @@
+#!/bin/bash
+echo "Configuring services..."
+
+# Disable GPS auto-start (user will enable when needed)
+systemctl disable gpsd || true
+
+# Update AX.25 port permissions
+if [ -f /etc/ax25/axports ]; then
+    chgrp et-data /etc/ax25/axports
+    chmod 664 /etc/ax25/axports
+fi
+
+# Ensure maptool is in PATH (from navit package)
+if [ -f /usr/bin/maptool ]; then
+    echo "maptool found at /usr/bin/maptool"
+elif [ -f /usr/share/navit/maptool ]; then
+    ln -sf /usr/share/navit/maptool /usr/local/bin/maptool
+    echo "Created maptool symlink"
+fi
+
+# Find maptool wherever it might be
+MAPTOOL=$(find /usr -name "maptool" -type f 2>/dev/null | head -1)
+if [ -n "$MAPTOOL" ] && [ ! -f /usr/local/bin/maptool ]; then
+    ln -sf "$MAPTOOL" /usr/local/bin/maptool
+    echo "Created maptool symlink from $MAPTOOL"
+fi
+
+echo "Services configured"

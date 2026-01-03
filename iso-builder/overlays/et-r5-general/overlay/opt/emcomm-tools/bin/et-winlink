@@ -3,20 +3,26 @@
 # Author  : Gaston Gonzalez
 # Date    : 4 November 2024
 # Updated : 4 February 2025
-# Purpose : Wrapper script for starting YAAC with PnP support
+# Modified: Sylvain Deguire (VA2OPS) - January 2026
+# Purpose : Wrapper script for starting Pat Winlink with PnP support
+#
+# Changes: Added automatic browser launch after starting Pat HTTP server
 #
 # Preconditions:
 # 1. Supported radio and audio interface are connected and properly detected
 # 2. Appropriate modem is started: Dire Wolf (et-direwolf) or ARDOP (et-ardop). 
 #
 # Postconditions:
-# 1. Callsign, Winlink  password, and grid are updated are updated 
+# 1. Callsign, Winlink password, and grid are updated 
 # 2. pat http is started
+# 3. Browser opens automatically to Pat web interface
 
 source /opt/emcomm-tools/bin/et-common
 
 PAT_CONF_FILE=${HOME}/.config/pat/config.json
 PAT_CONF_FILE_TEMPLATE=/etc/skel/.config/pat/config.json
+PAT_PORT=8080
+PAT_URL="http://localhost:${PAT_PORT}"
 
 usage() {
   echo "usage: $(basename $0) <command>"
@@ -26,6 +32,7 @@ usage() {
   echo "    start-native-packet - Start Pat Winlink in native AX.25 packet mode"
   echo "    start-vara-fm       - Start Pat Winlink in VARA FM mode"
   echo "    start-vara-hf       - Start Pat Winlink in VARA HF mode"
+  echo "    stop                - Stop Pat Winlink"
 }
 
 if [ $# -ne 1 ]; then
@@ -38,6 +45,26 @@ notify_user() {
    -t 10000 \
    --app-name="EmComm Tools" \
    "$1"
+}
+
+open_browser() {
+  # Wait for Pat to be ready
+  sleep 2
+  
+  et-log "Opening browser to ${PAT_URL}..."
+  
+  # Try Min first (lightweight), then firefox-esr, then xdg-open
+  if command -v min &> /dev/null; then
+    min "${PAT_URL}" &
+  elif command -v firefox-esr &> /dev/null; then
+    firefox-esr "${PAT_URL}" &
+  elif command -v firefox &> /dev/null; then
+    firefox "${PAT_URL}" &
+  else
+    xdg-open "${PAT_URL}" &
+  fi
+  
+  notify_user "Pat Winlink started - Browser opened to ${PAT_URL}"
 }
 
 start_ardop() {
@@ -54,7 +81,8 @@ start_ardop() {
   CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
-  ${CMD}
+  ${CMD} &
+  open_browser
 }
 
 start_packet() {
@@ -71,7 +99,8 @@ start_packet() {
   CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
-  ${CMD}
+  ${CMD} &
+  open_browser
 }
 
 # Only the BTECH UV PRO is supported in this mode
@@ -79,8 +108,8 @@ start_native_packet() {
  
   BLUETOOTH_TNC_CHECK=$(ps -ef | grep "[r]fcomm connect")
   if [[ $? -ne 0 ]]; then
-    echo -e "${RED}Can't start Pat in native AX.25 packet mode."
-    echo -e "If you have a UV Pro, first run: ${YELLOW}et-uv-pro connect${NC}"
+    echo -e "Can't start Pat in native AX.25 packet mode."
+    echo -e "If you have a UV Pro, first run: et-uv-pro connect"
     exit 1
   fi
 
@@ -89,7 +118,8 @@ start_native_packet() {
   CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
-  ${CMD}
+  ${CMD} &
+  open_browser
 }
 
 start_vara_fm() {
@@ -99,7 +129,8 @@ start_vara_fm() {
   CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
-  ${CMD}
+  ${CMD} &
+  open_browser
 }
 
 start_vara_hf() {
@@ -109,7 +140,14 @@ start_vara_hf() {
   CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
-  ${CMD}
+  ${CMD} &
+  open_browser
+}
+
+stop() {
+  pkill -f "pat http"
+  notify_user "Pat Winlink stopped"
+  et-log "Pat Winlink stopped"
 }
 
 update_config () {
@@ -144,6 +182,7 @@ update_config () {
   esac
 
   et-log "Updating Pat configuration file: ${PAT_CONF_FILE}..."
+  mkdir -p $(dirname ${PAT_CONF_FILE})
   cp -v ${PAT_CONF_FILE_TEMPLATE} ${PAT_CONF_FILE}
 
   sed -i "s|{{ET_CALLSIGN}}|${CALLSIGN}|g" ${PAT_CONF_FILE}
@@ -166,6 +205,9 @@ case $1 in
     ;;
   start-vara-hf)
     start_vara_hf
+    ;;
+  stop)
+    stop
     ;;
   *)
     echo "Invalid command."

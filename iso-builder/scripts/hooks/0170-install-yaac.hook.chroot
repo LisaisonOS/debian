@@ -1,0 +1,21 @@
+#!/bin/bash
+echo "Installing YAAC..."
+
+VERSION="latest"
+ZIP_FILE="YAAC.zip"
+INSTALL_DIR="/opt/yaac-${VERSION}"
+LINK_PATH="/opt/yaac"
+
+URL="https://www.ka2ddo.org/ka2ddo/${ZIP_FILE}"
+echo "Downloading YAAC from ${URL}..."
+curl -s -L -o /tmp/${ZIP_FILE} --fail ${URL}
+
+mkdir -p ${INSTALL_DIR}
+cd ${INSTALL_DIR}
+unzip /tmp/${ZIP_FILE}
+rm -f /tmp/${ZIP_FILE}
+
+[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+echo "YAAC installation complete"

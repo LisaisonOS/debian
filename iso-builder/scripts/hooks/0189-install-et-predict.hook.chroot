@@ -1,0 +1,18 @@
+#!/bin/bash
+echo "Installing ET-Predict..."
+
+VERSION="1.2.0"
+APP="et-predict-app"
+JAR_FILE="${APP}.jar"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+LINK_PATH="/opt/${APP}"
+
+URL="https://github.com/thetechprepper/et-predict-app/releases/download/v${VERSION}/${JAR_FILE}"
+
+mkdir -p ${INSTALL_DIR}
+curl -s -L -o ${INSTALL_DIR}/${JAR_FILE} --fail ${URL}
+
+[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+echo "ET-Predict installation complete"

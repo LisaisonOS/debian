@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=JS8Call
+Comment=JS8Call Digital Mode
+Exec=/opt/emcomm-tools/bin/et-js8call start
+Icon=/usr/share/pixmaps/js8call_icon.png
+Terminal=false
+Type=Application
+Categories=HamRadio;

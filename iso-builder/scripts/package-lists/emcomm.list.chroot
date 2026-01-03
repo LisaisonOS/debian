@@ -1,0 +1,125 @@
+# Desktop Environment
+task-xfce-desktop
+lightdm
+
+# Live system (CRITICAL!)
+live-boot
+live-config
+live-config-systemd
+user-setup
+
+# Base Tools
+git
+curl
+wget
+jq
+dialog
+nano
+sudo
+build-essential
+cmake
+gpg
+imagemagick
+net-tools
+default-jdk
+openssh-server
+screen
+socat
+steghide
+xsel
+tree
+autoconf
+gettext
+pkg-config
+meld
+vim
+
+# Dev libraries
+libfltk1.3-dev
+libportaudio2
+libsamplerate0-dev
+libsndfile1-dev
+libudev-dev
+portaudio19-dev
+
+# GPS and time sync
+gpsd
+gpsd-clients
+gpsd-tools
+chrony
+at
+
+# AX.25 Packet Radio
+ax25-tools
+ax25-apps
+expect
+
+# Audio tools
+pavucontrol
+audacity
+ffmpeg
+sox
+
+# GIS tools
+gpsbabel
+gpsbabel-gui
+sqlite3
+qgis
+
+# Web browser
+firefox-esr
+
+# Wikipedia offline reader
+kiwix
+kiwix-tools
+
+# RF analysis
+splat
+
+# Node.js for mbtileserver serve
+npm
+
+# Build tools for VOACAP
+gfortran
+
+# BBS Server dependencies (PostgreSQL, inetd)
+postgresql
+postgresql-contrib
+inetutils-inetd
+
+# Wine
+wine
+wine64
+
+# winetricks dependencies
+cabextract
+zenity
+unzip
+p7zip-full
+
+# Ham Radio
+js8call
+wsjtx
+fldigi
+flrig
+direwolf
+libhamlib-utils
+conky-std
+
+# Bluetooth (Kenwood TH-D74/D75, BT serial, GPS, audio)
+bluez
+bluez-tools
+
+# LinBPQ dependencies
+ucspi-tcp
+stow
+
+# Map tools (navit and maptool - maptool is separate package!)
+navit
+navit-gui-gtk
+navit-graphics-gtk-drawing-area
+navit-gui-internal
+libcanberra-gtk3-dev
+maptool
+espeak
+osmium-tool

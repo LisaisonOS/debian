@@ -1,0 +1,13 @@
+#!/bin/bash
+dpkg --add-architecture i386
+apt-get update
+apt-get install -y wine32
+
+# LinBPQ 32-bit dependencies
+apt-get install -y \
+  libpcap0.8-dev:i386 \
+  libasound2-dev:i386 \
+  zlib1g:i386
+
+curl -o /usr/local/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
+chmod +x /usr/local/bin/winetricks

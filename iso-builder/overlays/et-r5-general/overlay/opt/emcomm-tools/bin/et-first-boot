@@ -35,18 +35,18 @@ fi
 clear
 
 # =============================================================================
-# Welcome Screen
+# Welcome Screen 
 # =============================================================================
 echo ""
 echo -e "${GREEN}╔═══════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║                                                               ║${NC}"
-echo -e "${GREEN}║          ${CYAN}EmComm-Tools OS - Initial Configuration${GREEN}            ║${NC}"
+echo -e "${GREEN}║   ${CYAN}EmComm-Tools OS - Initial Configuration${GREEN}                     ║${NC}"
 echo -e "${GREEN}║                                                               ║${NC}"
-echo -e "${GREEN}║   Welcome! This wizard will help you configure:              ║${NC}"
+echo -e "${GREEN}║   Welcome! This wizard will help you configure:               ║${NC}"
 echo -e "${GREEN}║                                                               ║${NC}"
-echo -e "${GREEN}║     1. User Settings (callsign, grid, Winlink password)      ║${NC}"
-echo -e "${GREEN}║     2. Radio Configuration (select your transceiver)         ║${NC}"
-echo -e "${GREEN}║     3. Offline Maps (optional - requires USB drive)          ║${NC}"
+echo -e "${GREEN}║     1. User Settings (callsign, grid, Winlink password)       ║${NC}"
+echo -e "${GREEN}║     2. Radio Configuration (select your transceiver)          ║${NC}"
+echo -e "${GREEN}║     3. Offline Maps (optional - requires USB drive)           ║${NC}"
 echo -e "${GREEN}║                                                               ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}"
 echo ""

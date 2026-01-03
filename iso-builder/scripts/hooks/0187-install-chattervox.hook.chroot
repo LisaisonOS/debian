@@ -1,0 +1,25 @@
+#!/bin/bash
+echo "Installing Chattervox..."
+
+VERSION="0.5.0"
+APP="chattervox"
+TARBALL="${APP}-${VERSION}-linux-x64.tar.gz"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+LINK_PATH="/opt/${APP}"
+
+URL="https://github.com/brannondorsey/chattervox/releases/download/v${VERSION}/${TARBALL}"
+
+mkdir -p /opt
+cd /opt
+curl -s -L -o ${TARBALL} --fail ${URL}
+tar -xzf ${TARBALL}
+mv chattervox-${VERSION}-linux-x64 ${INSTALL_DIR}
+rm -f ${TARBALL}
+
+[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+# Create symlink in /usr/local/bin
+ln -sf ${INSTALL_DIR}/chattervox /usr/local/bin/chattervox
+
+echo "Chattervox installation complete"
