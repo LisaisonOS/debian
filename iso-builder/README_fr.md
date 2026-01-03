@@ -102,12 +102,9 @@ et-mode        # Mode d'opération
 
 ## Crédits
 
-- **EmComm-Tools OS** par Gaston Gonzalez (KT7RUN)
-- **Debian ISO Builder** par Sylvain Deguire (VA2OPS)
+Ceci est un portage Debian de **EmComm-Tools OS**, créé à l'origine par Gaston Gonzalez (KT7RUN) pour Ubuntu.
 
-## Licence
-
-Voir [LICENSE](LICENSE) et [LICENSE_fr](LICENSE_fr) pour les détails.
+Adaptation Debian et constructeur ISO par Sylvain Deguire (VA2OPS).
 
 ---
 
