@@ -1,0 +1,186 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Direct shortcut to QtTermTCP with modem selector
+#           Bypasses et-mode main menu for quick access from dashboard
+#
+# This script is autonomous from et-mode to avoid conflicts with TTP updates.
+#
+
+# Source common functions
+. /opt/emcomm-tools/bin/et-common
+
+# Read user language preference
+USER_CONF=~/.config/emcomm-tools/user.json
+if [ -f ${USER_CONF} ]; then
+    LANGUAGE=$(jq -r '.language // "en"' ${USER_CONF})
+else
+    LANGUAGE="en"
+fi
+
+# Set language-specific strings
+if [ "$LANGUAGE" == "fr" ]; then
+    MODEM_MENU_TITLE="Sélectionner un modem pour QtTermTCP"
+    MODEM_1200_LABEL="1200 baud (par défaut pour VHF/UHF)"
+    MODEM_9600_LABEL="9600 baud (VHF/UHF)"
+    MODEM_300_LABEL="300 baud (HF)"
+    MODEM_VARA_FM_LABEL="VARA FM"
+    MODEM_VARA_HF_LABEL="VARA HF"
+    
+    NOTE_9600_TITLE="Note sur 9600 Baud"
+    NOTE_9600_MSG="9600 baud est supporté seulement sur certaines radios et nécessite généralement un câble spécial.\n\nN'oubliez pas de configurer les paramètres packet à 9600 sur la radio."
+    
+    MSG_NO_MODEM="Aucun modem sélectionné. Annulation."
+    MSG_USING_MODEM="Utilisation de"
+    MSG_AS_MODEM="comme modem."
+    MSG_STARTING="Démarrage de QtTermTCP..."
+    MSG_STOPPING="Arrêt des services en cours..."
+else
+    MODEM_MENU_TITLE="Select modem for QtTermTCP"
+    MODEM_1200_LABEL="1200 baud (default for VHF/UHF)"
+    MODEM_9600_LABEL="9600 baud (VHF/UHF)"
+    MODEM_300_LABEL="300 baud (HF)"
+    MODEM_VARA_FM_LABEL="VARA FM"
+    MODEM_VARA_HF_LABEL="VARA HF"
+    
+    NOTE_9600_TITLE="Note on 9600 Baud"
+    NOTE_9600_MSG="9600 baud is only supported on limited radios and typically requires a special cable.\n\nDon't forget to set the packet settings to 9600 on the radio."
+    
+    MSG_NO_MODEM="No modem selected. Cancelled."
+    MSG_USING_MODEM="Using"
+    MSG_AS_MODEM="as modem."
+    MSG_STARTING="Starting QtTermTCP..."
+    MSG_STOPPING="Stopping running services..."
+fi
+
+# Config files
+MODE_STATUS_FILE="${HOME}/.config/emcomm-tools/et-mode"
+QTTERMTCP_CONF_FILE="${HOME}/.config/QtTermTCP.ini"
+
+TIMEOUT=15
+INTERVAL=2
+
+# Functions
+exit_on_service_failure() {
+    local systemd_unit_name="$1"
+    systemctl is-active --user --quiet "${systemd_unit_name}"
+    if [ $? -ne 0 ]; then
+        et-log "Can't start mode. ${systemd_unit_name} failed to start."
+        exit 1
+    fi
+}
+
+start_and_wait_for_service() {
+    local systemd_unit_name="$1"
+    local elapsed=0
+
+    et-log "Starting ${systemd_unit_name}..."
+    systemctl --user start ${systemd_unit_name}
+
+    et-log "Waiting for ${systemd_unit_name} to become active..."
+
+    while ! systemctl is-active --user --quiet "${systemd_unit_name}"; do
+        sleep "$INTERVAL"
+        elapsed=$((elapsed + INTERVAL))
+        if [ "$elapsed" -ge "$TIMEOUT" ]; then
+            et-log "Timeout reached. ${systemd_unit_name} failed to start."
+            exit 1
+        fi
+    done
+
+    sleep 2
+    exit_on_service_failure ${systemd_unit_name}
+}
+
+start_and_wait_for_vara() {
+    local vara_cmd="$1"
+    local elapsed=0
+
+    et-log "Starting ${vara_cmd}..."
+    ${vara_cmd} &
+
+    et-log "Waiting for ${vara_cmd} to become active..."
+    
+    while true; do
+        CHECK_VARA=$(ps -ef | grep "[V]ARA")
+        if [ $? -eq 0 ]; then
+            break
+        fi  
+
+        sleep "$INTERVAL"
+        elapsed=$((elapsed + INTERVAL))
+        if [ "$elapsed" -ge "$TIMEOUT" ]; then
+            et-log "Timeout reached. VARA failed to start."
+            exit 1
+        fi
+    done
+}
+
+# Build modem menu
+term_mode=()
+term_mode+=("1200" "$MODEM_1200_LABEL")
+term_mode+=("9600" "$MODEM_9600_LABEL")
+term_mode+=("300" "$MODEM_300_LABEL")
+
+# Add VARA options if installed
+if [ -e "${HOME}/.wine32/drive_c/VARA FM/VARAFM.exe" ]; then
+    term_mode+=("vara-fm" "$MODEM_VARA_FM_LABEL")
+fi
+
+if [ -e "${HOME}/.wine32/drive_c/VARA/VARA.exe" ]; then
+    term_mode+=("vara-hf" "$MODEM_VARA_HF_LABEL")
+fi
+
+# Show modem selector
+TERM_MODE=$(dialog --clear --menu "$MODEM_MENU_TITLE" 13 60 10 "${term_mode[@]}" 3>&1 1>&2 2>&3)
+exit_status=$?
+
+# Show 9600 baud warning if selected
+if [ "${TERM_MODE}" == "9600" ]; then
+    dialog --title "$NOTE_9600_TITLE" --msgbox "$NOTE_9600_MSG" 0 0
+fi
+
+tput sgr 0 && clear
+
+# Exit if cancelled
+if [ ${exit_status} -ne 0 ]; then
+    et-log "$MSG_NO_MODEM"
+    exit 0
+fi
+
+# Stop all running services
+et-log "$MSG_STOPPING"
+et-kill-all
+
+# Save mode status
+echo "bbs-client2" > ${MODE_STATUS_FILE}
+
+et-log "$MSG_USING_MODEM ${TERM_MODE} $MSG_AS_MODEM"
+
+# Start appropriate modem service
+case "${TERM_MODE}" in
+    "1200")
+        start_and_wait_for_service et-service-direwolf-simple
+        ;;
+    "9600")
+        start_and_wait_for_service et-service-direwolf-9600
+        ;;
+    "300")
+        start_and_wait_for_service et-service-direwolf-300
+        ;;
+    "vara-fm")
+        sed -i "s|^VARAFM=.*|VARAFM=1|g" ${QTTERMTCP_CONF_FILE}
+        sed -i "s|^VARAHF=.*|VARAHF=0|g" ${QTTERMTCP_CONF_FILE}
+        start_and_wait_for_vara et-vara-fm
+        ;;
+    "vara-hf")
+        sed -i "s|^VARAFM=.*|VARAFM=0|g" ${QTTERMTCP_CONF_FILE}
+        sed -i "s|^VARAHF=.*|VARAHF=1|g" ${QTTERMTCP_CONF_FILE}
+        start_and_wait_for_vara et-vara-hf
+        ;;
+esac
+
+# Start QtTermTCP
+et-log "$MSG_STARTING"
+et-qttermtcp start

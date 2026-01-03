@@ -18,6 +18,9 @@ class EmCommDashboard(Gtk.Window):
     def __init__(self):
         super().__init__(title="EmComm Dashboard")
         
+        # Load language preference
+        self.language = self.get_language()
+        
         # Window setup - desktop widget style (like Conky)
         self.set_decorated(False)
         self.set_skip_taskbar_hint(True)
@@ -106,6 +109,11 @@ class EmCommDashboard(Gtk.Window):
             background-color: #444444;
             min-height: 1px;
         }
+        .status-bar {
+            color: #FFA500;
+            font-family: monospace;
+            font-size: 14px;
+        }
         """
         style_provider = Gtk.CssProvider()
         style_provider.load_from_data(css)
@@ -191,7 +199,7 @@ class EmCommDashboard(Gtk.Window):
             ("Winlink", self.on_winlink_clicked),
             ("JS8", self.on_js8_clicked),
             ("VarAC", self.on_varac_clicked),
-            ("BBS", self.on_bbs_clicked),
+            ("QtTerm", self.on_qtterm_clicked),
         ]
         
         for name, callback in apps:
@@ -201,6 +209,15 @@ class EmCommDashboard(Gtk.Window):
             button_box.pack_start(btn, False, False, 0)
         
         self.main_box.pack_start(button_box, False, False, 5)
+        
+        # === Status Bar ===
+        self.main_box.pack_start(self.create_separator(), False, False, 5)
+        
+        self.status_label = Gtk.Label()
+        self.status_label.set_halign(Gtk.Align.CENTER)
+        self.status_label.get_style_context().add_class("status-bar")
+        self.status_label.set_text("")
+        self.main_box.pack_start(self.status_label, False, False, 5)
         
         # Initial update
         self.update_info()
@@ -239,7 +256,33 @@ class EmCommDashboard(Gtk.Window):
         except Exception:
             return ""
     
+    def get_language(self):
+        """Get language preference from user config"""
+        try:
+            config_path = os.path.expanduser("~/.config/emcomm-tools/user.json")
+            if os.path.exists(config_path):
+                with open(config_path) as f:
+                    config = json.load(f)
+                return config.get("language", "en")
+        except Exception:
+            pass
+        return "en"
+    
+    def set_status(self, msg_en, msg_fr, timeout=5):
+        """Set status message in user's language, auto-clear after timeout"""
+        message = msg_fr if self.language == "fr" else msg_en
+        self.status_label.set_markup(f"<span foreground='#FFA500'>{message}</span>")
+        if timeout > 0:
+            GLib.timeout_add_seconds(timeout, self.clear_status)
+    
+    def clear_status(self):
+        self.status_label.set_text("")
+        return False  # Don't repeat
+    
     def update_info(self):
+        # Refresh language in case user changed it
+        self.language = self.get_language()
+        
         # UTC Time
         utc = self.run_command("date -u '+%H:%M:%S'")
         self.utc_label.set_text(f"UTC: {utc}")
@@ -299,25 +342,32 @@ class EmCommDashboard(Gtk.Window):
     
     # === Click Handlers ===
     def on_radio_clicked(self, widget):
+        self.set_status("Opening radio config...", "Ouverture config radio...")
         subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-radio"])
     
     def on_user_clicked(self, widget):
+        self.set_status("Opening user config...", "Ouverture config utilisateur...")
         subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-user"])
     
     def on_mode_clicked(self, widget):
+        self.set_status("Opening mode selector...", "Ouverture sélecteur de mode...")
         subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-mode"])
     
     def on_winlink_clicked(self, widget):
-        subprocess.Popen(["/opt/emcomm-tools/bin/et-winlink", "start"])
+        self.set_status("Starting Winlink...", "Démarrage de Winlink...")
+        subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-winlink-mode"])
     
     def on_js8_clicked(self, widget):
+        self.set_status("Starting JS8Call...", "Démarrage de JS8Call...")
         subprocess.Popen(["/opt/emcomm-tools/bin/et-js8call", "start"])
     
     def on_varac_clicked(self, widget):
+        self.set_status("Starting VarAC (Wine)...", "Démarrage de VarAC (Wine)...")
         subprocess.Popen(["/opt/emcomm-tools/bin/et-varac", "start"])
     
-    def on_bbs_clicked(self, widget):
-        subprocess.Popen(["/opt/emcomm-tools/bin/et-bbs", "start"])
+    def on_qtterm_clicked(self, widget):
+        self.set_status("Opening modem selector...", "Ouverture sélecteur de modem...")
+        subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-qttermtcp-mode"])
 
 
 def main():

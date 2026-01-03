@@ -1,0 +1,139 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Quick Winlink launcher with auto-detect VARA HF or ARDOP
+#           Bypasses et-mode main menu for quick access from dashboard
+#
+# Logic:
+#   - If VARA HF is installed → use VARA HF
+#   - Otherwise → use ARDOP
+#
+
+# Source common functions
+. /opt/emcomm-tools/bin/et-common
+
+# Read user language preference
+USER_CONF=~/.config/emcomm-tools/user.json
+if [ -f ${USER_CONF} ]; then
+    LANGUAGE=$(jq -r '.language // "en"' ${USER_CONF})
+else
+    LANGUAGE="en"
+fi
+
+# Set language-specific strings
+if [ "$LANGUAGE" == "fr" ]; then
+    MSG_STOPPING="Arrêt des services en cours..."
+    MSG_USING_VARA="Utilisation de VARA HF pour Winlink..."
+    MSG_USING_ARDOP="Utilisation de ARDOP pour Winlink..."
+    MSG_STARTING_VARA="Démarrage de VARA HF..."
+    MSG_STARTING_ARDOP="Démarrage de ARDOP..."
+    MSG_STARTING_WINLINK="Démarrage de Winlink..."
+    VARA_ACTION_TITLE="Action requise"
+    VARA_HF_MSG="VARA HF n'est pas un mode plug and play.\nVous devez configurer VARA manuellement."
+else
+    MSG_STOPPING="Stopping running services..."
+    MSG_USING_VARA="Using VARA HF for Winlink..."
+    MSG_USING_ARDOP="Using ARDOP for Winlink..."
+    MSG_STARTING_VARA="Starting VARA HF..."
+    MSG_STARTING_ARDOP="Starting ARDOP..."
+    MSG_STARTING_WINLINK="Starting Winlink..."
+    VARA_ACTION_TITLE="User Action Required"
+    VARA_HF_MSG="VARA HF is not a plug and play mode.\nYou must configure VARA manually."
+fi
+
+# Config files
+MODE_STATUS_FILE="${HOME}/.config/emcomm-tools/et-mode"
+
+TIMEOUT=15
+INTERVAL=2
+
+# Functions
+exit_on_service_failure() {
+    local systemd_unit_name="$1"
+    systemctl is-active --user --quiet "${systemd_unit_name}"
+    if [ $? -ne 0 ]; then
+        et-log "Can't start mode. ${systemd_unit_name} failed to start."
+        exit 1
+    fi
+}
+
+start_and_wait_for_service() {
+    local systemd_unit_name="$1"
+    local elapsed=0
+
+    et-log "Starting ${systemd_unit_name}..."
+    systemctl --user start ${systemd_unit_name}
+
+    et-log "Waiting for ${systemd_unit_name} to become active..."
+
+    while ! systemctl is-active --user --quiet "${systemd_unit_name}"; do
+        sleep "$INTERVAL"
+        elapsed=$((elapsed + INTERVAL))
+        if [ "$elapsed" -ge "$TIMEOUT" ]; then
+            et-log "Timeout reached. ${systemd_unit_name} failed to start."
+            exit 1
+        fi
+    done
+
+    sleep 2
+    exit_on_service_failure ${systemd_unit_name}
+}
+
+start_and_wait_for_vara() {
+    local vara_cmd="$1"
+    local elapsed=0
+
+    et-log "Starting ${vara_cmd}..."
+    ${vara_cmd} &
+
+    et-log "Waiting for ${vara_cmd} to become active..."
+    
+    while true; do
+        CHECK_VARA=$(ps -ef | grep "[V]ARA")
+        if [ $? -eq 0 ]; then
+            break
+        fi  
+
+        sleep "$INTERVAL"
+        elapsed=$((elapsed + INTERVAL))
+        if [ "$elapsed" -ge "$TIMEOUT" ]; then
+            et-log "Timeout reached. VARA failed to start."
+            exit 1
+        fi
+    done
+}
+
+# Stop all running services
+et-log "$MSG_STOPPING"
+et-kill-all
+
+# Auto-detect: VARA HF or ARDOP?
+if [ -e "${HOME}/.wine32/drive_c/VARA/VARA.exe" ]; then
+    # VARA HF mode
+    et-log "$MSG_USING_VARA"
+    echo "winlink-vara-hf" > ${MODE_STATUS_FILE}
+    
+    # Show warning dialog
+    dialog --title "$VARA_ACTION_TITLE" --msgbox "$VARA_HF_MSG" 10 50
+    tput sgr 0 && clear
+    
+    et-log "$MSG_STARTING_VARA"
+    start_and_wait_for_vara et-vara-hf
+    
+    et-log "$MSG_STARTING_WINLINK"
+    et-winlink start-vara-hf &
+    sleep 1
+    min http://localhost:8080 2>/dev/null
+else
+    # ARDOP mode
+    et-log "$MSG_USING_ARDOP"
+    echo "winlink-ardop" > ${MODE_STATUS_FILE}
+    
+    et-log "$MSG_STARTING_ARDOP"
+    start_and_wait_for_service et-service-ardop
+    
+    et-log "$MSG_STARTING_WINLINK"
+    start_and_wait_for_service et-service-winlink-ardop
+    min http://localhost:8080
+fi

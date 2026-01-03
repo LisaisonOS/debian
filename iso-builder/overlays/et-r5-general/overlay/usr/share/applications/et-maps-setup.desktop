@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=EmComm Map Setup
+Name[fr]=Configuration des Cartes EmComm
+Comment=Download and configure offline maps for EmComm-Tools
+Comment[fr]=Télécharger et configurer les cartes hors-ligne pour EmComm-Tools
+Exec=/opt/emcomm-tools/bin/et-maps-setup
+Icon=preferences-system-network
+Terminal=true
+Type=Application
+Categories=HamRadio;Utility;
+Keywords=maps;offline;mbtiles;osm;wikipedia;
