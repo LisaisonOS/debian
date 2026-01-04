@@ -74,9 +74,22 @@ select_drive() {
         dialog --title "No External Drive Found" --msgbox \
 "No external drives detected in /media/${USER}/
 
-Please insert a USB drive or SD card and try again.
+⚠️  IMPORTANT - Live Mode Warning / Mode Live ⚠️
 
-The drive should auto-mount when inserted." 12 55
+In Live mode, USB drives do NOT auto-mount!
+En mode Live, les clés USB ne sont PAS montées automatiquement!
+
+To mount your USB drive:
+Pour monter votre clé USB:
+
+1. Open File Manager (Thunar)
+   Ouvrir le gestionnaire de fichiers (Thunar)
+
+2. Click on your USB drive in the left panel
+   Cliquez sur votre clé USB dans le panneau gauche
+
+3. Return here and try again
+   Revenez ici et réessayez" 22 60
         clear
         return 1
     fi

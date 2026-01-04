@@ -3,8 +3,10 @@
 et-dashboard - EmComm-Tools Interactive Dashboard
 Author: Sylvain Deguire (VA2OPS)
 Date: January 2026
+Updated: Added adaptive resolution support
 
 Replaces Conky with a clickable GTK dashboard
+Automatically adjusts to screen resolution changes
 """
 
 import gi
@@ -18,8 +20,13 @@ class EmCommDashboard(Gtk.Window):
     def __init__(self):
         super().__init__(title="EmComm Dashboard")
         
-        # Load language preference
-        self.language = self.get_language()
+        # Get screen for adaptive sizing
+        self.screen = Gdk.Screen.get_default()
+        self.screen_width = self.screen.get_width()
+        self.screen_height = self.screen.get_height()
+        
+        # Calculate adaptive sizes based on resolution
+        self.calculate_adaptive_sizes()
         
         # Window setup - desktop widget style (like Conky)
         self.set_decorated(False)
@@ -33,20 +40,20 @@ class EmCommDashboard(Gtk.Window):
         # Prevent accidental closing
         self.connect("delete-event", self.on_delete_event)
         
-        # Position top-right
-        screen = Gdk.Screen.get_default()
-        width = 350
-        self.set_default_size(width, -1)
-        self.move(screen.get_width() - width - 10, 10)
+        # Connect to screen size changes
+        self.screen.connect("size-changed", self.on_screen_resize)
+        
+        # Position top-right (adaptive)
+        self.set_default_size(self.panel_width, -1)
+        self.move(self.screen_width - self.panel_width - self.margin, self.margin)
         
         # Transparent background
         self.set_app_paintable(True)
-        screen = self.get_screen()
-        visual = screen.get_rgba_visual()
+        visual = self.screen.get_rgba_visual()
         if visual:
             self.set_visual(visual)
         
-        # Apply CSS styling
+        # Apply CSS styling (adaptive)
         self.apply_css()
         
         # Main container
@@ -59,64 +66,166 @@ class EmCommDashboard(Gtk.Window):
         
         # Start update timer
         GLib.timeout_add_seconds(2, self.update_info)
+    
+    def calculate_adaptive_sizes(self):
+        """Calculate sizes based on screen resolution"""
+        
+        if self.screen_width >= 1920:
+            # Full HD and above
+            self.panel_width = 350
+            self.margin = 10
+            self.font_header = 16
+            self.font_info = 16
+            self.font_callsign = 18
+            self.font_utc = 18
+            self.font_button = 14
+            self.padding = 15
+            self.btn_padding = "8px 14px"
+            
+        elif self.screen_width >= 1680:
+            # 1680x1050 (Toughpad)
+            self.panel_width = 300
+            self.margin = 8
+            self.font_header = 14
+            self.font_info = 13
+            self.font_callsign = 15
+            self.font_utc = 15
+            self.font_button = 12
+            self.padding = 12
+            self.btn_padding = "6px 10px"
+            
+        elif self.screen_width >= 1366:
+            # Laptop HD
+            self.panel_width = 260
+            self.margin = 6
+            self.font_header = 12
+            self.font_info = 11
+            self.font_callsign = 13
+            self.font_utc = 13
+            self.font_button = 10
+            self.padding = 10
+            self.btn_padding = "5px 8px"
+            
+        elif self.screen_width >= 1280:
+            # 1280x800 / 1280x720
+            self.panel_width = 240
+            self.margin = 5
+            self.font_header = 11
+            self.font_info = 10
+            self.font_callsign = 12
+            self.font_utc = 12
+            self.font_button = 9
+            self.padding = 8
+            self.btn_padding = "4px 6px"
+            
+        else:
+            # Small screens
+            self.panel_width = 200
+            self.margin = 5
+            self.font_header = 10
+            self.font_info = 9
+            self.font_callsign = 11
+            self.font_utc = 11
+            self.font_button = 8
+            self.padding = 6
+            self.btn_padding = "3px 5px"
+        
+        print(f"Screen: {self.screen_width}x{self.screen_height} -> Panel: {self.panel_width}px")
+    
+    def on_screen_resize(self, screen):
+        """Handle screen resolution changes"""
+        new_width = screen.get_width()
+        new_height = screen.get_height()
+        
+        if new_width != self.screen_width or new_height != self.screen_height:
+            print(f"Resolution changed: {new_width}x{new_height}")
+            self.screen_width = new_width
+            self.screen_height = new_height
+            
+            # Recalculate sizes
+            self.calculate_adaptive_sizes()
+            
+            # Reposition and resize window
+            self.resize(self.panel_width, 1)
+            self.move(self.screen_width - self.panel_width - self.margin, self.margin)
+            
+            # Rebuild UI
+            self.rebuild_ui()
+    
+    def rebuild_ui(self):
+        """Rebuild UI with new adaptive sizes"""
+        # Remove all children
+        for child in self.main_box.get_children():
+            self.main_box.remove(child)
+        
+        # Reapply CSS with new sizes
+        self.apply_css()
+        
+        # Rebuild
+        self.build_ui()
+        self.show_all()
         
     def apply_css(self):
-        css = b"""
-        #dashboard {
+        css_template = """
+        #dashboard {{
             background-color: rgba(30, 30, 30, 0.85);
             border-radius: 8px;
-            padding: 15px;
-        }
-        .section-header {
+            padding: {padding}px;
+        }}
+        .section-header {{
             color: #CCCCCC;
             font-weight: bold;
-            font-size: 16px;
-        }
-        .info-label {
+            font-size: {font_header}px;
+        }}
+        .info-label {{
             color: #888888;
             font-family: monospace;
-            font-size: 16px;
-        }
-        .callsign {
+            font-size: {font_info}px;
+        }}
+        .callsign {{
             color: #FFA500;
             font-family: monospace;
-            font-size: 18px;
+            font-size: {font_callsign}px;
             font-weight: bold;
-        }
-        .status-ok {
+        }}
+        .status-ok {{
             color: #00CC00;
-        }
-        .status-error {
+        }}
+        .status-error {{
             color: #CC0000;
-        }
-        .utc-time {
+        }}
+        .utc-time {{
             color: #888888;
             font-family: monospace;
-            font-size: 18px;
-        }
-        .config-button {
-            padding: 6px 12px;
+            font-size: {font_utc}px;
+        }}
+        .config-button {{
+            padding: 4px 8px;
             min-height: 0;
             min-width: 0;
-            font-size: 14px;
-        }
-        .app-button {
-            padding: 8px 14px;
-            font-size: 14px;
+            font-size: {font_button}px;
+        }}
+        .app-button {{
+            padding: {btn_padding};
+            font-size: {font_button}px;
             font-weight: bold;
-        }
-        .separator {
+        }}
+        .separator {{
             background-color: #444444;
             min-height: 1px;
-        }
-        .status-bar {
-            color: #FFA500;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        """
+        }}
+        """.format(
+            padding=self.padding,
+            font_header=self.font_header,
+            font_info=self.font_info,
+            font_callsign=self.font_callsign,
+            font_utc=self.font_utc,
+            font_button=self.font_button,
+            btn_padding=self.btn_padding
+        )
+        
         style_provider = Gtk.CssProvider()
-        style_provider.load_from_data(css)
+        style_provider.load_from_data(css_template.encode())
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(),
             style_provider,
@@ -199,7 +308,7 @@ class EmCommDashboard(Gtk.Window):
             ("Winlink", self.on_winlink_clicked),
             ("JS8", self.on_js8_clicked),
             ("VarAC", self.on_varac_clicked),
-            ("QtTerm", self.on_qtterm_clicked),
+            ("BBS", self.on_bbs_clicked),
         ]
         
         for name, callback in apps:
@@ -209,15 +318,6 @@ class EmCommDashboard(Gtk.Window):
             button_box.pack_start(btn, False, False, 0)
         
         self.main_box.pack_start(button_box, False, False, 5)
-        
-        # === Status Bar ===
-        self.main_box.pack_start(self.create_separator(), False, False, 5)
-        
-        self.status_label = Gtk.Label()
-        self.status_label.set_halign(Gtk.Align.CENTER)
-        self.status_label.get_style_context().add_class("status-bar")
-        self.status_label.set_text("")
-        self.main_box.pack_start(self.status_label, False, False, 5)
         
         # Initial update
         self.update_info()
@@ -256,33 +356,7 @@ class EmCommDashboard(Gtk.Window):
         except Exception:
             return ""
     
-    def get_language(self):
-        """Get language preference from user config"""
-        try:
-            config_path = os.path.expanduser("~/.config/emcomm-tools/user.json")
-            if os.path.exists(config_path):
-                with open(config_path) as f:
-                    config = json.load(f)
-                return config.get("language", "en")
-        except Exception:
-            pass
-        return "en"
-    
-    def set_status(self, msg_en, msg_fr, timeout=5):
-        """Set status message in user's language, auto-clear after timeout"""
-        message = msg_fr if self.language == "fr" else msg_en
-        self.status_label.set_markup(f"<span foreground='#FFA500'>{message}</span>")
-        if timeout > 0:
-            GLib.timeout_add_seconds(timeout, self.clear_status)
-    
-    def clear_status(self):
-        self.status_label.set_text("")
-        return False  # Don't repeat
-    
     def update_info(self):
-        # Refresh language in case user changed it
-        self.language = self.get_language()
-        
         # UTC Time
         utc = self.run_command("date -u '+%H:%M:%S'")
         self.utc_label.set_text(f"UTC: {utc}")
@@ -342,32 +416,25 @@ class EmCommDashboard(Gtk.Window):
     
     # === Click Handlers ===
     def on_radio_clicked(self, widget):
-        self.set_status("Opening radio config...", "Ouverture config radio...")
         subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-radio"])
     
     def on_user_clicked(self, widget):
-        self.set_status("Opening user config...", "Ouverture config utilisateur...")
         subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-user"])
     
     def on_mode_clicked(self, widget):
-        self.set_status("Opening mode selector...", "Ouverture sélecteur de mode...")
         subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-mode"])
     
     def on_winlink_clicked(self, widget):
-        self.set_status("Starting Winlink...", "Démarrage de Winlink...")
-        subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-winlink-mode"])
+        subprocess.Popen(["/opt/emcomm-tools/bin/et-winlink", "start"])
     
     def on_js8_clicked(self, widget):
-        self.set_status("Starting JS8Call...", "Démarrage de JS8Call...")
         subprocess.Popen(["/opt/emcomm-tools/bin/et-js8call", "start"])
     
     def on_varac_clicked(self, widget):
-        self.set_status("Starting VarAC (Wine)...", "Démarrage de VarAC (Wine)...")
         subprocess.Popen(["/opt/emcomm-tools/bin/et-varac", "start"])
     
-    def on_qtterm_clicked(self, widget):
-        self.set_status("Opening modem selector...", "Ouverture sélecteur de modem...")
-        subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-qttermtcp-mode"])
+    def on_bbs_clicked(self, widget):
+        subprocess.Popen(["/opt/emcomm-tools/bin/et-bbs", "start"])
 
 
 def main():

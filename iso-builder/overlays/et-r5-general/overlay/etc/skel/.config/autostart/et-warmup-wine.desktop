@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=EmComm Wine Warmup
+Comment=Initialize Wine and VARA on first boot
+Exec=/opt/emcomm-tools/bin/et-warmup-wine
+Icon=wine
+Terminal=true
+Categories=System;
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=5
+OnlyShowIn=XFCE;GNOME;
+Hidden=false

@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Set default display resolution for EmComm-Tools
+#           Target: 1680x1050 for Panasonic Toughpads and similar devices
+#
+
+PREFERRED_RES="1680x1050"
+FALLBACK_RES="1920x1080"
+
+# Get connected display
+DISPLAY_NAME=$(xrandr | grep " connected" | head -1 | cut -d' ' -f1)
+
+if [ -z "$DISPLAY_NAME" ]; then
+    echo "No display detected"
+    exit 1
+fi
+
+echo "Detected display: $DISPLAY_NAME"
+
+# Check if preferred resolution is available
+if xrandr | grep -q "$PREFERRED_RES"; then
+    echo "Setting resolution to $PREFERRED_RES"
+    xrandr --output "$DISPLAY_NAME" --mode "$PREFERRED_RES"
+else
+    echo "$PREFERRED_RES not available, checking alternatives..."
+    
+    # List available resolutions
+    echo "Available resolutions:"
+    xrandr | grep -oP '\d+x\d+' | sort -u
+    
+    # Try fallback
+    if xrandr | grep -q "$FALLBACK_RES"; then
+        echo "Setting resolution to $FALLBACK_RES"
+        xrandr --output "$DISPLAY_NAME" --mode "$FALLBACK_RES"
+    else
+        echo "Using current resolution"
+    fi
+fi
+
+# Save to XFCE settings if running XFCE
+if [ -n "$XFCE_SESSION_PID" ] || pgrep -x xfce4-session > /dev/null; then
+    echo "Saving XFCE display settings..."
+    
+    # Get current resolution
+    CURRENT_RES=$(xrandr | grep '\*' | head -1 | awk '{print $1}')
+    
+    # Create monitors.xml for persistence
+    MONITORS_DIR="$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
+    mkdir -p "$MONITORS_DIR"
+    
+    # Also use xfconf-query if available
+    if command -v xfconf-query &> /dev/null; then
+        xfconf-query -c displays -p /Default/${DISPLAY_NAME}/Resolution -s "$CURRENT_RES" 2>/dev/null || true
+    fi
+fi
+
+echo "Display configured: $(xrandr | grep '\*' | head -1 | awk '{print $1}')"
