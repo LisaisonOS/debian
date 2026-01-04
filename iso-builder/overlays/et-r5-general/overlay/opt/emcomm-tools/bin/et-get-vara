@@ -2,13 +2,15 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2025
+# Updated : January 2026
 # Purpose : Download and install VARA modem and VarAC into Wine prefix
 #
-# Note: VARA is proprietary software. This script downloads from official sources.
-#       Users should register VARA for full functionality.
+# Note: VARA HF/FM are now pre-installed with permission from EA5HVK.
+#       Users should register VARA for full speed functionality.
+#       VarAC requires manual download (permission pending).
 #
 
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="2.0.0"
 
 # Colors
 RED='\033[0;31m'
@@ -45,6 +47,22 @@ VARA_FM_DIR="${WINE_PREFIX}/drive_c/VARA FM"
 VARAC_DIR="${WINE_PREFIX}/drive_c/VarAC"
 
 DOWNLOAD_DIR="/tmp/vara-install"
+
+# =============================================================================
+# Installation Status Checks
+# =============================================================================
+
+is_vara_hf_installed() {
+    [ -f "${WINE_PREFIX}/drive_c/VARA/VARA.exe" ]
+}
+
+is_vara_fm_installed() {
+    [ -f "${WINE_PREFIX}/drive_c/VARA FM/VARAFM.exe" ]
+}
+
+is_varac_installed() {
+    [ -f "${VARAC_DIR}/VarAC.exe" ]
+}
 
 check_dependencies() {
     local missing=()
@@ -89,7 +107,17 @@ install_wine_dependencies() {
     winetricks -q corefonts 2>/dev/null || true
 }
 
+# =============================================================================
+# VARA HF Installation
+# =============================================================================
+
 download_vara_hf() {
+    # Check if already installed
+    if is_vara_hf_installed; then
+        log_info "VARA HF is already installed! Skipping download."
+        return 1
+    fi
+    
     log_step "Downloading VARA HF..."
     
     mkdir -p "${DOWNLOAD_DIR}"
@@ -97,7 +125,7 @@ download_vara_hf() {
     
     # VARA HF download page - user needs to download manually due to licensing
     echo ""
-    log_warn "VARA HF requires manual download due to licensing."
+    log_warn "VARA HF requires manual download."
     echo ""
     echo "Please visit: https://rosmodem.wordpress.com/"
     echo "Download: VARA HF vX.X.X (latest version)"
@@ -124,6 +152,12 @@ download_vara_hf() {
 }
 
 install_vara_hf() {
+    # Check if already installed
+    if is_vara_hf_installed; then
+        log_info "VARA HF is already installed!"
+        return 0
+    fi
+    
     log_step "Installing VARA HF..."
     
     local installer=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "VARA*HF*.exe" -o -iname "VARA_setup.exe" -type f 2>/dev/null | head -1)
@@ -146,14 +180,24 @@ install_vara_hf() {
     return 1
 }
 
+# =============================================================================
+# VARA FM Installation
+# =============================================================================
+
 download_vara_fm() {
+    # Check if already installed
+    if is_vara_fm_installed; then
+        log_info "VARA FM is already installed! Skipping download."
+        return 1
+    fi
+    
     log_step "Downloading VARA FM..."
     
     mkdir -p "${DOWNLOAD_DIR}"
     cd "${DOWNLOAD_DIR}"
     
     echo ""
-    log_warn "VARA FM requires manual download due to licensing."
+    log_warn "VARA FM requires manual download."
     echo ""
     echo "Please visit: https://rosmodem.wordpress.com/"
     echo "Download: VARA FM vX.X.X (latest version)"
@@ -176,6 +220,12 @@ download_vara_fm() {
 }
 
 install_vara_fm() {
+    # Check if already installed
+    if is_vara_fm_installed; then
+        log_info "VARA FM is already installed!"
+        return 0
+    fi
+    
     log_step "Installing VARA FM..."
     
     local installer=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "*VARA*FM*.exe" -type f 2>/dev/null | head -1)
@@ -194,7 +244,17 @@ install_vara_fm() {
     return 1
 }
 
+# =============================================================================
+# VarAC Installation
+# =============================================================================
+
 download_varac() {
+    # Check if already installed
+    if is_varac_installed; then
+        log_info "VarAC is already installed! Skipping download."
+        return 1
+    fi
+    
     log_step "Downloading VarAC..."
     
     mkdir -p "${DOWNLOAD_DIR}"
@@ -224,6 +284,12 @@ download_varac() {
 }
 
 install_varac() {
+    # Check if already installed
+    if is_varac_installed; then
+        log_info "VarAC is already installed!"
+        return 0
+    fi
+    
     log_step "Installing VarAC..."
     
     local varac_zip=$(find "${DOWNLOAD_DIR}" -maxdepth 1 -iname "VarAC*.zip" -type f 2>/dev/null | head -1)
@@ -256,63 +322,107 @@ install_varac() {
     return 1
 }
 
+# =============================================================================
+# Status Display
+# =============================================================================
+
 show_status() {
     echo ""
     echo "=== Installation Status ==="
     echo ""
     
-    if [ -f "${WINE_PREFIX}/drive_c/VARA/VARA.exe" ]; then
-        echo -e "VARA HF:  ${GREEN}INSTALLED${NC}"
+    if is_vara_hf_installed; then
+        echo -e "VARA HF:  ${GREEN}INSTALLED${NC} (Pre-installed with EA5HVK permission)"
     else
         echo -e "VARA HF:  ${RED}NOT INSTALLED${NC}"
     fi
     
-    if [ -f "${WINE_PREFIX}/drive_c/VARA FM/VARAFM.exe" ]; then
-        echo -e "VARA FM:  ${GREEN}INSTALLED${NC}"
+    if is_vara_fm_installed; then
+        echo -e "VARA FM:  ${GREEN}INSTALLED${NC} (Pre-installed with EA5HVK permission)"
     else
         echo -e "VARA FM:  ${RED}NOT INSTALLED${NC}"
     fi
     
-    if [ -f "${VARAC_DIR}/VarAC.exe" ]; then
+    if is_varac_installed; then
         echo -e "VarAC:    ${GREEN}INSTALLED${NC}"
     else
-        echo -e "VarAC:    ${RED}NOT INSTALLED${NC}"
+        echo -e "VarAC:    ${YELLOW}NOT INSTALLED${NC} (Download required)"
     fi
     
     echo ""
     echo "Wine Prefix: ${WINE_PREFIX}"
     echo ""
+    echo -e "${CYAN}Note:${NC} VARA runs in demo mode until registered."
+    echo "      Purchase license at: https://rosmodem.wordpress.com/"
+    echo ""
 }
+
+# =============================================================================
+# Interactive Menu
+# =============================================================================
 
 interactive_menu() {
     while true; do
         show_status
         
-        echo "What would you like to install?"
+        echo "What would you like to do?"
         echo ""
-        echo "1) Install VARA HF (required for HF digital)"
-        echo "2) Install VARA FM (for VHF/UHF)"
-        echo "3) Install VarAC (chat client)"
-        echo "4) Install ALL (VARA HF + VarAC)"
+        
+        # Show appropriate menu options based on what's installed
+        if is_vara_hf_installed && is_vara_fm_installed; then
+            echo -e "1) VARA HF      ${GREEN}[Installed]${NC}"
+            echo -e "2) VARA FM      ${GREEN}[Installed]${NC}"
+        else
+            if is_vara_hf_installed; then
+                echo -e "1) VARA HF      ${GREEN}[Installed]${NC}"
+            else
+                echo "1) Install VARA HF"
+            fi
+            if is_vara_fm_installed; then
+                echo -e "2) VARA FM      ${GREEN}[Installed]${NC}"
+            else
+                echo "2) Install VARA FM"
+            fi
+        fi
+        
+        if is_varac_installed; then
+            echo -e "3) VarAC        ${GREEN}[Installed]${NC}"
+        else
+            echo "3) Install VarAC (Download required)"
+        fi
+        
+        echo "4) Install missing components"
         echo "5) Install Wine dependencies (vcrun, dotnet)"
-        echo "6) Show status"
+        echo "6) Refresh status"
         echo "7) Exit"
         echo ""
         read -p "Choice [1-7]: " choice
         
         case $choice in
             1)
-                download_vara_hf && install_vara_hf
+                if is_vara_hf_installed; then
+                    log_info "VARA HF is already installed!"
+                else
+                    download_vara_hf && install_vara_hf
+                fi
                 ;;
             2)
-                download_vara_fm && install_vara_fm
+                if is_vara_fm_installed; then
+                    log_info "VARA FM is already installed!"
+                else
+                    download_vara_fm && install_vara_fm
+                fi
                 ;;
             3)
-                download_varac && install_varac
+                if is_varac_installed; then
+                    log_info "VarAC is already installed!"
+                else
+                    download_varac && install_varac
+                fi
                 ;;
             4)
-                download_vara_hf && install_vara_hf
-                download_varac && install_varac
+                # Install only what's missing
+                install_missing
                 ;;
             5)
                 install_wine_dependencies
@@ -321,7 +431,7 @@ interactive_menu() {
                 show_status
                 ;;
             7|"")
-                echo "Goodbye!"
+                echo "73!"
                 exit 0
                 ;;
             *)
@@ -335,22 +445,72 @@ interactive_menu() {
     done
 }
 
+# =============================================================================
+# Install Missing Components Only
+# =============================================================================
+
+install_missing() {
+    local installed_something=false
+    
+    echo ""
+    log_step "Checking for missing components..."
+    echo ""
+    
+    if ! is_vara_hf_installed; then
+        log_warn "VARA HF is missing"
+        download_vara_hf && install_vara_hf && installed_something=true
+    else
+        log_info "VARA HF: Already installed"
+    fi
+    
+    if ! is_vara_fm_installed; then
+        log_warn "VARA FM is missing"
+        download_vara_fm && install_vara_fm && installed_something=true
+    else
+        log_info "VARA FM: Already installed"
+    fi
+    
+    if ! is_varac_installed; then
+        log_warn "VarAC is missing"
+        download_varac && install_varac && installed_something=true
+    else
+        log_info "VarAC: Already installed"
+    fi
+    
+    echo ""
+    if [ "$installed_something" = true ]; then
+        log_info "Installation complete!"
+    else
+        log_info "All components are already installed!"
+    fi
+}
+
+# =============================================================================
+# Help
+# =============================================================================
+
 show_help() {
     echo "et-get-vara - VARA/VarAC Installer for EmComm-Tools"
+    echo "Version: ${SCRIPT_VERSION}"
     echo ""
     echo "Usage: et-get-vara [command]"
     echo ""
     echo "Commands:"
     echo "  (none)     Interactive menu"
     echo "  status     Show installation status"
-    echo "  vara-hf    Install VARA HF"
-    echo "  vara-fm    Install VARA FM"
-    echo "  varac      Install VarAC"
-    echo "  all        Install VARA HF + VarAC"
+    echo "  vara-hf    Install VARA HF (if not already installed)"
+    echo "  vara-fm    Install VARA FM (if not already installed)"
+    echo "  varac      Install VarAC (if not already installed)"
+    echo "  missing    Install only missing components"
     echo "  deps       Install Wine dependencies"
     echo "  help       Show this help"
     echo ""
     echo "Wine Prefix: ${WINE_PREFIX}"
+    echo ""
+    echo "Notes:"
+    echo "  - VARA HF/FM are pre-installed with permission from EA5HVK"
+    echo "  - VarAC requires manual download (permission pending)"
+    echo "  - Purchase VARA license at: https://rosmodem.wordpress.com/"
 }
 
 # =============================================================================
@@ -365,17 +525,31 @@ case "${1:-}" in
         show_status
         ;;
     vara-hf)
-        download_vara_hf && install_vara_hf
+        if is_vara_hf_installed; then
+            log_info "VARA HF is already installed!"
+            show_status
+        else
+            download_vara_hf && install_vara_hf
+        fi
         ;;
     vara-fm)
-        download_vara_fm && install_vara_fm
+        if is_vara_fm_installed; then
+            log_info "VARA FM is already installed!"
+            show_status
+        else
+            download_vara_fm && install_vara_fm
+        fi
         ;;
     varac)
-        download_varac && install_varac
+        if is_varac_installed; then
+            log_info "VarAC is already installed!"
+            show_status
+        else
+            download_varac && install_varac
+        fi
         ;;
-    all)
-        download_vara_hf && install_vara_hf
-        download_varac && install_varac
+    missing)
+        install_missing
         ;;
     deps)
         install_wine_dependencies
@@ -387,7 +561,7 @@ case "${1:-}" in
         clear
         echo "========================================"
         echo " VARA/VarAC Installer v${SCRIPT_VERSION}"
-        echo " EmComm-Tools"
+        echo " EmComm-Tools Debian Edition"
         echo "========================================"
         echo ""
         interactive_menu
