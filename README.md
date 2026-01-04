@@ -18,6 +18,10 @@ Fork of EmComm-Tools OS Community by TheTechPrepper (KT7RUN).
 
 🌐 [Website](https://emcomm-tools.ca)
 
+🐙 [GitHub](https://github.com/emcomm-tools/debian/)
+
+☕ [Buy Me a Coffee](https://buymeacoffee.com/emcommtools)
+
 ---
 
 ## Français
@@ -33,6 +37,10 @@ Fork d'EmComm-Tools OS Community par TheTechPrepper (KT7RUN).
 💾 [Téléchargements ISO](https://sourceforge.net/p/emcomm-tools/)
 
 🌐 [Site Web](https://emcomm-tools.ca)
+
+🐙 [GitHub](https://github.com/emcomm-tools/debian/)
+
+☕ [Offrez-moi un café](https://buymeacoffee.com/emcommtools)
 
 ---
 
