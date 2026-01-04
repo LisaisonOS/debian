@@ -2,6 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2025
+# Updated : January 2026
 # Purpose : Wrapper script for starting WSJT-X (FT8/FT4) with PnP support
 #
 # Based on et-js8call by Gaston Gonzalez
@@ -11,7 +12,7 @@
 #
 # Postconditions
 # 1. Stop all running EmComm Tools modes
-# 2. WSJT-X audio settings updated
+# 2. WSJT-X audio and CAT settings updated
 # 3. WSJT-X started
 
 . /opt/emcomm-tools/bin/et-common
@@ -48,15 +49,25 @@ start() {
 
 }
 
+# Helper function to update or add a setting in the config file
+update_setting() {
+  local key="$1"
+  local value="$2"
+  local file="$3"
+  
+  if grep -q "^${key}=" "${file}"; then
+    sed -i "s|^${key}=.*|${key}=${value}|" "${file}"
+  else
+    sed -i "/^\[Configuration\]/a ${key}=${value}" "${file}"
+  fi
+}
+
 update-config() {
 
-    WSJTX_CONF_DIR="${HOME}/.config/WSJT-X"
-    WSJTX_CONF_FILE="${WSJTX_CONF_DIR}/WSJT-X.ini"
+    # WSJT-X stores config directly in ~/.config/WSJT-X.ini (NO subdirectory!)
+    WSJTX_CONF_FILE="${HOME}/.config/WSJT-X.ini"
    
     [ -z "$ET_USER_CONFIG" ] && ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
-
-    # Create config directory if needed
-    mkdir -p "${WSJTX_CONF_DIR}"
 
     # Update configuration with current callsign and grid
     CALLSIGN=$(cat ${ET_USER_CONFIG} | jq -r .callsign)
@@ -67,30 +78,27 @@ update-config() {
       exit 1
     fi
 
-    # Create config file if it doesn't exist
+    # Create minimal config file if it doesn't exist
     if [ ! -f "${WSJTX_CONF_FILE}" ]; then
-      cat > "${WSJTX_CONF_FILE}" << EOF
-[General]
+      cat > "${WSJTX_CONF_FILE}" << EOFCFG
+[Configuration]
 MyCall=${CALLSIGN}
 MyGrid=${GRID}
-EOF
+EOFCFG
       et-log "Created new WSJT-X configuration file"
     fi
 
     # Update callsign and grid
-    if grep -q "^MyCall=" "${WSJTX_CONF_FILE}"; then
-      sed -i "s|^MyCall=.*|MyCall=${CALLSIGN}|" ${WSJTX_CONF_FILE}
-    else
-      echo "MyCall=${CALLSIGN}" >> ${WSJTX_CONF_FILE}
-    fi
-
-    if grep -q "^MyGrid=" "${WSJTX_CONF_FILE}"; then
-      sed -i "s|^MyGrid=.*|MyGrid=${GRID}|" ${WSJTX_CONF_FILE}
-    else
-      echo "MyGrid=${GRID}" >> ${WSJTX_CONF_FILE}
-    fi
+    update_setting "MyCall" "${CALLSIGN}" "${WSJTX_CONF_FILE}"
+    update_setting "MyGrid" "${GRID}" "${WSJTX_CONF_FILE}"
 
     et-log "Updated WSJT-X configuration with user callsign '${CALLSIGN}' and grid: '${GRID}'"
+
+    # Configure CAT control via rigctld
+    update_setting "Rig" "Hamlib NET rigctl" "${WSJTX_CONF_FILE}"
+    update_setting "CATNetworkPort" "localhost:4532" "${WSJTX_CONF_FILE}"
+    
+    et-log "Updated WSJT-X CAT configuration for rigctld on localhost:4532"
 
     # 1. Check if the symlink was created by the udev rules
     if [ -e /dev/et-audio ]; then
@@ -100,28 +108,14 @@ EOF
        if [ $? -eq 0 ]; then
          AUDIO_DEVICE=$(echo $APLAY_OUT | cut -d"," -f2 | cut -d":" -f1 | awk '{print $2}')
 
-         # Use sysdefault for best compatibility
+         # Use same ALSA device format as JS8Call (Gaston's PnP approach)
          WSJTX_AUDIO_DEVICE="sysdefault:CARD=ET_AUDIO"
   
          et-log "Using '${WSJTX_AUDIO_DEVICE}' for WSJT-X configuration."
 
-         # 3. Check for existing WSJT-X sound configuration
-
-         ## Update input (AudioInputDevice in WSJT-X)
-         grep "^AudioInputDevice" ${WSJTX_CONF_FILE}
-         if [ $? -eq 0 ]; then
-           sed -i "s|^AudioInputDevice.*|AudioInputDevice=\"${WSJTX_AUDIO_DEVICE}\"|" ${WSJTX_CONF_FILE} 
-         else
-           echo "AudioInputDevice=\"${WSJTX_AUDIO_DEVICE}\"" >> ${WSJTX_CONF_FILE}
-         fi
-
-         ## Update output (AudioOutputDevice in WSJT-X)
-         grep "^AudioOutputDevice" ${WSJTX_CONF_FILE}
-         if [ $? -eq 0 ]; then
-           sed -i "s|^AudioOutputDevice.*|AudioOutputDevice=\"${WSJTX_AUDIO_DEVICE}\"|" ${WSJTX_CONF_FILE} 
-         else
-           echo "AudioOutputDevice=\"${WSJTX_AUDIO_DEVICE}\"" >> ${WSJTX_CONF_FILE}
-         fi
+         # Update audio settings (with quotes around device name)
+         update_setting "SoundInName" "\"${WSJTX_AUDIO_DEVICE}\"" "${WSJTX_CONF_FILE}"
+         update_setting "SoundOutName" "\"${WSJTX_AUDIO_DEVICE}\"" "${WSJTX_CONF_FILE}"
 
          ## Configure ALSA settings for sound card
          /opt/emcomm-tools/bin/et-audio update-config
