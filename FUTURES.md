@@ -119,19 +119,25 @@ One of the biggest barriers to ham radio digital modes is the complexity of sett
 
 ### VARA HF/FM and VarAC Installation
 
-**Important:** VARA HF, VARA FM, and VarAC are **not pre-installed** in the ISO. These applications have specific licensing terms that do not permit redistribution.
+**VARA HF/FM - Pre-Installed with Permission**
 
-**First-Boot Installation Option:**
+VARA HF and VARA FM modems are **pre-installed** in the ISO with written permission from José Alberto Nieto Ros (EA5HVK), the developer.
 
-At first boot, the system will offer to download and install VARA and VarAC for you:
+**Important:** Users must still purchase their own license directly from EA5HVK to unlock full speed. The pre-installed version runs in demo mode until registered. Visit [rosmodem.wordpress.com](https://rosmodem.wordpress.com) to purchase your license.
+
+We are committed to keeping VARA updated with new releases as they become available.
+
+**VarAC - First-Boot Installation**
+
+VarAC is **not pre-installed** in the ISO (permission pending). At first boot, the system will offer to download and install VarAC for you:
 
 1. **Fresh Install:** If you select "Yes", an installation script will:
-   - Download VARA HF/FM and VarAC installers via `wget`
-   - Launch each installer through Wine
-   - **You must complete the installation wizard manually** for each application
-   - This process respects the developers' distribution policies and license agreements
+   - Download the VarAC installer via `wget`
+   - Launch the installer through Wine
+   - **You must complete the installation wizard manually**
+   - This process respects the developer's distribution policies
 
-2. **Restore from Backup:** If you previously used the original EmComm-Tools OS (Ubuntu/TTP version) and created a Wine backup using the `05-backup-wine-install.sh` script (TAR file), you can restore it directly. This method preserves your existing VARA configuration and registration.
+2. **Restore from Backup:** If you previously used the original EmComm-Tools OS (Ubuntu/TTP version) and created a Wine backup using the `05-backup-wine-install.sh` script (TAR file), you can restore it directly. This method preserves your existing configuration.
 
 **Note:** An internet connection is required for the fresh install option. Plan accordingly if you're setting up for field deployment.
 
