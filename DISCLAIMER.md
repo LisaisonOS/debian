@@ -53,6 +53,10 @@ EmComm-Tools Édition Debian inclut des logiciels tiers, chacun avec sa propre l
 | fldigi | W1HKJ | GPL |
 | pat-winlink | LA5NTA | MIT |
 | Direwolf | WB2OSZ | GPL |
+| LinBPQ | G8BPQ | Gratuiciel |
+| QtTermTCP | G8BPQ | Gratuiciel |
+| Paracon | mfncooper | MIT |
+| ARDOP (ardopcf) | pflarue | GPL |
 
 Les utilisateurs doivent se conformer aux termes de licence respectifs de chaque logiciel.
 
@@ -120,6 +124,10 @@ EmComm-Tools Debian Edition bundles third-party software, each with its own lice
 | fldigi | W1HKJ | GPL |
 | pat-winlink | LA5NTA | MIT |
 | Direwolf | WB2OSZ | GPL |
+| LinBPQ | G8BPQ | Freeware |
+| QtTermTCP | G8BPQ | Freeware |
+| Paracon | mfncooper | MIT |
+| ARDOP (ardopcf) | pflarue | GPL |
 
 Users must comply with each software's respective license terms.
 
