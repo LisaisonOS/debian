@@ -119,19 +119,25 @@ L'une des plus grandes barrières aux modes numériques radioamateurs est la com
 
 ### Installation de VARA HF/FM et VarAC
 
-**Important :** VARA HF, VARA FM, et VarAC ne sont **pas pré-installés** dans l'ISO. Ces applications ont des termes de licence spécifiques qui ne permettent pas la redistribution.
+**VARA HF/FM - Pré-Installé avec Permission**
 
-**Option d'Installation au Premier Démarrage :**
+Les modems VARA HF et VARA FM sont **pré-installés** dans l'ISO avec la permission écrite de José Alberto Nieto Ros (EA5HVK), le développeur.
 
-Au premier démarrage, le système vous offrira de télécharger et installer VARA et VarAC :
+**Important :** Les utilisateurs doivent toujours acheter leur propre licence directement auprès d'EA5HVK pour débloquer la pleine vitesse. La version pré-installée fonctionne en mode démo jusqu'à l'enregistrement. Visitez [rosmodem.wordpress.com](https://rosmodem.wordpress.com) pour acheter votre licence.
+
+Nous nous engageons à garder VARA à jour avec les nouvelles versions dès qu'elles sont disponibles.
+
+**VarAC - Installation au Premier Démarrage**
+
+VarAC n'est **pas pré-installé** dans l'ISO (permission en attente). Au premier démarrage, le système vous offrira de télécharger et installer VarAC :
 
 1. **Installation Fraîche :** Si vous sélectionnez « Oui », un script d'installation va :
-   - Télécharger les installateurs VARA HF/FM et VarAC via `wget`
-   - Lancer chaque installateur via Wine
-   - **Vous devez compléter l'assistant d'installation manuellement** pour chaque application
-   - Ce processus respecte les politiques de distribution et accords de licence des développeurs
+   - Télécharger l'installateur VarAC via `wget`
+   - Lancer l'installateur via Wine
+   - **Vous devez compléter l'assistant d'installation manuellement**
+   - Ce processus respecte les politiques de distribution du développeur
 
-2. **Restaurer depuis une Sauvegarde :** Si vous avez précédemment utilisé l'EmComm-Tools OS original (version Ubuntu/TTP) et créé une sauvegarde Wine avec le script `05-backup-wine-install.sh` (fichier TAR), vous pouvez la restaurer directement. Cette méthode préserve votre configuration VARA existante et votre enregistrement.
+2. **Restaurer depuis une Sauvegarde :** Si vous avez précédemment utilisé l'EmComm-Tools OS original (version Ubuntu/TTP) et créé une sauvegarde Wine avec le script `05-backup-wine-install.sh` (fichier TAR), vous pouvez la restaurer directement. Cette méthode préserve votre configuration existante.
 
 **Note :** Une connexion internet est requise pour l'option d'installation fraîche. Planifiez en conséquence si vous préparez un déploiement terrain.
 
