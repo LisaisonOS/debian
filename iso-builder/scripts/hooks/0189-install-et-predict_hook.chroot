@@ -1,0 +1,26 @@
+#!/bin/bash
+echo "Installing ET-Predict..."
+
+APP="et-predict-app"
+VERSION="1.2.0"
+DOWNLOAD_FILE="${APP}_${VERSION}_amd64.deb"
+
+# Note: TTP repo uses VERSION without 'v' prefix
+URL="https://github.com/thetechprepper/${APP}/releases/download/${VERSION}/${DOWNLOAD_FILE}"
+
+cd /tmp
+
+echo "Downloading ${URL}..."
+curl -L -o ${DOWNLOAD_FILE} --fail ${URL}
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to download et-predict-app"
+    exit 1
+fi
+
+echo "Installing ${DOWNLOAD_FILE}..."
+DEBIAN_FRONTEND=noninteractive dpkg -i ${DOWNLOAD_FILE}
+
+rm -f ${DOWNLOAD_FILE}
+
+echo "ET-Predict installation complete"

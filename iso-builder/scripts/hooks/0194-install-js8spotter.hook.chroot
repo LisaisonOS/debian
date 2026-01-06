@@ -1,0 +1,83 @@
+#!/bin/bash
+# =============================================================================
+# Hook: 0194-install-js8spotter
+# Purpose: Install JS8Spotter - JS8Call companion application
+# Author: Sylvain Deguire (VA2OPS)
+# Date: January 2026
+#
+# JS8Spotter extends JS8Call with profile-based activity search,
+# offline maps, APRS commands, automated responses, and MCForms.
+# https://kf7mix.com/js8spotter.html
+# =============================================================================
+
+set -e
+
+echo "=== Installing JS8Spotter ==="
+
+APP="js8spotter"
+VERSION="1.17"
+DOWNLOAD_FILE="${APP}-${VERSION}_src.zip"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+LINK_PATH="/opt/${APP}"
+URL="https://kf7mix.com/files/js8spotter/js8spotter-117_src.zip"
+
+# Install Python dependencies, netcat for port checking, sqlite3 for config
+echo "Installing JS8Spotter dependencies..."
+apt-get install -y \
+    python3-tk \
+    python3-pil \
+    python3-pil.imagetk \
+    python3-requests \
+    netcat-openbsd \
+    sqlite3
+
+# Download source-only version (for Linux)
+echo "Downloading JS8Spotter from ${URL}..."
+cd /tmp
+curl -s -L -o "${DOWNLOAD_FILE}" --fail "${URL}"
+
+# Extract and install
+echo "Extracting JS8Spotter to ${INSTALL_DIR}..."
+mkdir -p "${INSTALL_DIR}"
+unzip -o "/tmp/${DOWNLOAD_FILE}" -d "${INSTALL_DIR}"
+
+# If files are in a subdirectory, move them up
+if [ -d "${INSTALL_DIR}/js8spotter-117_src" ]; then
+    mv "${INSTALL_DIR}/js8spotter-117_src/"* "${INSTALL_DIR}/"
+    rmdir "${INSTALL_DIR}/js8spotter-117_src"
+fi
+
+cd "${INSTALL_DIR}"
+
+# Make the main script executable
+chmod +x js8spotter.py 2>/dev/null || true
+
+# Create symlink
+[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+# Clean up
+rm -f "/tmp/${DOWNLOAD_FILE}"
+
+# Create skel directory with database template
+JS8SPOTTER_SKEL="/etc/skel/.local/share/emcomm-tools/js8spotter"
+echo "Creating JS8Spotter skel directory: ${JS8SPOTTER_SKEL}"
+mkdir -p "${JS8SPOTTER_SKEL}"
+# Copy database template (wrapper will symlink resources at runtime)
+cp "${INSTALL_DIR}/js8spotter.db" "${JS8SPOTTER_SKEL}/"
+
+# Create desktop file
+echo "Installing JS8Spotter desktop launcher..."
+cat > /usr/share/applications/${APP}.desktop << 'EOF'
+[Desktop Entry]
+Name=JS8Spotter
+Comment=JS8Call Companion - Activity Search, Maps, APRS, Forms
+Exec=/opt/emcomm-tools/bin/et-js8spotter start
+Icon=js8call
+Terminal=false
+Type=Application
+Categories=HamRadio;Network;
+Keywords=ham;radio;js8call;digital;emcomm;
+EOF
+
+echo "=== JS8Spotter installation complete ==="

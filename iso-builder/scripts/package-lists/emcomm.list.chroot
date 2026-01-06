@@ -97,6 +97,12 @@ zenity
 unzip
 p7zip-full
 
+# Qt5 i386 libraries for QtTermTCP (32-bit)
+libqt5widgets5t64:i386
+libqt5multimedia5:i386
+libqt5network5:i386
+libqt5serialport5:i386
+
 # Ham Radio
 js8call
 wsjtx

@@ -1,0 +1,117 @@
+#!/bin/bash
+# =============================================================================
+# EmComm-Tools Debian Edition
+# Hook: Install flamp (Amateur Multicast Protocol)
+# 
+# Author: Sylvain Deguire (VA2OPS)
+# Date: January 2026
+# 
+# flamp is a file transfer tool using AMP (Amateur Multicast Protocol)
+# for broadcasting files to multiple stations simultaneously.
+# Files are broken into checksummed blocks for reliable delivery.
+# Part of the W1HKJ fldigi suite.
+# =============================================================================
+
+set -e
+
+APP="flamp"
+VERSION="2.2.12"
+GIT_TAG="v${VERSION}"
+GIT_URL="https://git.code.sf.net/p/fldigi/flamp"
+SRC_DIR="/opt/src"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+LINK_PATH="/opt/${APP}"
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "Installing ${APP} ${VERSION} (Amateur Multicast Protocol)"
+echo "═══════════════════════════════════════════════════════════════"
+
+# Build dependencies (most already installed for fldigi/flmsg)
+apt-get install -y --no-install-recommends \
+    build-essential \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    git \
+    libfltk1.3-dev \
+    libxft-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libsamplerate0-dev \
+    libpng-dev
+
+# Create source directory
+mkdir -p ${SRC_DIR}
+cd ${SRC_DIR}
+
+# Clone if not already present
+if [[ ! -d ${APP} ]]; then
+    echo "Cloning ${APP} repository..."
+    git clone ${GIT_URL} ${APP}
+fi
+
+cd ${APP}
+
+# Checkout the specific version (fallback to master if tag not found)
+echo "Checking out ${GIT_TAG}..."
+git fetch --all --tags
+
+if git tag -l | grep -q "^${GIT_TAG}$"; then
+    git checkout ${GIT_TAG}
+else
+    echo "Warning: Tag ${GIT_TAG} not found, using master branch"
+    git checkout master
+fi
+
+# Build
+echo "Running autoreconf..."
+autoreconf -i
+
+echo "Configuring with prefix=${INSTALL_DIR}..."
+./configure --prefix=${INSTALL_DIR}
+
+echo "Compiling ${APP}..."
+make -j$(nproc)
+
+echo "Installing ${APP}..."
+make install
+
+# Create symlink
+[[ -L ${LINK_PATH} ]] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+# Install to /usr/local using stow
+echo "Installing to /usr/local via stow..."
+stow -v -d /opt ${APP} -t /usr/local
+
+# Create .desktop file if not present
+DESKTOP_FILE="/usr/share/applications/${APP}.desktop"
+if [[ ! -f ${DESKTOP_FILE} ]]; then
+    echo "Creating desktop entry..."
+    cat > ${DESKTOP_FILE} << 'EOF'
+[Desktop Entry]
+Name=flamp
+GenericName=Amateur Multicast Protocol
+Comment=File transfer via AMP protocol - broadcast to multiple stations
+Exec=/usr/local/bin/flamp
+Icon=flamp
+Terminal=false
+Type=Application
+Categories=HamRadio;Network;
+Keywords=amateur;radio;ham;file;transfer;multicast;emcomm;
+EOF
+fi
+
+# Copy icon if available
+if [[ -f ${INSTALL_DIR}/share/pixmaps/flamp.xpm ]]; then
+    cp ${INSTALL_DIR}/share/pixmaps/flamp.xpm /usr/share/pixmaps/
+fi
+
+# Create flamp directory structure for user
+FLAMP_DIR="/etc/skel/.flamp"
+mkdir -p ${FLAMP_DIR}/{rx,tx}
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "${APP} ${VERSION} installation complete!"
+echo "═══════════════════════════════════════════════════════════════"

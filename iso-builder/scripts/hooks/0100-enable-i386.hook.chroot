@@ -11,3 +11,9 @@ apt-get install -y \
 
 curl -o /usr/local/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
 chmod +x /usr/local/bin/winetricks
+# Qt5 i386 libraries for QtTermTCP (32-bit)
+apt-get install -y \
+  libqt5widgets5t64:i386 \
+  libqt5multimedia5:i386 \
+  libqt5network5:i386 \
+  libqt5serialport5:i386
