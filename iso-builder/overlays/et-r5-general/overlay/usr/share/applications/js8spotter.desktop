@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=JS8Spotter
+Comment=JS8Spotter - JS8Call companion for activity search and APRS
+Exec=/opt/emcomm-tools/bin/et-js8spotter start
+Icon=/usr/share/icons/js8spotter.png
+Terminal=false
+Type=Application
+Categories=HamRadio;Audio;Network;
+Keywords=ham;radio;js8;js8call;spotter;aprs;digital;
+StartupNotify=true

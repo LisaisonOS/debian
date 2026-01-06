@@ -2,11 +2,13 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2025
+# Updated : January 2026
 # Purpose : EmComm-Tools Map Setup Utility
 #          Downloads and configures offline maps for field deployment
 #
+# Version: 20260105.01
 
-SCRIPT_VERSION="1.1.0"
+SCRIPT_VERSION="20260105.01"
 
 # Colors
 RED='\033[0;31m'
@@ -337,29 +339,49 @@ download_wikipedia() {
         return
     fi
     
-    # Predefined useful Wikipedia archives
-    local files=(
-        "wikipedia_en_simple_all_nopic_2024-06.zim:Simple English (all):~500MB"
-        "wikipedia_en_medicine_nopic_2024-06.zim:English Medicine:~1.2GB"
-        "wikipedia_en_computer_nopic_2024-05.zim:English Computer:~800MB"
-    )
+    log_info "Fetching Wikipedia catalog from Kiwix..."
     
-    local options=()
-    local i=1
-    for file_info in "${files[@]}"; do
-        IFS=':' read -r filename description size <<< "$file_info"
-        if [ -f "${WIKIPEDIA_DIR}/${filename}" ]; then
-            options+=("$i" "[INSTALLED] ${description} (${size})" off)
-        else
-            options+=("$i" "${description} (${size})" off)
+    local html_file="/tmp/kiwix-catalog.html"
+    curl -s -L -f -o "${html_file}" "${KIWIX_URL}/"
+    
+    if [ $? -ne 0 ]; then
+        log_error "Cannot fetch catalog from Kiwix"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
+    
+    # Parse available .zim files (English Wikipedia, nopic versions for smaller size)
+    local zim_files=()
+    local menu_items=()
+    
+    while IFS= read -r line; do
+        local zim_file=$(echo "$line" | grep -oP 'href="\K[^"]*\.zim(?=")' | head -1)
+        if [ -n "$zim_file" ]; then
+            # Get file size from the HTML if available
+            local size=$(echo "$line" | grep -oP '[0-9]+(\.[0-9]+)?[MGT]' | head -1)
+            [ -z "$size" ] && size="?"
+            
+            zim_files+=("$zim_file")
+            if [ -f "${WIKIPEDIA_DIR}/${zim_file}" ]; then
+                menu_items+=("$zim_file" "[INSTALLED] ($size)" off)
+            else
+                menu_items+=("$zim_file" "($size)" off)
+            fi
         fi
-        ((i++))
-    done
+    done < <(grep -E 'wikipedia_en.*nopic.*\.zim"' "${html_file}" | sort -u | head -30)
+    
+    rm -f "${html_file}"
+    
+    if [ ${#zim_files[@]} -eq 0 ]; then
+        log_error "No Wikipedia files found in catalog"
+        read -p "Press Enter to continue..."
+        return 1
+    fi
     
     local selected
-    selected=$(dialog --title "Download Wikipedia Archives" \
-        --checklist "Select Wikipedia archives to download:\n(nopic = no pictures, smaller size)" \
-        16 60 5 "${options[@]}" 2>&1 >/dev/tty)
+    selected=$(dialog --title "Download Wikipedia Archives (English nopic)" \
+        --checklist "Select Wikipedia archives to download:\n(nopic = no pictures, smaller size)\n\nSpace to select, Enter to confirm" \
+        22 75 12 "${menu_items[@]}" 2>&1 >/dev/tty)
     
     local ret=$?
     clear
@@ -367,18 +389,18 @@ download_wikipedia() {
     [ $ret -ne 0 ] && return
     [ -z "$selected" ] && return
     
-    for sel in $selected; do
-        local file_info="${files[$((sel-1))]}"
-        IFS=':' read -r filename description size <<< "$file_info"
-        local url="${KIWIX_URL}/${filename}"
-        local dest_file="${WIKIPEDIA_DIR}/${filename}"
+    for zim_file in $selected; do
+        # Remove quotes
+        zim_file=$(echo "$zim_file" | tr -d '"')
+        local url="${KIWIX_URL}/${zim_file}"
+        local dest_file="${WIKIPEDIA_DIR}/${zim_file}"
         
         if [ -f "${dest_file}" ]; then
-            log_info "${filename} already exists, skipping..."
+            log_info "${zim_file} already exists, skipping..."
             continue
         fi
         
-        log_info "Downloading ${description}..."
+        log_info "Downloading ${zim_file}..."
         log_info "URL: ${url}"
         log_info "Destination: ${dest_file}"
         

@@ -14,7 +14,8 @@
 # 3. JS8Call started
 
 # Modified : Syvain Deguire - VA2OPS
-# Modiification : Comments out the overwrite of MyInfo 
+# Date     : January 2026
+# Changes  : MyInfo now shows the selected radio from et-radio 
 
 . /opt/emcomm-tools/bin/et-common
 
@@ -48,6 +49,9 @@ start() {
       "No GPS. Ensure your time is accurate when JS8 starts."
   fi
 
+  # Start JS8Spotter (it will wait for JS8Call API to be ready)
+  /opt/emcomm-tools/bin/et-js8spotter start &
+
 }
 
 update-config() {
@@ -68,9 +72,15 @@ update-config() {
     sed -i "s|^MyCall.*|MyCall=${CALLSIGN}|" ${JS8CALL_CONF_FILE} 
     sed -i "s|^MyGrid.*|MyGrid=${GRID}|" ${JS8CALL_CONF_FILE} 
 
-    ### ET_RELEASE=$(et-system-info release)
-    ### Comment out this instruction to NOT overwrite the MyInfo setting.
-    ### sed -i "s|^MyInfo.*|MyInfo=${ET_RELEASE}|" ${JS8CALL_CONF_FILE} 
+    # Set MyInfo to the selected radio (from et-radio)
+    ACTIVE_RADIO_FILE="/opt/emcomm-tools/conf/radios.d/active-radio.json"
+    if [ -e "${ACTIVE_RADIO_FILE}" ]; then
+        RADIO_MODEL=$(jq -r '.model // empty' "${ACTIVE_RADIO_FILE}")
+        if [ -n "${RADIO_MODEL}" ]; then
+            sed -i "s|^MyInfo.*|MyInfo=${RADIO_MODEL}|" ${JS8CALL_CONF_FILE}
+            et-log "Updated JS8Call MyInfo with radio: '${RADIO_MODEL}'"
+        fi
+    fi
 
     et-log "Updated JS8Call configuration with user callsign '${CALLSIGN}' and grid: '${GRID}'"
 

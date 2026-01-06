@@ -4,6 +4,7 @@ et-dashboard - EmComm-Tools Interactive Dashboard
 Author: Sylvain Deguire (VA2OPS)
 Date: January 2026
 Updated: Added adaptive resolution support
+Updated: JS8 button now launches JS8Spotter alongside JS8Call
 
 Replaces Conky with a clickable GTK dashboard
 Automatically adjusts to screen resolution changes
@@ -308,7 +309,7 @@ class EmCommDashboard(Gtk.Window):
             ("Winlink", self.on_winlink_clicked),
             ("JS8", self.on_js8_clicked),
             ("VarAC", self.on_varac_clicked),
-            ("BBS", self.on_bbs_clicked),
+            ("QtTerm", self.on_bbs_clicked),
         ]
         
         for name, callback in apps:
@@ -415,6 +416,7 @@ class EmCommDashboard(Gtk.Window):
         return True
     
     # === Click Handlers ===
+    # ALL handlers use xfce4-terminal to ensure proper environment (Wine, etc.)
     def on_radio_clicked(self, widget):
         subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-radio"])
     
@@ -425,16 +427,17 @@ class EmCommDashboard(Gtk.Window):
         subprocess.Popen(["xfce4-terminal", "--command=/opt/emcomm-tools/bin/et-mode"])
     
     def on_winlink_clicked(self, widget):
-        subprocess.Popen(["/opt/emcomm-tools/bin/et-winlink", "start"])
+        subprocess.Popen(["xfce4-terminal", "-e", "bash -l -c '/opt/emcomm-tools/bin/et-winlink-mode; exec bash'"])
     
     def on_js8_clicked(self, widget):
+        """Launch JS8Call (et-js8call will also start JS8Spotter)"""
         subprocess.Popen(["/opt/emcomm-tools/bin/et-js8call", "start"])
     
     def on_varac_clicked(self, widget):
         subprocess.Popen(["/opt/emcomm-tools/bin/et-varac", "start"])
     
     def on_bbs_clicked(self, widget):
-        subprocess.Popen(["/opt/emcomm-tools/bin/et-bbs", "start"])
+        subprocess.Popen(["xfce4-terminal", "-e", "bash -l -c '/opt/emcomm-tools/bin/et-qttermtcp-mode; exec bash'"])
 
 
 def main():

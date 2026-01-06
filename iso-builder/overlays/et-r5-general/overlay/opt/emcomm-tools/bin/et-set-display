@@ -2,12 +2,18 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : Set default display resolution for EmComm-Tools
-#           Target: 1680x1050 for Panasonic Toughpads and similar devices
+# Version : 20260105.02
+# Purpose : Set display resolution and wallpaper based on screen aspect ratio
 #
 
 PREFERRED_RES="1680x1050"
 FALLBACK_RES="1920x1080"
+
+# Wallpaper paths
+WALLPAPER_DIR="/usr/share/backgrounds"
+WALLPAPER_16x9="${WALLPAPER_DIR}/wallpaper-16x9.png"
+WALLPAPER_16x10="${WALLPAPER_DIR}/wallpaper-16x10.png"
+WALLPAPER_DEFAULT="${WALLPAPER_DIR}/wallpaper.png"
 
 # Get connected display
 DISPLAY_NAME=$(xrandr | grep " connected" | head -1 | cut -d' ' -f1)
@@ -39,9 +45,66 @@ else
     fi
 fi
 
+# === WALLPAPER SELECTION BY ASPECT RATIO ===
+select_wallpaper() {
+    # Get current resolution
+    local RES=$(xrandr | grep '\*' | head -1 | awk '{print $1}')
+    local WIDTH=$(echo "$RES" | cut -dx -f1)
+    local HEIGHT=$(echo "$RES" | cut -dx -f2)
+    
+    if [ -z "$WIDTH" ] || [ -z "$HEIGHT" ]; then
+        echo "Could not detect resolution for wallpaper selection"
+        return
+    fi
+    
+    # Calculate aspect ratio (x100 to avoid floating point)
+    local RATIO=$((WIDTH * 100 / HEIGHT))
+    
+    echo "Screen: ${WIDTH}x${HEIGHT}, Ratio: ${RATIO}"
+    
+    # Select wallpaper based on ratio
+    # 16:9  = 1.78 = 178
+    # 16:10 = 1.60 = 160
+    # 4:3   = 1.33 = 133
+    
+    local SELECTED_WALLPAPER=""
+    
+    if [ $RATIO -ge 170 ]; then
+        # 16:9 or wider
+        if [ -f "$WALLPAPER_16x9" ]; then
+            SELECTED_WALLPAPER="$WALLPAPER_16x9"
+            echo "Selected 16:9 wallpaper"
+        fi
+    elif [ $RATIO -ge 155 ]; then
+        # 16:10
+        if [ -f "$WALLPAPER_16x10" ]; then
+            SELECTED_WALLPAPER="$WALLPAPER_16x10"
+            echo "Selected 16:10 wallpaper"
+        fi
+    fi
+    
+    # Fallback to default
+    if [ -z "$SELECTED_WALLPAPER" ] || [ ! -f "$SELECTED_WALLPAPER" ]; then
+        SELECTED_WALLPAPER="$WALLPAPER_DEFAULT"
+        echo "Using default wallpaper"
+    fi
+    
+    # Apply wallpaper via xfconf-query
+    if command -v xfconf-query &> /dev/null; then
+        # Find the correct property path for this monitor
+        local BACKDROP_PATH="/backdrop/screen0/monitor${DISPLAY_NAME}/workspace0/last-image"
+        
+        xfconf-query -c xfce4-desktop -p "$BACKDROP_PATH" -s "$SELECTED_WALLPAPER" 2>/dev/null || \
+        xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor0/workspace0/last-image" -s "$SELECTED_WALLPAPER" 2>/dev/null || \
+        echo "Could not set wallpaper via xfconf-query"
+        
+        echo "Wallpaper set to: $SELECTED_WALLPAPER"
+    fi
+}
+
 # Save to XFCE settings if running XFCE
 if [ -n "$XFCE_SESSION_PID" ] || pgrep -x xfce4-session > /dev/null; then
-    echo "Saving XFCE display settings..."
+    echo "Configuring XFCE display settings..."
     
     # Get current resolution
     CURRENT_RES=$(xrandr | grep '\*' | head -1 | awk '{print $1}')
@@ -54,6 +117,9 @@ if [ -n "$XFCE_SESSION_PID" ] || pgrep -x xfce4-session > /dev/null; then
     if command -v xfconf-query &> /dev/null; then
         xfconf-query -c displays -p /Default/${DISPLAY_NAME}/Resolution -s "$CURRENT_RES" 2>/dev/null || true
     fi
+    
+    # Select and set wallpaper based on aspect ratio
+    select_wallpaper
 fi
 
 echo "Display configured: $(xrandr | grep '\*' | head -1 | awk '{print $1}')"

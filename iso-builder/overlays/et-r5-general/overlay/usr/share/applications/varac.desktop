@@ -1,8 +1,11 @@
 [Desktop Entry]
 Name=VarAC
-Comment=VarAC application
-Exec=bash -c "$HOME/varac.sh"
-Icon=varac
-Type=Application
-Categories=HamRadio;Network;
+Comment=VarAC - Chat over VARA modems
+Exec=/opt/emcomm-tools/bin/et-varac start
+Icon=/usr/share/icons/varac.png
 Terminal=false
+Type=Application
+Categories=HamRadio;Audio;Network;
+Keywords=ham;radio;vara;varac;digital;
+StartupNotify=true
+StartupWMClass=varac.exe
