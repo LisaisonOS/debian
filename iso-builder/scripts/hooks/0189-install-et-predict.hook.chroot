@@ -1,18 +1,26 @@
 #!/bin/bash
 echo "Installing ET-Predict..."
 
-VERSION="1.2.0"
 APP="et-predict-app"
-JAR_FILE="${APP}.jar"
-INSTALL_DIR="/opt/${APP}-${VERSION}"
-LINK_PATH="/opt/${APP}"
+VERSION="1.2.0"
+DOWNLOAD_FILE="${APP}_${VERSION}_amd64.deb"
 
-URL="https://github.com/thetechprepper/et-predict-app/releases/download/v${VERSION}/${JAR_FILE}"
+# Note: TTP repo uses VERSION without 'v' prefix
+URL="https://github.com/thetechprepper/${APP}/releases/download/${VERSION}/${DOWNLOAD_FILE}"
 
-mkdir -p ${INSTALL_DIR}
-curl -s -L -o ${INSTALL_DIR}/${JAR_FILE} --fail ${URL}
+cd /tmp
 
-[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
-ln -s ${INSTALL_DIR} ${LINK_PATH}
+echo "Downloading ${URL}..."
+curl -L -o ${DOWNLOAD_FILE} --fail ${URL}
 
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to download et-predict-app"
+    exit 1
+fi
+
+echo "Installing ${DOWNLOAD_FILE}..."
+DEBIAN_FRONTEND=noninteractive dpkg -i ${DOWNLOAD_FILE}
+
+rm -f ${DOWNLOAD_FILE}
+rm -f /usr/share/applications/et-predict-app.desktop
 echo "ET-Predict installation complete"

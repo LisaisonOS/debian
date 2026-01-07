@@ -3,19 +3,28 @@ echo "Installing mbtileserver..."
 
 APP="mbtileserver"
 VERSION="0.11.0"
-TARBALL="mbtileserver_${VERSION}_linux_amd64.tar.gz"
+ZIPFILE="mbtileserver_v${VERSION}_linux_amd64.zip"
 INSTALL_DIR="/opt/${APP}-${VERSION}"
 INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
 LINK_PATH="/opt/${APP}"
 
-URL="https://github.com/consbio/mbtileserver/releases/download/v${VERSION}/${TARBALL}"
+URL="https://github.com/consbio/mbtileserver/releases/download/v${VERSION}/${ZIPFILE}"
 
 mkdir -p ${INSTALL_BIN_DIR}
 cd /tmp
-curl -s -L -o ${TARBALL} --fail ${URL}
-tar -xzf ${TARBALL}
-mv mbtileserver ${INSTALL_BIN_DIR}/
-rm -f ${TARBALL}
+
+echo "Downloading ${URL}..."
+curl -L -o ${ZIPFILE} --fail ${URL}
+
+if [ $? -ne 0 ]; then
+    echo "ERROR: Failed to download mbtileserver"
+    exit 1
+fi
+
+unzip -o ${ZIPFILE} -d ${INSTALL_BIN_DIR}/
+mv ${INSTALL_BIN_DIR}/mbtileserver_v${VERSION}_linux_amd64 ${INSTALL_BIN_DIR}/mbtileserver
+chmod 755 ${INSTALL_BIN_DIR}/mbtileserver
+rm -f ${ZIPFILE}
 
 [ -e ${LINK_PATH} ] && rm ${LINK_PATH}
 ln -s ${INSTALL_DIR} ${LINK_PATH}

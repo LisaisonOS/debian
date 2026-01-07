@@ -4,12 +4,12 @@
 # Purpose: Install JS8Spotter - JS8Call companion application
 # Author: Sylvain Deguire (VA2OPS)
 # Date: January 2026
+# Version: 20260106.02
 #
 # JS8Spotter extends JS8Call with profile-based activity search,
 # offline maps, APRS commands, automated responses, and MCForms.
 # https://kf7mix.com/js8spotter.html
 # =============================================================================
-
 set -e
 
 echo "=== Installing JS8Spotter ==="
@@ -31,9 +31,15 @@ apt-get install -y \
     netcat-openbsd \
     sqlite3
 
+# Clean any previous installation to avoid mv conflicts
+echo "Cleaning previous installation..."
+rm -rf "${INSTALL_DIR}"
+rm -f "${LINK_PATH}"
+
 # Download source-only version (for Linux)
 echo "Downloading JS8Spotter from ${URL}..."
 cd /tmp
+rm -f "${DOWNLOAD_FILE}"
 curl -s -L -o "${DOWNLOAD_FILE}" --fail "${URL}"
 
 # Extract and install
@@ -43,8 +49,8 @@ unzip -o "/tmp/${DOWNLOAD_FILE}" -d "${INSTALL_DIR}"
 
 # If files are in a subdirectory, move them up
 if [ -d "${INSTALL_DIR}/js8spotter-117_src" ]; then
-    mv "${INSTALL_DIR}/js8spotter-117_src/"* "${INSTALL_DIR}/"
-    rmdir "${INSTALL_DIR}/js8spotter-117_src"
+    cp -r "${INSTALL_DIR}/js8spotter-117_src/"* "${INSTALL_DIR}/"
+    rm -rf "${INSTALL_DIR}/js8spotter-117_src"
 fi
 
 cd "${INSTALL_DIR}"
@@ -53,7 +59,6 @@ cd "${INSTALL_DIR}"
 chmod +x js8spotter.py 2>/dev/null || true
 
 # Create symlink
-[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
 ln -s ${INSTALL_DIR} ${LINK_PATH}
 
 # Clean up
@@ -63,6 +68,7 @@ rm -f "/tmp/${DOWNLOAD_FILE}"
 JS8SPOTTER_SKEL="/etc/skel/.local/share/emcomm-tools/js8spotter"
 echo "Creating JS8Spotter skel directory: ${JS8SPOTTER_SKEL}"
 mkdir -p "${JS8SPOTTER_SKEL}"
+
 # Copy database template (wrapper will symlink resources at runtime)
 cp "${INSTALL_DIR}/js8spotter.db" "${JS8SPOTTER_SKEL}/"
 
