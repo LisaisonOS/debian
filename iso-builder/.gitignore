@@ -3,17 +3,12 @@ build/
 *.iso
 *.log
 
-# Personal/Club stuff
+# Personal files, not for public
 overlays/et-r5-va2ops/
 overlays/*-va2ops/
-overlays/*-va2gcu/
 
-backgrounds/va2ops-*
-backgrounds/va2gcu-*
 motd/va2ops-*
-motd/va2gcu-*
 wine-sources/Personal/
-wine-sources/Private/
 
 # System files
 *.bak
@@ -21,4 +16,6 @@ wine-sources/Private/
 *~
 wine-sources/
 wine-sources/
+
+# not fot general emcomm-tools os, has is own git: emcomm-tools/bbs-server-app
 overlays/*/overlay/etc/skel/.local/share/emcomm-tools/bbs-server/apps/
