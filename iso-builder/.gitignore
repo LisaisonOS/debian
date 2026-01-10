@@ -14,8 +14,9 @@ wine-sources/Personal/
 *.bak
 *.tmp
 *~
-wine-sources/
-wine-sources/
+wine-sources/Public
+wine-sources/General
+
 
 # not fot general emcomm-tools os, has is own git: emcomm-tools/bbs-server-app
 overlays/*/overlay/etc/skel/.local/share/emcomm-tools/bbs-server/apps/
