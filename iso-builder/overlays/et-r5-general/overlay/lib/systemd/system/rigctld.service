@@ -1,9 +1,9 @@
 [Unit]
 Description=Rig Control Service
-#ConditionPathExists=/dev/et-cat
 After=multi-user.target
 
 [Service]
+Type=simple
 ExecStart=/opt/emcomm-tools/sbin/wrapper-rigctld.sh start
 
 [Install]

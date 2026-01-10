@@ -1,27 +1,28 @@
 #!/bin/bash
 #
 # Author  : Sylvain Deguire (VA2OPS)
-# Date    : 4 January 2026
+# Date    : 7 January 2026
 # Purpose : Wrapper script for JS8Spotter
 #
 # JS8Spotter writes its database to current directory. We run from user's
-# config directory with symlinks to all resources in /opt/js8spotter.
+# config directory which has a writable copy of the database and symlinks
+# to all resources in /opt/js8spotter.
 
 . /opt/emcomm-tools/bin/et-common
 
 JS8SPOTTER_INSTALL="/opt/js8spotter"
 JS8SPOTTER_HOME="${HOME}/.local/share/emcomm-tools/js8spotter"
-JS8SPOTTER_BIN="${JS8SPOTTER_INSTALL}/js8spotter.py"
 
 case "$1" in
     start)
         et-log "Starting JS8Spotter..."
         
         # Wait for JS8Call API to be ready (port 2442)
+        # Using bash builtin instead of nc (which may not be installed)
         MAX_WAIT=30
         WAITED=0
         et-log "Waiting for JS8Call API (port 2442)..."
-        while ! nc -z localhost 2442 2>/dev/null; do
+        while ! timeout 1 bash -c 'echo > /dev/tcp/127.0.0.1/2442' 2>/dev/null; do
             sleep 1
             WAITED=$((WAITED + 1))
             if [ $WAITED -ge $MAX_WAIT ]; then
@@ -32,30 +33,17 @@ case "$1" in
         done
         et-log "JS8Call API ready after ${WAITED}s"
         
-        # Create user directory if needed
+        # Create user directory if needed (should exist from skel, but just in case)
         [[ ! -d "${JS8SPOTTER_HOME}" ]] && mkdir -p "${JS8SPOTTER_HOME}"
         
-        # Copy database template if not exists
-        [[ ! -e "${JS8SPOTTER_HOME}/js8spotter.db" ]] && cp "${JS8SPOTTER_INSTALL}/js8spotter.db" "${JS8SPOTTER_HOME}/"
-        
-        # Update callsign and grid from et-user config
-        ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
-        if [[ -e "${ET_USER_CONFIG}" ]]; then
-            CALLSIGN=$(jq -r '.callsign // empty' "${ET_USER_CONFIG}")
-            GRID=$(jq -r '.grid // empty' "${ET_USER_CONFIG}")
-            
-            if [[ -n "${CALLSIGN}" && "${CALLSIGN}" != "N0CALL" ]]; then
-                sqlite3 "${JS8SPOTTER_HOME}/js8spotter.db" "UPDATE setting SET value='${CALLSIGN}' WHERE name='callsign';"
-                et-log "Updated JS8Spotter callsign: ${CALLSIGN}"
-            fi
-            
-            if [[ -n "${GRID}" ]]; then
-                sqlite3 "${JS8SPOTTER_HOME}/js8spotter.db" "UPDATE setting SET value='${GRID}' WHERE name='grid';"
-                et-log "Updated JS8Spotter grid: ${GRID}"
-            fi
+        # Copy database if not exists (for users created before JS8Spotter was installed)
+        if [[ ! -e "${JS8SPOTTER_HOME}/js8spotter.db" ]]; then
+            cp "${JS8SPOTTER_INSTALL}/js8spotter.db" "${JS8SPOTTER_HOME}/"
+            # Disable sounds by default
+            sqlite3 "${JS8SPOTTER_HOME}/js8spotter.db" "UPDATE setting SET value='1' WHERE name='disable_sounds';"
         fi
         
-        # Symlink all resources (maps, theme, sounds, etc.) except database files
+        # Ensure symlinks exist for all resources
         for f in "${JS8SPOTTER_INSTALL}"/*; do
             name=$(basename "$f")
             # Skip database files - user has own copy
@@ -64,8 +52,26 @@ case "$1" in
             [[ ! -e "${JS8SPOTTER_HOME}/${name}" ]] && ln -s "$f" "${JS8SPOTTER_HOME}/"
         done
         
+        # Update callsign and grid from et-user config
+        ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
+        if [[ -e "${ET_USER_CONFIG}" ]]; then
+            CALLSIGN=$(jq -r '.callsign // empty' "${ET_USER_CONFIG}")
+            GRID=$(jq -r '.grid // empty' "${ET_USER_CONFIG}")
+            
+            if [[ -n "${CALLSIGN}" && "${CALLSIGN}" != "N0CALL" ]]; then
+                sqlite3 "${JS8SPOTTER_HOME}/js8spotter.db" "UPDATE setting SET value='${CALLSIGN}' WHERE name='callsign';" 2>/dev/null || true
+                et-log "Updated JS8Spotter callsign: ${CALLSIGN}"
+            fi
+            
+            if [[ -n "${GRID}" ]]; then
+                sqlite3 "${JS8SPOTTER_HOME}/js8spotter.db" "UPDATE setting SET value='${GRID}' WHERE name='grid';" 2>/dev/null || true
+                et-log "Updated JS8Spotter grid: ${GRID}"
+            fi
+        fi
+        
+        # Run from user's directory (critical for database writes!)
         cd "${JS8SPOTTER_HOME}"
-        python3 "${JS8SPOTTER_BIN}" &
+        python3 js8spotter.py &
         ;;
     stop)
         et-log "Stopping JS8Spotter..."

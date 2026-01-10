@@ -205,11 +205,38 @@ class EmCommDashboard(Gtk.Window):
             min-height: 0;
             min-width: 0;
             font-size: {font_button}px;
+            background: transparent;
+            border: 1px solid #444444;
+            color: #888888;
+            border-radius: 3px;
+        }}
+        .config-button:hover {{
+            background: #444444;
+            color: #CCCCCC;
+        }}
+        .config-button:active {{
+            background: #333333;
+            border-color: #FFA500;
+            color: #FFA500;
         }}
         .app-button {{
             padding: {btn_padding};
             font-size: {font_button}px;
             font-weight: bold;
+            background: linear-gradient(to bottom, #444444, #333333);
+            border: 1px solid #555555;
+            color: #CCCCCC;
+            border-radius: 4px;
+        }}
+        .app-button:hover {{
+            background: linear-gradient(to bottom, #555555, #444444);
+            border-color: #666666;
+            color: #FFFFFF;
+        }}
+        .app-button:active {{
+            background: linear-gradient(to bottom, #222222, #333333);
+            border-color: #FFA500;
+            color: #FFA500;
         }}
         .separator {{
             background-color: #444444;

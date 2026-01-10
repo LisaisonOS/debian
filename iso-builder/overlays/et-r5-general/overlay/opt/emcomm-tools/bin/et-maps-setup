@@ -6,9 +6,12 @@
 # Purpose : EmComm-Tools Map Setup Utility
 #          Downloads and configures offline maps for field deployment
 #
-# Version: 20260105.01
+# Version: 1.2.0
+# Changes: - Wikipedia: per-file symlinks (keeps local .zim files)
+#          - Wikipedia: full English + French catalog from Kiwix
+#
 
-SCRIPT_VERSION="20260105.01"
+SCRIPT_VERSION="1.2.0"
 
 # Colors
 RED='\033[0;31m'
@@ -147,31 +150,67 @@ setup_symlinks() {
     
     # Create parent directories
     mkdir -p "$(dirname ${MBTILES_LOCAL_DIR})"
-    mkdir -p "$(dirname ${WIKIPEDIA_LOCAL_DIR})"
+    mkdir -p "${WIKIPEDIA_LOCAL_DIR}"
     mkdir -p "$(dirname ${OSM_LOCAL_DIR})"
     
-    # Backup and replace existing directories
-    for dir in "${MBTILES_LOCAL_DIR}" "${WIKIPEDIA_LOCAL_DIR}" "${OSM_LOCAL_DIR}"; do
-        if [ -d "$dir" ] && [ ! -L "$dir" ]; then
-            if [ "$(ls -A $dir 2>/dev/null)" ]; then
-                log_warn "Backing up existing data in $dir"
-                mv "$dir" "${dir}.backup.$(date +%Y%m%d)"
-            else
-                rmdir "$dir" 2>/dev/null || true
-            fi
+    # === MBTILES: Symlink entire folder ===
+    if [ -d "${MBTILES_LOCAL_DIR}" ] && [ ! -L "${MBTILES_LOCAL_DIR}" ]; then
+        if [ "$(ls -A ${MBTILES_LOCAL_DIR} 2>/dev/null)" ]; then
+            log_warn "Backing up existing data in ${MBTILES_LOCAL_DIR}"
+            mv "${MBTILES_LOCAL_DIR}" "${MBTILES_LOCAL_DIR}.backup.$(date +%Y%m%d)"
+        else
+            rmdir "${MBTILES_LOCAL_DIR}" 2>/dev/null || true
         fi
-        [ -L "$dir" ] && rm "$dir"
-    done
-    
-    # Create symlinks
+    fi
+    [ -L "${MBTILES_LOCAL_DIR}" ] && rm "${MBTILES_LOCAL_DIR}"
     ln -s "${MBTILES_DIR}" "${MBTILES_LOCAL_DIR}"
     log_info "Linked: ${MBTILES_LOCAL_DIR} -> ${MBTILES_DIR}"
     
-    ln -s "${WIKIPEDIA_DIR}" "${WIKIPEDIA_LOCAL_DIR}"
-    log_info "Linked: ${WIKIPEDIA_LOCAL_DIR} -> ${WIKIPEDIA_DIR}"
-    
+    # === OSM: Symlink entire folder ===
+    if [ -d "${OSM_LOCAL_DIR}" ] && [ ! -L "${OSM_LOCAL_DIR}" ]; then
+        if [ "$(ls -A ${OSM_LOCAL_DIR} 2>/dev/null)" ]; then
+            log_warn "Backing up existing data in ${OSM_LOCAL_DIR}"
+            mv "${OSM_LOCAL_DIR}" "${OSM_LOCAL_DIR}.backup.$(date +%Y%m%d)"
+        else
+            rmdir "${OSM_LOCAL_DIR}" 2>/dev/null || true
+        fi
+    fi
+    [ -L "${OSM_LOCAL_DIR}" ] && rm "${OSM_LOCAL_DIR}"
     ln -s "${OSM_DIR}" "${OSM_LOCAL_DIR}"
     log_info "Linked: ${OSM_LOCAL_DIR} -> ${OSM_DIR}"
+    
+    # === WIKIPEDIA: Per-file symlinks (keep local files) ===
+    log_info "Setting up Wikipedia per-file symlinks..."
+    
+    # Ensure local wikipedia folder exists (not a symlink)
+    if [ -L "${WIKIPEDIA_LOCAL_DIR}" ]; then
+        log_warn "Removing old wikipedia folder symlink..."
+        rm "${WIKIPEDIA_LOCAL_DIR}"
+        mkdir -p "${WIKIPEDIA_LOCAL_DIR}"
+    fi
+    
+    # Create symlink for each .zim file on external drive
+    if [ -d "${WIKIPEDIA_DIR}" ]; then
+        for zim_file in "${WIKIPEDIA_DIR}"/*.zim; do
+            if [ -f "$zim_file" ]; then
+                local filename=$(basename "$zim_file")
+                local link_path="${WIKIPEDIA_LOCAL_DIR}/${filename}"
+                
+                # Remove existing link or file with same name
+                [ -L "$link_path" ] && rm "$link_path"
+                
+                # Don't overwrite local files - only create link if not exists
+                if [ ! -f "$link_path" ]; then
+                    ln -s "$zim_file" "$link_path"
+                    log_info "Linked: ${filename}"
+                else
+                    log_warn "Local file exists, skipping: ${filename}"
+                fi
+            fi
+        done
+    fi
+    
+    log_info "Wikipedia symlinks configured (local files preserved)."
 }
 
 download_mbtiles() {
@@ -340,6 +379,7 @@ download_wikipedia() {
     fi
     
     log_info "Fetching Wikipedia catalog from Kiwix..."
+    log_info "This may take a moment..."
     
     local html_file="/tmp/kiwix-catalog.html"
     curl -s -L -f -o "${html_file}" "${KIWIX_URL}/"
@@ -350,38 +390,50 @@ download_wikipedia() {
         return 1
     fi
     
-    # Parse available .zim files (English Wikipedia, nopic versions for smaller size)
-    local zim_files=()
+    # Parse ALL English and French Wikipedia files
+    local files=()
     local menu_items=()
+    local i=1
     
     while IFS= read -r line; do
+        # Extract .zim filename
         local zim_file=$(echo "$line" | grep -oP 'href="\K[^"]*\.zim(?=")' | head -1)
+        
         if [ -n "$zim_file" ]; then
-            # Get file size from the HTML if available
-            local size=$(echo "$line" | grep -oP '[0-9]+(\.[0-9]+)?[MGT]' | head -1)
-            [ -z "$size" ] && size="?"
-            
-            zim_files+=("$zim_file")
-            if [ -f "${WIKIPEDIA_DIR}/${zim_file}" ]; then
-                menu_items+=("$zim_file" "[INSTALLED] ($size)" off)
-            else
-                menu_items+=("$zim_file" "($size)" off)
+            # Filter: English (wikipedia_en_) or French (wikipedia_fr_)
+            if [[ "$zim_file" == wikipedia_en_* ]] || [[ "$zim_file" == wikipedia_fr_* ]]; then
+                files+=("$zim_file")
+                
+                # Create display name
+                local display_name="$zim_file"
+                # Shorten for display
+                display_name=$(echo "$display_name" | sed 's/wikipedia_//' | sed 's/\.zim$//' | sed 's/_/ /g')
+                
+                # Check if installed
+                if [ -f "${WIKIPEDIA_DIR}/${zim_file}" ]; then
+                    menu_items+=("$i" "[✓] ${display_name}" off)
+                else
+                    menu_items+=("$i" "${display_name}" off)
+                fi
+                ((i++))
             fi
         fi
-    done < <(grep -E 'wikipedia_en.*nopic.*\.zim"' "${html_file}" | sort -u | head -30)
+    done < <(grep -E '\.zim"' "${html_file}" | sort)
     
     rm -f "${html_file}"
     
-    if [ ${#zim_files[@]} -eq 0 ]; then
-        log_error "No Wikipedia files found in catalog"
+    if [ ${#files[@]} -eq 0 ]; then
+        log_error "No Wikipedia files found"
         read -p "Press Enter to continue..."
         return 1
     fi
     
+    log_info "Found ${#files[@]} English/French Wikipedia archives"
+    
     local selected
-    selected=$(dialog --title "Download Wikipedia Archives (English nopic)" \
-        --checklist "Select Wikipedia archives to download:\n(nopic = no pictures, smaller size)\n\nSpace to select, Enter to confirm" \
-        22 75 12 "${menu_items[@]}" 2>&1 >/dev/tty)
+    selected=$(dialog --title "Download Wikipedia Archives (EN + FR)" \
+        --checklist "Select Wikipedia archives to download:\n[✓] = Already installed\nSpace to select, Enter to confirm" \
+        22 75 14 "${menu_items[@]}" 2>&1 >/dev/tty)
     
     local ret=$?
     clear
@@ -389,18 +441,17 @@ download_wikipedia() {
     [ $ret -ne 0 ] && return
     [ -z "$selected" ] && return
     
-    for zim_file in $selected; do
-        # Remove quotes
-        zim_file=$(echo "$zim_file" | tr -d '"')
-        local url="${KIWIX_URL}/${zim_file}"
-        local dest_file="${WIKIPEDIA_DIR}/${zim_file}"
+    for sel in $selected; do
+        local filename="${files[$((sel-1))]}"
+        local url="${KIWIX_URL}/${filename}"
+        local dest_file="${WIKIPEDIA_DIR}/${filename}"
         
         if [ -f "${dest_file}" ]; then
-            log_info "${zim_file} already exists, skipping..."
+            log_info "${filename} already exists, skipping..."
             continue
         fi
         
-        log_info "Downloading ${zim_file}..."
+        log_info "Downloading ${filename}..."
         log_info "URL: ${url}"
         log_info "Destination: ${dest_file}"
         
@@ -448,21 +499,27 @@ show_status() {
     fi
     
     status+="\nWikipedia Archives:\n"
+    status+="  Local (~/wikipedia):\n"
+    local local_count=$(ls -1 "${WIKIPEDIA_LOCAL_DIR}"/*.zim 2>/dev/null | wc -l)
+    status+="    Files: ${local_count}\n"
     if [ -d "${WIKIPEDIA_DIR}" ]; then
-        local count=$(ls -1 "${WIKIPEDIA_DIR}"/*.zim 2>/dev/null | wc -l)
-        status+="  ZIM Files: ${count}\n"
-    else
-        status+="  Not configured\n"
+        local ext_count=$(ls -1 "${WIKIPEDIA_DIR}"/*.zim 2>/dev/null | wc -l)
+        status+="  External (${WIKIPEDIA_DIR}):\n"
+        status+="    Files: ${ext_count}\n"
     fi
     
     status+="\nSymlinks:\n"
-    for link in "${MBTILES_LOCAL_DIR}" "${WIKIPEDIA_LOCAL_DIR}" "${OSM_LOCAL_DIR}"; do
-        if [ -L "$link" ]; then
-            status+="  $(basename $link) -> $(readlink $link)\n"
-        fi
-    done
+    if [ -L "${MBTILES_LOCAL_DIR}" ]; then
+        status+="  tilesets -> $(readlink ${MBTILES_LOCAL_DIR})\n"
+    fi
+    if [ -L "${OSM_LOCAL_DIR}" ]; then
+        status+="  my-maps -> $(readlink ${OSM_LOCAL_DIR})\n"
+    fi
+    # Count wikipedia file symlinks
+    local wiki_links=$(find "${WIKIPEDIA_LOCAL_DIR}" -maxdepth 1 -type l -name "*.zim" 2>/dev/null | wc -l)
+    status+="  wikipedia: ${wiki_links} file symlinks\n"
     
-    dialog --title "EmComm-Tools Data Status" --msgbox "$(echo -e "$status")" 24 65
+    dialog --title "EmComm-Tools Data Status" --msgbox "$(echo -e "$status")" 26 70
     clear
 }
 
@@ -507,7 +564,7 @@ main_menu() {
             7)
                 if [ -n "$MOUNT_POINT" ]; then
                     setup_symlinks
-                    dialog --msgbox "Symlinks configured!" 8 40
+                    dialog --msgbox "Symlinks configured!\n\nLocal Wikipedia files preserved.\nExternal files linked individually." 10 50
                     clear
                 else
                     dialog --msgbox "Please select a drive first (Option 2)" 8 45

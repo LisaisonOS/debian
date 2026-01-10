@@ -6,7 +6,7 @@
 # Purpose : Wrapper script for starting VarAC with PnP support
 #
 # VarAC is a Windows app running under Wine.
-# Wine handles audio through Wine/ALSA - no et-audio checks needed!
+# Wine uses ALSA underneath - et-audio MUST configure mixer levels!
 # VARA modem handles CAT/PTT directly - no rigctld needed!
 #
 # VarAC is proprietary software by Irad Deutsch (4Z1AC).
@@ -351,6 +351,23 @@ show_status() {
     echo "  Run 'et-user' to configure"
   fi
   
+  # Show radio config
+  ACTIVE_RADIO="/opt/emcomm-tools/conf/radios.d/active-radio.json"
+  if [ -f "${ACTIVE_RADIO}" ]; then
+    MODEL=$(jq -r '.model // ""' "${ACTIVE_RADIO}" 2>/dev/null)
+    echo ""
+    echo "Active Radio:"
+    if [ -n "${MODEL}" ] && [ "${MODEL}" != "null" ]; then
+      echo "  ${MODEL}"
+    else
+      echo "  (unknown)"
+    fi
+  else
+    echo ""
+    echo "Active Radio: NOT CONFIGURED"
+    echo "  Run 'et-radio' to configure"
+  fi
+  
   echo ""
 }
 
@@ -418,6 +435,12 @@ start() {
 }
 
 start_varac() {
+  # Configure ALSA mixer for USB audio device (Digirig, etc.)
+  if [[ -e /dev/et-audio ]]; then
+    et-log "Configuring audio device..."
+    /opt/emcomm-tools/bin/et-audio update-config
+  fi
+
   # Start VarAC (it will start VARA modem automatically)
   et-log "Starting VarAC..."
   cd "${VARAC_DIR}"
@@ -437,6 +460,16 @@ update-config() {
     # Fallback to user.json grid if et-system-info fails
     if [ -z "${GRID}" ]; then
       GRID=$(cat ${ET_USER_CONFIG} | jq -r .grid 2>/dev/null)
+    fi
+
+    # Get radio model from active-radio.json
+    ACTIVE_RADIO="/opt/emcomm-tools/conf/radios.d/active-radio.json"
+    MYRIG=""
+    if [ -f "${ACTIVE_RADIO}" ]; then
+      MODEL=$(jq -r '.model // ""' "${ACTIVE_RADIO}" 2>/dev/null)
+      if [ -n "${MODEL}" ] && [ "${MODEL}" != "null" ]; then
+        MYRIG="${MODEL}"
+      fi
     fi
 
     if [ "${CALLSIGN}" = "N0CALL" ] || [ -z "${CALLSIGN}" ] || [ "${CALLSIGN}" = "null" ]; then
@@ -465,7 +498,16 @@ update-config() {
         sed -i "/^\[MY_INFO\]/a MyLocator=${GRID}" ${VARAC_INI}
       fi
 
-      et-log "Updated VarAC configuration with callsign '${CALLSIGN}' and grid: '${GRID}'"
+      # Update MyRIG (if radio is selected)
+      if [ -n "${MYRIG}" ]; then
+        if grep -qi "^MyRIG=" "${VARAC_INI}"; then
+          sed -i "s|^MyRIG=.*|MyRIG=${MYRIG}|i" ${VARAC_INI}
+        elif grep -qi "^\[MY_INFO\]" "${VARAC_INI}"; then
+          sed -i "/^\[MY_INFO\]/a MyRIG=${MYRIG}" ${VARAC_INI}
+        fi
+      fi
+
+      et-log "Updated VarAC configuration with callsign '${CALLSIGN}', grid: '${GRID}', rig: '${MYRIG}'"
     else
       et-log "VarAC.ini not found. Will be created on first run."
     fi

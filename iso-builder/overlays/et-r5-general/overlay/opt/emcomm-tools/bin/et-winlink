@@ -78,7 +78,7 @@ start_ardop() {
 
   update_config ardop
 
-  CMD="pat http"
+  CMD="pat-winlink http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
@@ -96,7 +96,7 @@ start_packet() {
   
   update_config packet
 
-  CMD="pat http"
+  CMD="pat-winlink http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
@@ -115,7 +115,7 @@ start_native_packet() {
 
   update_config native-packet
 
-  CMD="pat http"
+  CMD="pat-winlink http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
@@ -126,7 +126,7 @@ start_vara_fm() {
  
   update_config vara-fm
 
-  CMD="pat http"
+  CMD="pat-winlink http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
@@ -137,7 +137,7 @@ start_vara_hf() {
  
   update_config vara-hf
 
-  CMD="pat http"
+  CMD="pat-winlink http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
@@ -145,7 +145,7 @@ start_vara_hf() {
 }
 
 stop() {
-  pkill -f "pat http"
+  pkill -f "pat-winlink http"
   notify_user "Pat Winlink stopped"
   et-log "Pat Winlink stopped"
 }

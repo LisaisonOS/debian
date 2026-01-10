@@ -1,0 +1,276 @@
+#!/bin/bash
+# =============================================================================
+# EmComm-Tools Post-Install Verification Script
+# Author: Sylvain Deguire (VA2OPS)
+# Date: 7 January 2026
+#
+# Run this after installing to verify all components work correctly.
+# Usage: et-verify
+# =============================================================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+PASS=0
+FAIL=0
+WARN=0
+
+echo "╔═══════════════════════════════════════════════════════════════════════╗"
+echo "║         EmComm-Tools Post-Install Verification                        ║"
+echo "╚═══════════════════════════════════════════════════════════════════════╝"
+echo ""
+
+# -----------------------------------------------------------------------------
+# Helper functions
+# -----------------------------------------------------------------------------
+check_pass() {
+    echo -e "  ${GREEN}✓${NC} $1"
+    PASS=$((PASS+1))
+}
+
+check_fail() {
+    echo -e "  ${RED}✗${NC} $1"
+    FAIL=$((FAIL+1))
+}
+
+check_warn() {
+    echo -e "  ${YELLOW}⚠${NC} $1"
+    WARN=$((WARN+1))
+}
+
+check_command() {
+    if command -v "$1" &> /dev/null; then
+        check_pass "$1 found: $(which $1)"
+        return 0
+    else
+        check_fail "$1 NOT FOUND"
+        return 1
+    fi
+}
+
+check_file() {
+    if [[ -e "$1" ]]; then
+        check_pass "$1 exists"
+        return 0
+    else
+        check_fail "$1 MISSING"
+        return 1
+    fi
+}
+
+check_writable() {
+    if [[ -w "$1" ]]; then
+        check_pass "$1 is writable"
+        return 0
+    else
+        check_fail "$1 NOT WRITABLE"
+        return 1
+    fi
+}
+
+check_symlink() {
+    if [[ -L "$1" ]]; then
+        TARGET=$(readlink "$1")
+        if [[ -e "$1" ]]; then
+            check_pass "$1 -> $TARGET (valid)"
+            return 0
+        else
+            check_fail "$1 -> $TARGET (BROKEN)"
+            return 1
+        fi
+    else
+        check_warn "$1 is not a symlink"
+        return 1
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# 1. Core Commands
+# -----------------------------------------------------------------------------
+echo "=== Core Commands ==="
+check_command pat-winlink
+check_command js8call
+check_command wsjtx
+check_command fldigi
+check_command flrig
+check_command direwolf
+check_command rigctld
+check_command wine
+echo ""
+
+# -----------------------------------------------------------------------------
+# 2. EmComm-Tools Scripts
+# -----------------------------------------------------------------------------
+echo "=== EmComm-Tools Scripts ==="
+check_command et-user
+check_command et-radio
+check_command et-mode
+check_command et-winlink
+check_command et-js8call
+check_command et-js8spotter
+check_command et-vara-hf
+check_command et-vara-fm
+check_command et-ft8
+check_command et-kill-all
+echo ""
+
+# -----------------------------------------------------------------------------
+# 3. Browsers
+# -----------------------------------------------------------------------------
+echo "=== Web Browsers ==="
+check_command min
+check_command firefox-esr
+DEFAULT_BROWSER=$(xdg-settings get default-web-browser 2>/dev/null)
+if [[ "$DEFAULT_BROWSER" == "min.desktop" ]]; then
+    check_pass "Default browser: Min"
+else
+    check_warn "Default browser: $DEFAULT_BROWSER (recommend: min.desktop)"
+fi
+echo ""
+
+# -----------------------------------------------------------------------------
+# 4. Symlinks
+# -----------------------------------------------------------------------------
+echo "=== Critical Symlinks ==="
+check_symlink /opt/js8spotter
+check_symlink /opt/fldigi
+check_symlink /opt/hamlib
+check_symlink /opt/ardop
+check_symlink /opt/voacapl
+echo ""
+
+# -----------------------------------------------------------------------------
+# 5. User Directories & Permissions
+# -----------------------------------------------------------------------------
+echo "=== User Directories & Permissions ==="
+JS8SPOTTER_HOME="${HOME}/.local/share/emcomm-tools/js8spotter"
+if [[ -d "$JS8SPOTTER_HOME" ]]; then
+    check_pass "JS8Spotter user directory exists"
+    check_writable "$JS8SPOTTER_HOME"
+    if [[ -e "$JS8SPOTTER_HOME/js8spotter.db" ]]; then
+        check_writable "$JS8SPOTTER_HOME/js8spotter.db"
+    else
+        check_warn "JS8Spotter database not yet created (will be created on first run)"
+    fi
+else
+    check_warn "JS8Spotter user directory not yet created"
+fi
+
+check_writable "/opt/emcomm-tools/conf/radios.d"
+echo ""
+
+# -----------------------------------------------------------------------------
+# 6. Wine & VARA
+# -----------------------------------------------------------------------------
+echo "=== Wine & VARA ==="
+WINE_PREFIX="${HOME}/.wine32"
+if [[ -d "$WINE_PREFIX" ]]; then
+    check_pass "Wine prefix exists: $WINE_PREFIX"
+    
+    if [[ -e "$WINE_PREFIX/drive_c/VARA/VARA.exe" ]]; then
+        check_pass "VARA HF installed"
+    else
+        check_warn "VARA HF not found in Wine prefix"
+    fi
+    
+    if [[ -e "$WINE_PREFIX/drive_c/VARA FM/VARAFM.exe" ]]; then
+        check_pass "VARA FM installed"
+    else
+        check_warn "VARA FM not found in Wine prefix"
+    fi
+    
+    if [[ -e "$WINE_PREFIX/drive_c/VarAC/VarAC.exe" ]]; then
+        check_pass "VarAC installed"
+    else
+        check_warn "VarAC not found in Wine prefix"
+    fi
+else
+    check_warn "Wine prefix not found (run et-get-vara to install)"
+fi
+echo ""
+
+# -----------------------------------------------------------------------------
+# 7. Audio Configuration
+# -----------------------------------------------------------------------------
+echo "=== Audio Configuration ==="
+JS8CALL_CONF="${HOME}/.config/JS8Call.ini"
+if [[ -e "$JS8CALL_CONF" ]]; then
+    NOTIF_SOUND=$(grep "^NotificationSoundOutName=" "$JS8CALL_CONF" | cut -d= -f2)
+    if [[ "$NOTIF_SOUND" == *"ET_AUDIO"* ]] || [[ "$NOTIF_SOUND" == *"USB"* ]]; then
+        check_fail "JS8Call notifications set to USB device (will TX on air!): $NOTIF_SOUND"
+    elif [[ "$NOTIF_SOUND" == *"PCH"* ]]; then
+        check_pass "JS8Call notifications set to internal speaker"
+    else
+        check_warn "JS8Call notification device: $NOTIF_SOUND"
+    fi
+else
+    check_warn "JS8Call config not found (will be created on first run)"
+fi
+echo ""
+
+# -----------------------------------------------------------------------------
+# 8. Services
+# -----------------------------------------------------------------------------
+echo "=== SystemD User Services ==="
+for SERVICE in et-service-ardop et-service-vara-hf et-service-vara-fm et-service-winlink-ardop et-service-winlink-vara-hf et-service-winlink-vara-fm; do
+    if [[ -e "${HOME}/.config/systemd/user/${SERVICE}.service" ]]; then
+        check_pass "$SERVICE available"
+    else
+        check_warn "$SERVICE not configured"
+    fi
+done
+echo ""
+
+# -----------------------------------------------------------------------------
+# 9. GPS & Time
+# -----------------------------------------------------------------------------
+echo "=== GPS & Time ==="
+if [[ -e /dev/et-gps ]]; then
+    check_pass "GPS device detected: /dev/et-gps"
+else
+    check_warn "No GPS device (time sync may be manual)"
+fi
+check_command gpsd
+check_command chronyc
+echo ""
+
+# -----------------------------------------------------------------------------
+# 10. Group Membership
+# -----------------------------------------------------------------------------
+echo "=== Group Membership ==="
+USER_GROUPS=$(groups)
+for GROUP in dialout et-data plugdev audio; do
+    if echo "$USER_GROUPS" | grep -qw "$GROUP"; then
+        check_pass "User in group: $GROUP"
+    else
+        check_fail "User NOT in group: $GROUP"
+    fi
+done
+echo ""
+
+# -----------------------------------------------------------------------------
+# Summary
+# -----------------------------------------------------------------------------
+echo "╔═══════════════════════════════════════════════════════════════════════╗"
+echo "║                           SUMMARY                                      ║"
+echo "╚═══════════════════════════════════════════════════════════════════════╝"
+echo ""
+echo -e "  ${GREEN}Passed:${NC}  $PASS"
+echo -e "  ${RED}Failed:${NC}  $FAIL"
+echo -e "  ${YELLOW}Warnings:${NC} $WARN"
+echo ""
+
+if [[ $FAIL -eq 0 ]]; then
+    echo -e "${GREEN}All critical checks passed!${NC}"
+    exit 0
+else
+    echo -e "${RED}Some checks failed. Review above for details.${NC}"
+    echo ""
+    echo "Common fixes:"
+    echo "  - Missing commands: May need to rebuild ISO with 'lb clean --purge'"
+    echo "  - Permission issues: Run 'sudo usermod -aG et-data,dialout \$USER' then logout/login"
+    echo "  - Broken symlinks: Check if package installed correctly"
+    exit 1
+fi

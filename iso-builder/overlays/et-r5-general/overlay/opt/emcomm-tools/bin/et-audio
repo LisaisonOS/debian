@@ -5,11 +5,15 @@
 # Updated : 13 October 2025
 # Purpose : Configures ET audio device with sane defaults
 #
+# Modified: VA2OPS - January 2026
+#           Added pulseaudio -k to release ET_AUDIO for direct ALSA access
+#
 # Preconditions
 # 1. Supported audio interface is connected and properly detected
 #
 # Postconditions
 # 1. ALSA settings set on ET audio device
+
 . /opt/emcomm-tools/bin/et-common
 
 usage() {
@@ -27,6 +31,10 @@ start() {
 }
 
 update-config () {
+
+  # Kill PulseAudio to release ET_AUDIO for direct ALSA access
+  pulseaudio -k 2>/dev/null
+  sleep 1
 
   # 1. Check if the symlink was created by the udev rules
   if [ -e /dev/et-audio ]; then

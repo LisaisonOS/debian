@@ -120,6 +120,11 @@ update-config() {
            echo "SoundOutName=\"${JS8_AUDIO_DEVICE}\"" >> ${JS8CALL_CONF_FILE}
          fi
 
+         ## Set notification sounds to internal speaker (PCH), NOT the Digirig!
+         ## This prevents notifications from transmitting over the air
+         sed -i "s|^NotificationSoundOutName=.*|NotificationSoundOutName=\"sysdefault:CARD=PCH\"|" ${JS8CALL_CONF_FILE}
+         et-log "Set JS8Call notifications to internal speaker (PCH)"
+
          ## Configure ALSA settings for sound card
          /opt/emcomm-tools/bin/et-audio update-config
 

@@ -3,6 +3,7 @@
 # Author  : Gaston Gonzalez
 # Date    : 9 October 2024
 # Updated : 26 September 2025
+# Modified: VA2OPS - January 2026 - replaced et-log with echo
 # Purpose : Wrapper startup/shutdown script around systemd/rigctld
 
 ET_HOME=/opt/emcomm-tools
@@ -13,7 +14,7 @@ CAT_DEVICE=/dev/et-cat
 SET_CONF=""
 
 do_full_auto() {
-  et-log "Found ET_DEVICE='${ET_DEVICE}'"
+  echo "Found ET_DEVICE='${ET_DEVICE}'"
 
   case "$1" in
     IC-705)
@@ -21,11 +22,10 @@ do_full_auto() {
       if [ -L ${ACTIVE_RADIO} ]; then
         rm -v  ${ACTIVE_RADIO}
       fi
-
       ln -v -s ${ET_HOME}/conf/radios.d/icom-ic705.json ${ACTIVE_RADIO}
     ;;
   *)
-    et-log "Full auto configuration not available for ET_DEVICE=$1"
+    echo "Full auto configuration not available for ET_DEVICE=$1"
     ;;
   esac
 }
@@ -39,7 +39,7 @@ start() {
     # All VOX devices use the dummy mode provided by Hamlib. This helps maintain 
     # a cleaner interface by leveraging rigctl NET in applications.
     if [ "${RIG_ID}" = "1" ]; then
-      et-log "Starting dummy rigctld service for VOX device."
+      echo "Starting dummy rigctld service for VOX device."
 
       ID=$(cat ${ET_HOME}/conf/radios.d/active-radio.json | jq -r .rigctrl.id)
       PTT=$(cat ${ET_HOME}/conf/radios.d/active-radio.json | jq -r .rigctrl.ptt)
@@ -48,38 +48,34 @@ start() {
       # do not have CAT control support. This edge case was added for radios
       # like the Yaesu FTX-1 Field before Yaesu published their CAT commands.
       PTT_ONLY=$(cat ${ET_HOME}/conf/radios.d/active-radio.json | jq -r .rigctrl.pttOnly)
-
       if [ "${PTT_ONLY}" = "true" ]; then
-        CMD="rigctld -m ${ID} -p ${CAT_DEVICE} -P ${PTT} "
-        et-log "Starting rigctld in PTT-only mode with: ${CMD}"
+        CMD="/usr/bin/rigctld -m ${ID} -p ${CAT_DEVICE} -P ${PTT} "
+        echo "Starting rigctld in PTT-only mode with: ${CMD}"
       else
-        CMD="rigctld -m ${ID} -P ${PTT} "
-        et-log "Starting rigctld in VOX mode with: ${CMD}"
+        CMD="/usr/bin/rigctld -m ${ID} -P ${PTT} "
+        echo "Starting rigctld in VOX mode with: ${CMD}"
       fi
 
       $CMD
       exit 0
     fi
-
   fi
 
   if [ ! -e ${CAT_DEVICE} ]; then
-    et-log "No CAT device found. ${CAT_DEVICE} symlink is missing."
+    echo "No CAT device found. ${CAT_DEVICE} symlink is missing."
     exit 1
   fi
 
   if [ ! -L ${ACTIVE_RADIO} ]; then
-    et-log "No active radio defined. ${ACTIVE_RADIO} symlink is missing."
+    echo "No active radio defined. ${ACTIVE_RADIO} symlink is missing."
     exit 1
   fi
 
   # Check if rigctld is already running
-  ps -ef | grep [r]igctld
-  if [ $? -eq 0 ]; then
-    PID=$(ps -ef | grep [r]igctld | awk '{print $2}')
-    et-log "Rig control is already running with process ID: ${PID}."
-    #kill -9 ${PID} 
-    #sleep 1
+  if pgrep -x "rigctld" > /dev/null 2>&1; then
+    PID=$(pgrep -x "rigctld")
+    echo "Rig control is already running with process ID: ${PID}."
+    exit 0
   fi
 
   # Grab rigctld values from active radio configuration
@@ -89,11 +85,10 @@ start() {
 
   # Special case for DigiRig Mobile for radios with no CAT control.
   if [ "${ID}" = "6" ]; then
-    et-log "Starting rigctld in RTS PTT only mode with: ${CMD}"
+    echo "Starting rigctld in RTS PTT only mode with: ${CMD}"
     PTT=$(cat ${ET_HOME}/conf/radios.d/active-radio.json | jq -r .rigctrl.ptt)
-
-    CMD="rigctld -p ${CAT_DEVICE} -P ${PTT} "
-    et-log "Starting rigctld in RTS PTT only mode with: ${CMD}"
+    CMD="/usr/bin/rigctld -p ${CAT_DEVICE} -P ${PTT} "
+    echo "Starting rigctld in RTS PTT only mode with: ${CMD}"
     $CMD
     exit 0
   fi
@@ -105,17 +100,17 @@ start() {
   fi
 
   # Generate command
-  CMD="rigctld -m ${ID} -r ${CAT_DEVICE} -s ${BAUD} -P ${PTT} ${SET_CONF}"
-  et-log "Starting rigctld with: ${CMD}"
+  CMD="/usr/bin/rigctld -m ${ID} -r ${CAT_DEVICE} -s ${BAUD} -P ${PTT} ${SET_CONF}"
+  echo "Starting rigctld with: ${CMD}"
   $CMD
 }
 
 stop() {
-  et-log "Stopping rigctld service..."
+  echo "Stopping rigctld service..."
   systemctl stop rigctld
 
   if [ -L /dev/et-cat ]; then
-    et-log "Removing stale /dev/et-cat symlink"
+    echo "Removing stale /dev/et-cat symlink"
     rm -f /dev/et-cat
   fi
 }
