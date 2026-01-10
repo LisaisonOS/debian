@@ -6,17 +6,16 @@ build/
 # Personal files, not for public
 overlays/et-r5-va2ops/
 overlays/*-va2ops/
-
 motd/va2ops-*
 wine-sources/Personal/
+
+# Wine General will we part of the ISO
+wine-sources/General
 
 # System files
 *.bak
 *.tmp
 *~
-wine-sources/Public
-wine-sources/General
-
 
 # not fot general emcomm-tools os, has is own git: emcomm-tools/bbs-server-app
 overlays/*/overlay/etc/skel/.local/share/emcomm-tools/bbs-server/apps/
