@@ -33,6 +33,11 @@ gettext
 pkg-config
 meld
 vim
+udiskie
+
+#Python depencencies
+python3-flask 
+python3-werkzeug
 
 # Dev libraries
 libfltk1.3-dev
@@ -129,3 +134,22 @@ libcanberra-gtk3-dev
 maptool
 espeak
 osmium-tool
+pat
+
+
+#debian dependencies for Calamare installer
+calamares
+calamares-settings-debian
+
+grub-efi-amd64
+grub-efi-amd64-signed
+grub-efi-amd64-bin
+grub-efi-amd64-unsigned
+grub2-common
+efibootmgr
+shim-signed
+shim-unsigned
+shim-signed-common
+shim-helpers-amd64-signed
+mokutil
+

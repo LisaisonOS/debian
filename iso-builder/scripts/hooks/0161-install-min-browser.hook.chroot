@@ -1,13 +1,10 @@
 #!/bin/bash
 echo "Installing Min browser..."
-
-MIN_VERSION="1.33.0"
+MIN_VERSION="1.34.1"
 MIN_DEB="min-${MIN_VERSION}-amd64.deb"
 MIN_URL="https://github.com/minbrowser/min/releases/download/v${MIN_VERSION}/${MIN_DEB}"
-
 cd /tmp
 curl -L -f -o ${MIN_DEB} ${MIN_URL}
-
 if [ -f "${MIN_DEB}" ] && [ -s "${MIN_DEB}" ]; then
     dpkg -i ${MIN_DEB} || apt-get install -f -y
     rm -f ${MIN_DEB}

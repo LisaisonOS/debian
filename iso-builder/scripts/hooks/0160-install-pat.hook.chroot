@@ -1,13 +1,4 @@
 #!/bin/bash
-echo "Installing Pat Winlink client..."
-
-PAT_VERSION="0.16.0"
-PAT_DEB="pat_${PAT_VERSION}_linux_amd64.deb"
-PAT_URL="https://github.com/la5nta/pat/releases/download/v${PAT_VERSION}/${PAT_DEB}"
-
-cd /tmp
-curl -L -f -o ${PAT_DEB} ${PAT_URL}
-dpkg -i ${PAT_DEB} || apt-get install -f -y
-rm -f ${PAT_DEB}
-
-echo "Pat Winlink installation complete"
+# Pat Winlink is installed from Debian repos via package list
+# No hook needed - Debian's pat 0.16.0-1+b9 is same as GitHub 0.16.0
+echo "Pat Winlink: using Debian package (same version as GitHub)"
