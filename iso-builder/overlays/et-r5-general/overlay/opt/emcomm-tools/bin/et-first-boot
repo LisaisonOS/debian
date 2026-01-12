@@ -7,33 +7,35 @@
 #
 # This is a temporary CLI solution until a GUI app is developed.
 #
-
 FLAG_FILE="${HOME}/.config/emcomm-tools/.first-boot-done"
 USER_CONF="${HOME}/.config/emcomm-tools/user.json"
-
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# =============================================================================
+# First-boot cleanup (runs every time, quick checks)
+# =============================================================================
+# Remove installer icon from desktop
+if [ ! -d /run/live ]; then
+    rm -f ~/Desktop/calamares*.desktop ~/Desktop/*install*.desktop 2>/dev/null
+fi
+
 # Check if already configured
 if [ -f "${FLAG_FILE}" ]; then
     exit 0
 fi
-
 # Ensure config directory exists
 mkdir -p "$(dirname ${FLAG_FILE})"
 mkdir -p "$(dirname ${USER_CONF})"
-
 # Copy default user config if not exists
 if [ ! -f "${USER_CONF}" ]; then
     cp /etc/skel/.config/emcomm-tools/user.json "${USER_CONF}" 2>/dev/null || \
     echo '{"language":"en","callsign":"N0CALL","grid":"AA00aa","winlinkPasswd":null}' > "${USER_CONF}"
 fi
-
 clear
-
 # =============================================================================
 # Welcome Screen 
 # =============================================================================
@@ -53,7 +55,6 @@ echo ""
 echo -e "${YELLOW}Bienvenue! Cet assistant vous aidera à configurer EmComm-Tools.${NC}"
 echo ""
 read -p "Press Enter to begin / Appuyez sur Entrée pour commencer... "
-
 # =============================================================================
 # Step 1: User Configuration
 # =============================================================================
@@ -63,17 +64,14 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  STEP 1/3: User Configuration / Configuration utilisateur${NC}"
 echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
 echo ""
-
 if [ -x /opt/emcomm-tools/bin/et-user ]; then
     /opt/emcomm-tools/bin/et-user
 else
     echo "Warning: et-user not found, skipping..."
     sleep 2
 fi
-
 echo ""
 read -p "Press Enter to continue to Radio Configuration... "
-
 # =============================================================================
 # Step 2: Radio Configuration
 # =============================================================================
@@ -83,17 +81,14 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  STEP 2/3: Radio Configuration / Configuration radio${NC}"
 echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
 echo ""
-
 if [ -x /opt/emcomm-tools/bin/et-radio ]; then
     /opt/emcomm-tools/bin/et-radio
 else
     echo "Warning: et-radio not found, skipping..."
     sleep 2
 fi
-
 echo ""
 read -p "Press Enter to continue to Maps Setup... "
-
 # =============================================================================
 # Step 3: External Maps Setup
 # =============================================================================
@@ -120,7 +115,6 @@ echo -e "${YELLOW}Note: You can skip this step and run it later with 'et-maps-se
 echo -e "${YELLOW}Note: Vous pouvez passer cette étape et l'exécuter plus tard${NC}"
 echo ""
 read -p "Configure maps now? / Configurer les cartes maintenant? (y/n): " maps_choice
-
 if [ "${maps_choice,,}" == "y" ] || [ "${maps_choice,,}" == "o" ]; then
     if [ -x /opt/emcomm-tools/bin/et-maps-setup ]; then
         /opt/emcomm-tools/bin/et-maps-setup
@@ -129,7 +123,6 @@ if [ "${maps_choice,,}" == "y" ] || [ "${maps_choice,,}" == "o" ]; then
         sleep 2
     fi
 fi
-
 # =============================================================================
 # Completion Screen
 # =============================================================================
@@ -160,8 +153,6 @@ echo -e "${GREEN}═════════════════════
 echo ""
 echo "73 de VA2OPS!"
 echo ""
-
 # Create flag file to prevent running again
 touch "${FLAG_FILE}"
-
 read -p "Press Enter to close this wizard... "

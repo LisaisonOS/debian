@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=USB Automount
+Exec=udiskie -a -n -t
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

@@ -19,9 +19,4 @@ chmod 775 /opt/emcomm-tools/conf/radios.d 2>/dev/null
 chmod 664 /opt/emcomm-tools/conf/radios.d/*.json 2>/dev/null
 chmod 775 /opt/emcomm-tools/conf/radios.d/audio 2>/dev/null
 
-
-# Remove installer icon (only needed in Live)
-rm -f /home/*/Desktop/calamares*.desktop
-rm -f /etc/skel/Desktop/calamares*.desktop
-
 echo "First boot setup complete. Reboot for group changes."

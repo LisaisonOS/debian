@@ -1,0 +1,244 @@
+#!/bin/bash
+# =============================================================================
+# et-manifest-build - Generate manifest.json from overlay files
+# Version: 1.0.0
+# Updated: 2026-01-10
+# Author: Sylvain Deguire (VA2OPS)
+#
+# Developer tool to generate manifest for update server
+# =============================================================================
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+show_help() {
+    cat << EOF
+EmComm-Tools Manifest Builder
+
+Usage: et-manifest-build [OPTIONS] -s SOURCE_DIR -o OUTPUT_FILE
+
+Options:
+  -s, --source DIR     Source directory (overlay folder)
+  -o, --output FILE    Output manifest file (manifest.json)
+  -v, --version VER    Version string (e.g., 1.0.0)
+  -c, --channel CHAN   Channel name (stable, beta, personal)
+  -u, --url URL        Base URL for file downloads
+  -h, --help           Show this help message
+
+Examples:
+  et-manifest-build -s ./overlay/opt/emcomm-tools -o manifest.json -v 1.0.0 -c stable
+  et-manifest-build --source ~/emcomm-tools/overlays/et-r5-personal/overlay/opt/emcomm-tools \\
+                    --output ~/public_html/updates/stable/manifest.json \\
+                    --version 1.0.0 \\
+                    --channel stable \\
+                    --url https://emcomm-tools.ca/updates/stable/files
+
+EOF
+}
+
+extract_version_from_file() {
+    local file="$1"
+    
+    # Try to extract version from file header
+    local version=$(grep -m1 "^# Version:" "$file" 2>/dev/null | sed 's/# Version: *//' | tr -d '[:space:]')
+    
+    if [ -z "$version" ]; then
+        # Fallback: use file modification date
+        version=$(date -r "$file" '+%Y.%m.%d')
+    fi
+    
+    echo "$version"
+}
+
+get_permissions() {
+    local file="$1"
+    stat -c "%a" "$file"
+}
+
+generate_manifest() {
+    local source_dir="$1"
+    local output_file="$2"
+    local version="$3"
+    local channel="$4"
+    local base_url="$5"
+    
+    echo -e "${GREEN}[INFO]${NC} Scanning: $source_dir"
+    echo -e "${GREEN}[INFO]${NC} Output:   $output_file"
+    echo -e "${GREEN}[INFO]${NC} Version:  $version"
+    echo -e "${GREEN}[INFO]${NC} Channel:  $channel"
+    echo ""
+    
+    local temp_files="/tmp/manifest-files-$$.json"
+    echo "[]" > "$temp_files"
+    
+    local file_count=0
+    
+    # Find all files in source directory
+    while IFS= read -r -d '' file; do
+        # Skip certain files
+        local basename=$(basename "$file")
+        case "$basename" in
+            *.pyc|*.pyo|__pycache__|.git*|*.swp|*.bak)
+                continue
+                ;;
+        esac
+        
+        # Get relative path
+        local rel_path="${file#$source_dir/}"
+        
+        # Calculate checksum
+        local sha256=$(sha256sum "$file" | cut -d' ' -f1)
+        
+        # Get file size
+        local size=$(stat -c "%s" "$file")
+        
+        # Get permissions
+        local permissions=$(get_permissions "$file")
+        
+        # Get file version
+        local file_version=$(extract_version_from_file "$file")
+        
+        # Get description from file header
+        local description=$(grep -m1 "^# Purpose:" "$file" 2>/dev/null | sed 's/# Purpose: *//' || echo "")
+        
+        echo -e "  ${BLUE}[SCAN]${NC} $rel_path (v$file_version)"
+        
+        # Add to JSON array
+        jq --arg path "$rel_path" \
+           --arg version "$file_version" \
+           --arg sha256 "$sha256" \
+           --argjson size "$size" \
+           --arg permissions "$permissions" \
+           --arg description "$description" \
+           '. += [{
+               "path": $path,
+               "version": $version,
+               "sha256": $sha256,
+               "size": $size,
+               "permissions": $permissions,
+               "description": $description
+           }]' "$temp_files" > "${temp_files}.tmp" && mv "${temp_files}.tmp" "$temp_files"
+        
+        ((file_count++))
+        
+    done < <(find "$source_dir" -type f -print0 | sort -z)
+    
+    echo ""
+    echo -e "${GREEN}[INFO]${NC} Found $file_count files"
+    
+    # Build final manifest
+    local release_date=$(date '+%Y-%m-%d')
+    
+    jq -n \
+        --arg schema_version "1.0" \
+        --arg distribution "EmComm-Tools Debian Edition" \
+        --arg version "$version" \
+        --arg channel "$channel" \
+        --arg release_date "$release_date" \
+        --arg base_url "$base_url" \
+        --slurpfile files "$temp_files" \
+        '{
+            "schema_version": $schema_version,
+            "distribution": $distribution,
+            "version": $version,
+            "channel": $channel,
+            "release_date": $release_date,
+            "base_url": $base_url,
+            "files": $files[0]
+        }' > "$output_file"
+    
+    rm -f "$temp_files"
+    
+    echo -e "${GREEN}[INFO]${NC} Manifest created: $output_file"
+    echo ""
+    
+    # Show summary
+    echo "╔══════════════════════════════════════════════════════════════════╗"
+    echo "║  Manifest Summary                                                ║"
+    echo "╠══════════════════════════════════════════════════════════════════╣"
+    printf "║  Version:      %-51s║\n" "$version"
+    printf "║  Channel:      %-51s║\n" "$channel"
+    printf "║  Files:        %-51s║\n" "$file_count"
+    printf "║  Release Date: %-51s║\n" "$release_date"
+    echo "╚══════════════════════════════════════════════════════════════════╝"
+}
+
+# =============================================================================
+# Main
+# =============================================================================
+main() {
+    local source_dir=""
+    local output_file=""
+    local version="1.0.0"
+    local channel="stable"
+    local base_url="https://emcomm-tools.ca/updates/stable/files"
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -s|--source)
+                source_dir="$2"
+                shift 2
+                ;;
+            -o|--output)
+                output_file="$2"
+                shift 2
+                ;;
+            -v|--version)
+                version="$2"
+                shift 2
+                ;;
+            -c|--channel)
+                channel="$2"
+                shift 2
+                ;;
+            -u|--url)
+                base_url="$2"
+                shift 2
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}[ERROR]${NC} Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Validate required arguments
+    if [ -z "$source_dir" ]; then
+        echo -e "${RED}[ERROR]${NC} Source directory required (-s)"
+        show_help
+        exit 1
+    fi
+    
+    if [ -z "$output_file" ]; then
+        echo -e "${RED}[ERROR]${NC} Output file required (-o)"
+        show_help
+        exit 1
+    fi
+    
+    if [ ! -d "$source_dir" ]; then
+        echo -e "${RED}[ERROR]${NC} Source directory not found: $source_dir"
+        exit 1
+    fi
+    
+    # Check for jq
+    if ! command -v jq &> /dev/null; then
+        echo -e "${RED}[ERROR]${NC} jq is required but not installed"
+        echo "Install with: sudo apt install jq"
+        exit 1
+    fi
+    
+    generate_manifest "$source_dir" "$output_file" "$version" "$channel" "$base_url"
+}
+
+main "$@"
