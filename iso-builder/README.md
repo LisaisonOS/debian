@@ -54,7 +54,7 @@ Choose which EmComm-Tools version to build.
 ### 3. Wine Prefix
 A pre-configured Wine prefix is downloaded from SourceForge (~100MB). This provides a ready-to-use Wine environment for VARA and VarAC.
 
-**Note:** VARA and VarAC are NOT included due to licensing. Users must install them on first boot by running VarAC from the panel - it will download and run the official installer.
+**Note:** VARA and VarAC are NOT included due to licensing. Users must install them.
 
 ### 4. MOTD Banner
 Custom terminal message displayed on login.
@@ -74,8 +74,6 @@ On first boot, a wizard configures:
 1. User settings (callsign, grid, Winlink password)
 2. Radio/transceiver selection
 3. Offline maps (optional)
-
-To install VARA/VarAC: Click the VarAC icon in the panel and follow the official installer.
 
 ## Dashboard & Configuration
 
