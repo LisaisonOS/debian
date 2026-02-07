@@ -1,0 +1,211 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS) / Claude AI
+# Date    : January 2026
+# Purpose : Auto-detect display DPI and apply optimal XFCE scaling
+#           for live boot sessions
+#
+# Logic:
+#   - Detect physical DPI from xrandr
+#   - Calculate screen diagonal for small screen detection
+#   - Calculate optimal scale multiplier (110 DPI = 1x baseline for field use)
+#   - Apply minimum scaling for small screens (better readability)
+#   - Convert to XFCE scale value (inverse: 1/multiplier)
+#   - Apply to current display
+#
+
+# Exit on error
+set -e
+
+# --- Configuration ---
+BASELINE_DPI=110         # Field-optimized DPI (more readable than 96)
+MIN_SCALE=0.333333       # Maximum zoom (3x)
+MAX_SCALE=1.0            # No zoom (1x)
+ROUND_TO=0.25            # Round multiplier to nearest 0.25
+
+# Minimum multipliers based on screen size (diagonal inches)
+MIN_MULT_UNDER_11=1.25    # Screens under 11" get at least 1.25x
+MIN_MULT_UNDER_13=1.25   # Screens under 13" get at least 1.25x
+MIN_MULT_UNDER_15=1.0    # Screens under 15" get at least 1.0x
+
+# Maximum multipliers based on screen size (cap for small screens)
+MAX_MULT_UNDER_11=1.25    # Screens under 11" get at most 1.25x
+MAX_MULT_UNDER_13=1.75   # Screens under 13" get at most 1.75x
+MAX_MULT_UNDER_15=2.0    # Screens under 15" get at most 2.0x
+
+# --- Functions ---
+
+log_msg() {
+    echo "[et-auto-scale] $1"
+}
+
+get_display_name() {
+    xrandr | grep ' connected' | head -1 | awk '{print $1}'
+}
+
+get_resolution() {
+    xrandr | grep '*' | head -1 | awk '{print $1}'
+}
+
+get_physical_width_mm() {
+    # Extract physical width in mm from xrandr output
+    # Format: "eDP-1 connected 3840x2160+0+0 (normal ...) 340mm x 190mm"
+    xrandr | grep ' connected' | head -1 | sed -n 's/.* \([0-9]\+\)mm x [0-9]\+mm.*/\1/p'
+}
+
+get_physical_height_mm() {
+    # Extract physical height in mm from xrandr output
+    xrandr | grep ' connected' | head -1 | sed -n 's/.* [0-9]\+mm x \([0-9]\+\)mm.*/\1/p'
+}
+
+calc_diagonal_inches() {
+    local width_mm=$1
+    local height_mm=$2
+    # Calculate diagonal in inches: sqrt(w² + h²) / 25.4
+    echo "scale=2; sqrt($width_mm^2 + $height_mm^2) / 25.4" | bc
+}
+
+get_min_multiplier_for_size() {
+    local diagonal=$1
+    # Return minimum multiplier based on screen size
+    echo "$diagonal" | awk -v min11="$MIN_MULT_UNDER_11" -v min13="$MIN_MULT_UNDER_13" -v min15="$MIN_MULT_UNDER_15" '{
+        if ($1 < 11) print min11;
+        else if ($1 < 13) print min13;
+        else if ($1 < 15) print min15;
+        else print 1.0
+    }'
+}
+
+get_max_multiplier_for_size() {
+    local diagonal=$1
+    # Return maximum multiplier based on screen size
+    echo "$diagonal" | awk -v max11="$MAX_MULT_UNDER_11" -v max13="$MAX_MULT_UNDER_13" -v max15="$MAX_MULT_UNDER_15" '{
+        if ($1 < 11) print max11;
+        else if ($1 < 13) print max13;
+        else if ($1 < 15) print max15;
+        else print 3.0
+    }'
+}
+
+round_to_increment() {
+    local value=$1
+    local increment=$2
+    # Round to nearest increment (e.g., 0.25)
+    # Formula: round(value / increment) * increment
+    printf "%.2f" $(echo "$value $increment" | awk '{printf "%.2f", int($1/$2 + 0.5) * $2}')
+}
+
+clamp_value() {
+    local value=$1
+    local min=$2
+    local max=$3
+    echo "$value $min $max" | awk '{if($1<$2)print $2; else if($1>$3)print $3; else print $1}'
+}
+
+# --- Main ---
+
+log_msg "Démarrage / Starting auto-scale detection..."
+
+# Get display info
+DISPLAY_NAME=$(get_display_name)
+if [[ -z "$DISPLAY_NAME" ]]; then
+    log_msg "Erreur: Aucun écran détecté / Error: No display detected"
+    exit 1
+fi
+log_msg "Écran détecté / Display detected: $DISPLAY_NAME"
+
+# Get resolution
+RESOLUTION=$(get_resolution)
+if [[ -z "$RESOLUTION" ]]; then
+    log_msg "Erreur: Résolution non détectée / Error: Resolution not detected"
+    exit 1
+fi
+WIDTH=$(echo $RESOLUTION | cut -d'x' -f1)
+HEIGHT=$(echo $RESOLUTION | cut -d'x' -f2)
+log_msg "Résolution / Resolution: ${WIDTH}x${HEIGHT}"
+
+# Get physical size
+WIDTH_MM=$(get_physical_width_mm)
+HEIGHT_MM=$(get_physical_height_mm)
+
+if [[ -n "$WIDTH_MM" && "$WIDTH_MM" -gt 0 && -n "$HEIGHT_MM" && "$HEIGHT_MM" -gt 0 ]]; then
+    # Calculate screen diagonal
+    DIAGONAL=$(calc_diagonal_inches $WIDTH_MM $HEIGHT_MM)
+    log_msg "Diagonale écran / Screen diagonal: ${DIAGONAL}\""
+    
+    # Get minimum multiplier for this screen size
+    MIN_MULT=$(get_min_multiplier_for_size $DIAGONAL)
+    MAX_MULT=$(get_max_multiplier_for_size $DIAGONAL)
+    log_msg "Multiplicateur min/max pour cette taille / Min/max multiplier for size: $MIN_MULT - $MAX_MULT"
+    
+    # Calculate physical DPI
+    DPI=$(echo "scale=2; $WIDTH / ($WIDTH_MM / 25.4)" | bc)
+    log_msg "DPI physique calculé / Calculated physical DPI: $DPI"
+    
+    # Calculate desired multiplier (how much bigger UI should be)
+    MULTIPLIER=$(echo "scale=4; $DPI / $BASELINE_DPI" | bc)
+    log_msg "Multiplicateur brut / Raw multiplier: $MULTIPLIER"
+    
+    # Round to nearest increment (0.25)
+    MULTIPLIER_ROUNDED=$(round_to_increment $MULTIPLIER $ROUND_TO)
+    
+    # Apply minimum and maximum based on screen size
+    MULTIPLIER_CLAMPED=$(echo "$MULTIPLIER_ROUNDED $MIN_MULT $MAX_MULT" | awk '{
+        val=$1; min=$2; max=$3;
+        if (val < min) print min;
+        else if (val > max) print max;
+        else print val
+    }')
+    
+    log_msg "Multiplicateur ajusté / Adjusted multiplier: $MULTIPLIER_CLAMPED"
+    
+    # Convert to XFCE scale (inverse)
+    XFCE_SCALE=$(echo "scale=6; 1 / $MULTIPLIER_CLAMPED" | bc)
+    
+else
+    log_msg "Taille physique non disponible, utilisation des valeurs par défaut"
+    log_msg "Physical size unavailable, using fallback values"
+    
+    # Fallback based on resolution alone
+    if [[ $WIDTH -ge 3840 ]]; then
+        XFCE_SCALE=0.5        # 4K -> 2x
+        MULTIPLIER_CLAMPED=2.0
+    elif [[ $WIDTH -ge 2560 ]]; then
+        XFCE_SCALE=0.666667   # QHD -> 1.5x
+        MULTIPLIER_CLAMPED=1.5
+    elif [[ $WIDTH -ge 1920 ]]; then
+        XFCE_SCALE=1.0        # FHD -> 1x
+        MULTIPLIER_CLAMPED=1.0
+    else
+        XFCE_SCALE=1.0        # Lower -> 1x
+        MULTIPLIER_CLAMPED=1.0
+    fi
+fi
+
+# Clamp XFCE scale value
+XFCE_SCALE=$(clamp_value $XFCE_SCALE $MIN_SCALE $MAX_SCALE)
+
+log_msg "Échelle XFCE finale / Final XFCE scale: $XFCE_SCALE (${MULTIPLIER_CLAMPED}x UI)"
+
+# Check if property exists, create or set
+if xfconf-query -c displays -p /Default/${DISPLAY_NAME}/Scale &>/dev/null; then
+    xfconf-query -c displays -p /Default/${DISPLAY_NAME}/Scale -s $XFCE_SCALE
+else
+    xfconf-query -c displays -p /Default/${DISPLAY_NAME}/Scale -n -t double -s $XFCE_SCALE
+fi
+
+# Apply scaling immediately with xrandr
+log_msg "Application de l'échelle avec xrandr / Applying scale with xrandr..."
+xrandr --output ${DISPLAY_NAME} --scale ${XFCE_SCALE}x${XFCE_SCALE}
+
+log_msg "Échelle appliquée avec succès / Scale applied successfully"
+
+# Optional: Show notification to user
+if command -v notify-send &>/dev/null; then
+    notify-send "EmComm-Tools" \
+        "Échelle d'affichage: ${MULTIPLIER_CLAMPED}x\nDisplay scale: ${MULTIPLIER_CLAMPED}x" \
+        --icon=video-display \
+        --expire-time=5000
+fi
+
+exit 0

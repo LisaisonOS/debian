@@ -1,0 +1,338 @@
+/*
+ * et-mode - Mode Selection Stylesheet
+ * Author: Sylvain Deguire (VA2OPS)
+ * Date: January 2026
+ */
+
+/* Mode grid */
+.mode-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 12px 0;
+}
+
+@media (max-width: 500px) {
+    .mode-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mode card */
+.mode-card {
+    background: var(--bg-input);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.mode-card:hover {
+    border-color: var(--accent-primary);
+    background: rgba(74, 158, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.mode-card.selected {
+    border-color: var(--accent-success);
+    background: rgba(74, 222, 128, 0.15);
+}
+
+.mode-card.current {
+    border-color: var(--accent-warning);
+    background: rgba(251, 191, 36, 0.1);
+}
+
+.mode-card.current::before {
+    content: '▶';
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    color: var(--accent-warning);
+    font-size: 10px;
+}
+
+.mode-card.system {
+    border-style: dashed;
+    opacity: 0.85;
+}
+
+.mode-card .mode-icon {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+}
+
+.mode-card .mode-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+    line-height: 1.2;
+}
+
+.mode-card .mode-desc {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+}
+
+/* Category header */
+.category-header {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 16px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.category-header:first-child {
+    margin-top: 0;
+}
+
+/* Modem cards */
+.modem-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 16px 0;
+}
+
+.modem-card {
+    background: var(--bg-input);
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modem-card:hover {
+    border-color: var(--accent-primary);
+    background: rgba(74, 158, 255, 0.1);
+}
+
+.modem-card.selected {
+    border-color: var(--accent-success);
+    background: rgba(74, 222, 128, 0.15);
+}
+
+.modem-card .modem-radio {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modem-card.selected .modem-radio {
+    background: var(--accent-success);
+    border-color: var(--accent-success);
+}
+
+.modem-card.selected .modem-radio::after {
+    content: '✓';
+    color: #fff;
+    font-size: 12px;
+}
+
+.modem-card .modem-info {
+    flex: 1;
+}
+
+.modem-card .modem-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.modem-card .modem-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Status display */
+.current-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+}
+
+.current-status .label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.current-status .value {
+    font-weight: 600;
+    color: var(--accent-warning);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.current-status .value .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent-warning);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.current-status.stopped .value {
+    color: var(--text-muted);
+}
+
+.current-status.stopped .value .dot {
+    background: var(--text-muted);
+    animation: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Log output */
+.log-output {
+    background: #1a1a2e;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 16px 0;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.8rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.log-output .log-line {
+    padding: 3px 0;
+    color: var(--text-secondary);
+}
+
+.log-output .log-line.success {
+    color: var(--accent-success);
+}
+
+.log-output .log-line.error {
+    color: var(--accent-danger);
+}
+
+.log-output .log-line::before {
+    content: '› ';
+    color: var(--accent-primary);
+}
+
+/* Result page */
+.result-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.result-icon.success {
+    background: linear-gradient(135deg, var(--accent-success), #16a34a);
+    animation: pop 0.4s ease;
+}
+
+.result-icon.error {
+    background: linear-gradient(135deg, var(--accent-danger), #dc2626);
+}
+
+@keyframes pop {
+    0% { transform: scale(0); }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Warning note */
+.warning-note {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-left: 3px solid var(--accent-warning);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 12px 0;
+    font-size: 0.8rem;
+    color: var(--accent-warning);
+}
+
+.warning-note .icon {
+    margin-right: 6px;
+}
+
+/* Compact overrides */
+.card-header {
+    padding: 14px 18px !important;
+}
+
+.card-header h1 {
+    font-size: 1.3rem !important;
+}
+
+.card-body {
+    padding: 14px 18px !important;
+}
+
+.btn-group {
+    margin-top: 14px !important;
+}
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-overlay .spinner-large {
+    width: 50px;
+    height: 50px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+.loading-overlay .loading-text {
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

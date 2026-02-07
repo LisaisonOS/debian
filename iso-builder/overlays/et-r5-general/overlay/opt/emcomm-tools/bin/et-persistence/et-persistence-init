@@ -1,0 +1,175 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Initialize EmComm-Tools persistence on a USB drive
+#
+# Usage   : et-persistence-init <mount-point>
+#
+
+set -e
+
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+error() {
+    log "ERROR: $1"
+    exit 1
+}
+
+show_usage() {
+    echo "Usage: et-persistence init <mount-point>"
+    echo ""
+    echo "Initialize EmComm-Tools persistence directory on a USB drive."
+    echo ""
+    echo "Arguments:"
+    echo "  <mount-point>  Path where USB drive is mounted (e.g., /media/user/MYUSB)"
+    echo ""
+    echo "Example:"
+    echo "  et-persistence init /media/sylvain/VENTOY"
+    echo ""
+    echo "This will create /media/sylvain/VENTOY/emcomm-data/ with the proper structure."
+}
+
+# Check arguments
+if [[ $# -lt 1 ]]; then
+    show_usage
+    exit 1
+fi
+
+if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+    show_usage
+    exit 0
+fi
+
+MOUNT_POINT="$1"
+PERSISTENCE_DIR="${MOUNT_POINT}/emcomm-data"
+
+# Verify mount point exists and is writable
+if [[ ! -d "$MOUNT_POINT" ]]; then
+    error "Mount point does not exist: ${MOUNT_POINT}"
+fi
+
+if [[ ! -w "$MOUNT_POINT" ]]; then
+    error "Mount point is not writable: ${MOUNT_POINT}"
+fi
+
+# Check if persistence already exists
+if [[ -d "$PERSISTENCE_DIR" ]]; then
+    echo ""
+    echo "WARNING: Persistence directory already exists at ${PERSISTENCE_DIR}"
+    echo ""
+    read -p "Do you want to reinitialize it? This will NOT delete existing data. [y/N] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log "Aborted."
+        exit 0
+    fi
+fi
+
+log "Initializing EmComm-Tools persistence at: ${PERSISTENCE_DIR}"
+
+# Create directory structure
+mkdir -p "${PERSISTENCE_DIR}/configs/pat"
+mkdir -p "${PERSISTENCE_DIR}/configs/js8call"
+mkdir -p "${PERSISTENCE_DIR}/configs/wsjtx"
+mkdir -p "${PERSISTENCE_DIR}/configs/fldigi/macros"
+mkdir -p "${PERSISTENCE_DIR}/configs/flmsg"
+mkdir -p "${PERSISTENCE_DIR}/configs/vara"
+mkdir -p "${PERSISTENCE_DIR}/configs/varac"
+mkdir -p "${PERSISTENCE_DIR}/configs/direwolf"
+mkdir -p "${PERSISTENCE_DIR}/configs/linbpq"
+mkdir -p "${PERSISTENCE_DIR}/mailbox"
+mkdir -p "${PERSISTENCE_DIR}/backups"
+
+log "Created directory structure."
+
+# Create initial manifest
+cat > "${PERSISTENCE_DIR}/manifest.json" << EOF
+{
+  "version": "2.0.0",
+  "callsign": "",
+  "created": "$(date -Iseconds)",
+  "last_save": null,
+  "hostname": null,
+  "emcomm_version": null
+}
+EOF
+
+log "Created manifest.json"
+
+# Create template user.conf if it doesn't exist
+if [[ ! -f "${PERSISTENCE_DIR}/user.conf" ]]; then
+    cat > "${PERSISTENCE_DIR}/user.conf" << 'EOF'
+{
+  "callsign": "",
+  "grid": "",
+  "name": "",
+  "winlink_password": "",
+  "club": "",
+  "language": "en",
+  "configured": false
+}
+EOF
+    log "Created template user.conf"
+fi
+
+# Create README for users
+cat > "${PERSISTENCE_DIR}/README.txt" << 'EOF'
+===============================================
+  EmComm-Tools Persistence Directory
+===============================================
+
+This directory contains your EmComm-Tools configuration and data.
+
+STRUCTURE:
+  user.conf      - Your identity (callsign, grid, etc.)
+  manifest.json  - Metadata about this persistence
+  configs/       - Application configuration files
+  mailbox/       - Winlink messages (inbox/outbox/sent)
+  backups/       - Automatic backups of configurations
+
+USAGE:
+  - Boot any computer with EmComm-Tools Live USB
+  - Your settings will be automatically detected and restored
+  - Changes are saved back to this drive
+
+BACKUP:
+  Simply copy this entire 'emcomm-data' folder to back up
+  all your EmComm-Tools configurations and messages.
+
+For more information: https://emcomm-tools.ca
+===============================================
+EOF
+
+log "Created README.txt"
+
+# Copy config-mapping.json for reference
+if [[ -f "${SCRIPT_DIR}/persistence-mapping.json" ]]; then
+    cp "${SCRIPT_DIR}/persistence-mapping.json" "${PERSISTENCE_DIR}/.persistence-mapping.json"
+    log "Copied persistence mapping reference."
+fi
+
+echo ""
+echo "=============================================="
+echo "  EmComm-Tools Persistence Initialized!"
+echo "=============================================="
+echo ""
+echo "  Location: ${PERSISTENCE_DIR}"
+echo ""
+echo "  Next steps:"
+echo "  1. Run et-firstboot to configure your identity"
+echo "     (or edit user.conf manually)"
+echo ""
+echo "  2. Run 'et-persistence save' to save your current"
+echo "     configuration to this drive"
+echo ""
+echo "  3. Next time you boot EmComm-Tools Live, your"
+echo "     configuration will be automatically detected!"
+echo ""
+echo "=============================================="
+
+log "Initialization complete!"

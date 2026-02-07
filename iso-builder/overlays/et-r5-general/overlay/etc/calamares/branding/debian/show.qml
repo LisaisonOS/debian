@@ -24,7 +24,8 @@ Presentation
     id: presentation
 
     Timer {
-        interval: 20000
+        interval: 10000
+        running: true
         repeat: true
         onTriggered: presentation.goToNextSlide()
     }
@@ -40,12 +41,47 @@ Presentation
         Text {
             anchors.horizontalCenter: background1.horizontalCenter
             anchors.top: background1.bottom
-            text: qsTr("Welcome to Debian GNU/Linux.<br/>"+
+            text: qsTr("Welcome to Emcomm-Tools OS Debian edition.<br/>"+
                   "The rest of the installation is automated and should complete in a few minutes.")
             wrapMode: Text.WordWrap
             width: 600
             horizontalAlignment: Text.Center
         }
     }
-
+    Slide {
+        Image {
+            id: background2
+            source: "slide2.png"
+            width: 840; height: 480
+            fillMode: Image.PreserveAspectFit
+            anchors.centerIn: parent
+        }
+    }
+    Slide {
+        Image {
+            id: background3
+            source: "slide3.png"
+            width: 840; height: 480
+            fillMode: Image.PreserveAspectFit
+            anchors.centerIn: parent
+        }
+    }
+    Slide {
+        Image {
+            id: background4
+            source: "slide4.png"
+            width: 840; height: 480
+            fillMode: Image.PreserveAspectFit
+            anchors.centerIn: parent
+        }
+    }
+    Slide {
+        Image {
+            id: background5
+            source: "slide5.png"
+            width: 840; height: 480
+            fillMode: Image.PreserveAspectFit
+            anchors.centerIn: parent
+        }
+    }
 }

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Save & Shutdown
+Name[fr]=Sauvegarder & Éteindre
+Comment=Save your configuration to USB then shutdown
+Comment[fr]=Sauvegarder votre configuration sur USB puis éteindre
+Exec=/opt/emcomm-tools/bin/et-persistence/et-save-and-shutdown
+Icon=system-shutdown
+Terminal=false
+Categories=X-XFCE;X-Xfce-Toplevel;

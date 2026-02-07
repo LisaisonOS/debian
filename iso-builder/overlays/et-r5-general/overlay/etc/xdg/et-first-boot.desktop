@@ -4,7 +4,7 @@ Name=EmComm-Tools First Boot Setup
 Name[fr]=Configuration initiale EmComm-Tools
 Comment=Initial configuration wizard for EmComm-Tools
 Comment[fr]=Assistant de configuration initiale pour EmComm-Tools
-Exec=xfce4-terminal --title="EmComm-Tools Setup" --geometry=80x30 --command="/opt/emcomm-tools/bin/et-first-boot"
+Exec=python3 /opt/emcomm-tools/bin/et-flask-apps/et-firstboot/et-firstboot.py
 Icon=preferences-system
 Terminal=false
 Categories=System;Settings;

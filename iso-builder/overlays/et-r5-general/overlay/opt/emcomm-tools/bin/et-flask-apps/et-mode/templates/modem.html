@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ t['select_modem'] }}{% endblock %}
+
+{% block content %}
+<div class="card-header">
+    <h1>⚡ {{ t['select_modem'] }}</h1>
+    <p class="subtitle">{{ mode.name_fr if lang == 'fr' else mode.name }}</p>
+</div>
+
+<div class="card-body">
+    <div class="info-box">
+        <p><span class="icon">{{ mode.icon }}</span> {{ t['modem_subtitle'] }}</p>
+    </div>
+
+    <div class="modem-grid">
+        {% for modem in modems %}
+        <div class="modem-card" data-modem="{{ modem.id }}" onclick="selectModem('{{ modem.id }}')">
+            <div class="modem-radio"></div>
+            <div class="modem-info">
+                <div class="modem-name">{{ modem.name }}</div>
+                <div class="modem-desc">{{ modem.description_fr if lang == 'fr' else modem.description }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if modems|selectattr('id', 'equalto', '9600')|list %}
+    <div class="warning-note">
+        <span class="icon">⚠️</span> {{ t['note_9600'] }}
+    </div>
+    {% endif %}
+
+    {% if modems|selectattr('id', 'in', ['vara-fm', 'vara-hf'])|list %}
+    <div class="warning-note">
+        <span class="icon">⚠️</span> {{ t['vara_note'] }}
+    </div>
+    {% endif %}
+
+    <div class="btn-group">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">← {{ t['back'] }}</a>
+        <button id="start-btn" onclick="startModeWithModem('{{ mode.id }}')" class="btn btn-success" disabled>
+            ▶ {{ t['start'] }}
+        </button>
+    </div>
+</div>
+{% endblock %}

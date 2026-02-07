@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('download_tiles') }} - EmComm-Tools{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>{{ t('download_tiles') }}</h1>
+        <div class="step-indicator">{{ t('step') }} 5 {{ t('of') }} 8</div>
+    </div>
+    
+    <div class="dest-info">
+        <span class="label">Destination:</span>
+        <span class="path">{{ dest_path }}</span>
+    </div>
+    
+    <div class="card">
+        <h2>{{ t('tiles_desc') }}</h2>
+        
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress" style="width: 0%"></div>
+            </div>
+            <div class="progress-text" id="progress-text">Preparing...</div>
+        </div>
+        
+        <div class="status-list" id="status-list">
+            {% for file in files %}
+            <div class="status-item pending" id="status-{{ loop.index }}">
+                <span class="icon">⏳</span>
+                <span>{{ file }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="buttons">
+        <a href="{{ url_for('drive_setup') }}" class="btn btn-secondary" id="back-btn">{{ t('back') }}</a>
+        <button class="btn btn-primary" id="next-btn" disabled>{{ t('next') }}</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const files = {{ files | tojson }};
+    let currentIndex = 0;
+    
+    async function downloadFile(index) {
+        if (index >= files.length) {
+            document.getElementById('progress-text').textContent = '{{ t("complete") }}!';
+            document.getElementById('next-btn').disabled = false;
+            document.getElementById('next-btn').onclick = () => window.location.href = '{{ url_for("download_osm") }}';
+            return;
+        }
+        
+        const file = files[index];
+        const statusEl = document.getElementById('status-' + (index + 1));
+        
+        statusEl.className = 'status-item active';
+        statusEl.querySelector('.icon').innerHTML = '<span class="spinner"></span>';
+        document.getElementById('progress-text').textContent = '{{ t("downloading") }}: ' + file;
+        
+        try {
+            const response = await fetch('/api/download/tile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({file: file})
+            });
+            
+            const result = await response.json();
+            
+            if (result.success || result.skipped) {
+                statusEl.className = 'status-item done';
+                statusEl.querySelector('.icon').textContent = '✓';
+                if (result.skipped) {
+                    statusEl.innerHTML += ' <span style="color:#888;font-size:0.8rem">(exists)</span>';
+                }
+            } else {
+                statusEl.className = 'status-item error';
+                statusEl.querySelector('.icon').textContent = '✗';
+                const errorMsg = result.error || 'Download failed';
+                statusEl.innerHTML += ' <span style="color:#ff6b6b;font-size:0.8rem">(' + errorMsg + ')</span>';
+                console.error('Tile download error:', errorMsg);
+            }
+        } catch (e) {
+            statusEl.className = 'status-item error';
+            statusEl.querySelector('.icon').textContent = '✗';
+            statusEl.innerHTML += ' <span style="color:#ff6b6b;font-size:0.8rem">(Network: ' + e.message + ')</span>';
+        }
+        
+        const progress = ((index + 1) / files.length) * 100;
+        document.getElementById('progress').style.width = progress + '%';
+        
+        downloadFile(index + 1);
+    }
+    
+    // Start downloads
+    downloadFile(0);
+</script>
+{% endblock %}

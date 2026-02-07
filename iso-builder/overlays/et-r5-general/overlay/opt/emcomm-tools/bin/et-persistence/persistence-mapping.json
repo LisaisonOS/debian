@@ -1,0 +1,166 @@
+{
+  "version": "2.0.0",
+  "description": "EmComm-Tools config persistence mapping",
+  "apps": {
+    "emcomm-tools": {
+      "name": "EmComm-Tools Core",
+      "persistence_subdir": "",
+      "configs": [
+        {
+          "source": "user.json",
+          "target": "${HOME}/.config/emcomm-tools/user.json",
+          "type": "file",
+          "required": true
+        }
+      ]
+    },
+    "pat": {
+      "name": "Pat Winlink",
+      "persistence_subdir": "configs/pat",
+      "configs": [
+        {
+          "source": "config.json",
+          "target": "${HOME}/.config/pat/config.json",
+          "type": "file",
+          "required": true
+        }
+      ],
+      "data": [
+        {
+          "source": "../mailbox",
+          "target": "${HOME}/.local/share/pat/mailbox",
+          "type": "directory",
+          "description": "Winlink mailbox (in/out/sent/archive)"
+        }
+      ]
+    },
+    "js8call": {
+      "name": "JS8Call",
+      "persistence_subdir": "configs/js8call",
+      "configs": [
+        {
+          "source": "JS8Call.ini",
+          "target": "${HOME}/.config/JS8Call.ini",
+          "type": "file",
+          "required": true
+        }
+      ]
+    },
+    "wsjtx": {
+      "name": "WSJT-X",
+      "persistence_subdir": "configs/wsjtx",
+      "configs": [
+        {
+          "source": "WSJT-X.ini",
+          "target": "${HOME}/.config/WSJT-X.ini",
+          "type": "file",
+          "required": true
+        }
+      ]
+    },
+    "fldigi": {
+      "name": "Fldigi",
+      "persistence_subdir": "configs/fldigi",
+      "configs": [
+        {
+          "source": "fldigi_def.xml",
+          "target": "${HOME}/.fldigi/fldigi_def.xml",
+          "type": "file",
+          "required": true
+        },
+        {
+          "source": "macros/",
+          "target": "${HOME}/.fldigi/macros/",
+          "type": "directory",
+          "required": false
+        }
+      ]
+    },
+    "flmsg": {
+      "name": "Flmsg",
+      "persistence_subdir": "configs/flmsg",
+      "configs": [
+        {
+          "source": "flmsg_def.xml",
+          "target": "${HOME}/.flmsg/flmsg_def.xml",
+          "type": "file",
+          "required": true
+        }
+      ]
+    },
+    "vara_hf": {
+      "name": "VARA HF",
+      "persistence_subdir": "configs/vara",
+      "configs": [
+        {
+          "source": "VARA.ini",
+          "target": "${HOME}/.wine32/drive_c/VARA/VARA.ini",
+          "type": "file",
+          "required": true
+        }
+      ]
+    },
+    "vara_fm": {
+      "name": "VARA FM",
+      "persistence_subdir": "configs/vara",
+      "configs": [
+        {
+          "source": "VARAFM.ini",
+          "target": "${HOME}/.wine32/drive_c/VARAFM/VARAFM.ini",
+          "type": "file",
+          "required": true
+        }
+      ]
+    },
+    "varac": {
+      "name": "VarAC",
+      "persistence_subdir": "configs/varac",
+      "configs": [
+        {
+          "source": "VarAC.ini",
+          "target": "${HOME}/.wine32/drive_c/VarAC/VarAC.ini",
+          "type": "file",
+          "required": true
+        },
+        {
+          "source": "license.flag",
+          "target": "${HOME}/.config/emcomm-tools/varac/license.flag",
+          "type": "file",
+          "required": false,
+          "description": "VarAC Limited Distribution Agreement acceptance"
+        },
+        {
+          "source": "license-audit.log",
+          "target": "${HOME}/.config/emcomm-tools/varac/license-audit.log",
+          "type": "file",
+          "required": false,
+          "description": "VarAC license audit trail"
+        }
+      ]
+    },
+    "direwolf": {
+      "name": "Direwolf",
+      "persistence_subdir": "configs/direwolf",
+      "configs": [
+        {
+          "source": "direwolf.conf",
+          "target": "${HOME}/.config/direwolf/direwolf.conf",
+          "type": "file",
+          "required": true
+        }
+      ]
+    },
+    "linbpq": {
+      "name": "LinBPQ BBS",
+      "persistence_subdir": "configs/linbpq",
+      "configs": [
+        {
+          "source": "bpq32.cfg",
+          "target": "${HOME}/.local/share/emcomm-tools/bbs-server/bpq32.cfg",
+          "type": "file",
+          "required": false
+        }
+      ]
+    }
+  }
+}

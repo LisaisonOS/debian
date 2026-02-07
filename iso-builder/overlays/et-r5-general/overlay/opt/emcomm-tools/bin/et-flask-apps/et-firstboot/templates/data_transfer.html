@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('data_transfer') }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>📦 {{ t('data_transfer_title') }}</h1>
+        <p style="color: #888; margin-top: 10px;">{{ t('data_transfer_desc') }}</p>
+        <p style="color: #4CAF50; font-size: 12px; margin-top: 5px;">💾 {{ t('data_transfer_note') }}</p>
+    </div>
+    
+    <!-- Storage Info -->
+    <div class="card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-around; text-align: center;">
+            <!-- USB Info -->
+            <div style="flex: 1; padding: 10px; border-right: 1px solid #333;">
+                <div style="font-size: 24px; margin-bottom: 5px;">🔌</div>
+                <h3 style="margin: 0; color: #2196F3;">{{ t('usb_storage') }}</h3>
+                <p style="color: #888; font-size: 12px; margin: 5px 0;">{{ usb_path }}</p>
+                <p style="color: #4CAF50; font-weight: bold;">{{ data_info.total_gb }} GB {{ t('total') }}</p>
+            </div>
+            
+            <!-- HDD Info -->
+            <div style="flex: 1; padding: 10px;">
+                <div style="font-size: 24px; margin-bottom: 5px;">💻</div>
+                <h3 style="margin: 0; color: #FF9800;">{{ t('hdd_storage') }}</h3>
+                <p style="color: #888; font-size: 12px; margin: 5px 0;">{{ t('free') }}: {{ hdd_space.free_gb }} GB</p>
+                {% if space_ok %}
+                <p style="color: #4CAF50; font-weight: bold;">✓ {{ t('space_ok') }}</p>
+                {% else %}
+                <p style="color: #f44336; font-weight: bold;">⚠ {{ t('insufficient_space') }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Data Selection -->
+    <div class="card">
+        <h3 style="margin-top: 0; margin-bottom: 15px;">📂 Select data to copy:</h3>
+        
+        <form id="transfer-form">
+            {% if data_info.tiles.total_bytes > 0 %}
+            <div class="data-item" style="display: flex; align-items: center; padding: 12px; background: #2a2a2a; border-radius: 8px; margin-bottom: 10px;">
+                <input type="checkbox" name="category" value="tiles" id="tiles" 
+                       {% if space_ok %}checked{% endif %}
+                       {% if not space_ok and data_info.tiles.total_bytes > hdd_space.free %}disabled{% endif %}
+                       style="width: 20px; height: 20px; margin-right: 15px;">
+                <label for="tiles" style="flex: 1; cursor: pointer;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>🗺️ <strong>{{ t('map_tiles') }}</strong></span>
+                        <span style="color: #888;">{{ data_info.tiles.total_mb }} MB</span>
+                    </div>
+                    <div style="font-size: 11px; color: #666; margin-top: 3px;">
+                        {{ data_info.tiles.files|length }} file(s): 
+                        {% for f in data_info.tiles.files[:3] %}{{ f.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                        {% if data_info.tiles.files|length > 3 %}...{% endif %}
+                    </div>
+                </label>
+            </div>
+            {% endif %}
+            
+            {% if data_info.maps.total_bytes > 0 %}
+            <div class="data-item" style="display: flex; align-items: center; padding: 12px; background: #2a2a2a; border-radius: 8px; margin-bottom: 10px;">
+                <input type="checkbox" name="category" value="maps" id="maps"
+                       {% if space_ok %}checked{% endif %}
+                       {% if not space_ok and data_info.maps.total_bytes > hdd_space.free %}disabled{% endif %}
+                       style="width: 20px; height: 20px; margin-right: 15px;">
+                <label for="maps" style="flex: 1; cursor: pointer;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>🧭 <strong>{{ t('osm_maps') }}</strong></span>
+                        <span style="color: #888;">{{ data_info.maps.total_mb }} MB</span>
+                    </div>
+                    <div style="font-size: 11px; color: #666; margin-top: 3px;">
+                        {{ data_info.maps.files|length }} file(s): 
+                        {% for f in data_info.maps.files[:3] %}{{ f.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                        {% if data_info.maps.files|length > 3 %}...{% endif %}
+                    </div>
+                </label>
+            </div>
+            {% endif %}
+            
+            {% if data_info.wikipedia.total_bytes > 0 %}
+            <div class="data-item" style="display: flex; align-items: center; padding: 12px; background: #2a2a2a; border-radius: 8px; margin-bottom: 10px;">
+                <input type="checkbox" name="category" value="wikipedia" id="wikipedia"
+                       {% if space_ok %}checked{% endif %}
+                       {% if not space_ok and data_info.wikipedia.total_bytes > hdd_space.free %}disabled{% endif %}
+                       style="width: 20px; height: 20px; margin-right: 15px;">
+                <label for="wikipedia" style="flex: 1; cursor: pointer;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📚 <strong>{{ t('wikipedia_files') }}</strong></span>
+                        <span style="color: #888;">{{ data_info.wikipedia.total_mb }} MB</span>
+                    </div>
+                    <div style="font-size: 11px; color: #666; margin-top: 3px;">
+                        {{ data_info.wikipedia.files|length }} file(s): 
+                        {% for f in data_info.wikipedia.files[:3] %}{{ f.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                        {% if data_info.wikipedia.files|length > 3 %}...{% endif %}
+                    </div>
+                </label>
+            </div>
+            {% endif %}
+        </form>
+        
+        <!-- Progress (hidden initially) -->
+        <div id="progress-container" style="display: none; margin: 20px 0;">
+            <div style="background: #333; border-radius: 8px; padding: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span id="progress-title" style="color: #4CAF50; font-weight: bold;">{{ t('copying') }}...</span>
+                    <span id="progress-percent" style="color: #888;">0%</span>
+                </div>
+                <div style="background: #222; border-radius: 4px; height: 8px; overflow: hidden;">
+                    <div id="progress-bar" style="background: linear-gradient(90deg, #4CAF50, #8BC34A); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div id="progress-log" style="background: #1a1a1a; border-radius: 8px; padding: 15px; max-height: 150px; overflow-y: auto; font-family: monospace; font-size: 11px; color: #aaa; margin-top: 10px;">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Buttons -->
+    <div id="buttons-container" style="display: flex; gap: 15px; margin-top: 20px;">
+        <button id="btn-copy" class="btn btn-primary" style="flex: 1; padding: 15px; font-size: 16px; border: none; cursor: pointer;" onclick="startCopy()">
+            📥 {{ t('copy_selected') }}
+        </button>
+        <button id="btn-skip" class="btn btn-secondary" style="flex: 1; padding: 15px; background: #444; border: 1px solid #555; border-radius: 8px; color: #ccc; cursor: pointer;" onclick="skipCopy()">
+            ⏭️ {{ t('skip_copy') }}
+        </button>
+    </div>
+</div>
+
+<style>
+.btn-primary {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.btn-secondary:hover {
+    background: #555 !important;
+}
+.data-item:hover {
+    background: #333 !important;
+}
+.log-item {
+    padding: 2px 0;
+    border-bottom: 1px solid #2a2a2a;
+}
+.log-item:last-child { border-bottom: none; }
+.log-item.success { color: #4CAF50; }
+.log-item.skip { color: #888; }
+.log-item.error { color: #f44336; }
+</style>
+
+<script>
+let copyRunning = false;
+
+function skipCopy() {
+    // User chose to skip - notify server that nothing was copied
+    // This ensures symlinks are created for all categories
+    fetch('/api/data_transfer/copy', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({categories: []})  // Empty = nothing copied
+    })
+    .then(() => {
+        window.location.href = '/complete';
+    })
+    .catch(() => {
+        window.location.href = '/complete';
+    });
+}
+
+function startCopy() {
+    if (copyRunning) return;
+    
+    // Get selected categories
+    const checkboxes = document.querySelectorAll('input[name="category"]:checked');
+    const categories = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (categories.length === 0) {
+        // Nothing selected, go to complete
+        window.location.href = '/complete';
+        return;
+    }
+    
+    copyRunning = true;
+    
+    // Disable buttons
+    document.getElementById('btn-copy').disabled = true;
+    document.getElementById('btn-skip').style.pointerEvents = 'none';
+    document.getElementById('btn-skip').style.opacity = '0.5';
+    
+    // Disable checkboxes
+    document.querySelectorAll('input[name="category"]').forEach(cb => cb.disabled = true);
+    
+    // Show progress
+    document.getElementById('progress-container').style.display = 'block';
+    
+    const logDiv = document.getElementById('progress-log');
+    const progressBar = document.getElementById('progress-bar');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressTitle = document.getElementById('progress-title');
+    
+    // Start copy
+    fetch('/api/data_transfer/copy', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({categories: categories})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show results
+            let progress = 0;
+            const step = 100 / data.results.length;
+            
+            data.results.forEach((result, i) => {
+                setTimeout(() => {
+                    const item = document.createElement('div');
+                    item.className = 'log-item';
+                    if (result.includes('✓')) item.className += ' success';
+                    else if (result.includes('⏭')) item.className += ' skip';
+                    else if (result.includes('✗')) item.className += ' error';
+                    item.textContent = result;
+                    logDiv.appendChild(item);
+                    logDiv.scrollTop = logDiv.scrollHeight;
+                    
+                    progress += step;
+                    progressBar.style.width = Math.min(progress, 100) + '%';
+                    progressPercent.textContent = Math.round(Math.min(progress, 100)) + '%';
+                    
+                    if (i === data.results.length - 1) {
+                        progressTitle.textContent = '{{ t("copy_complete") }}';
+                        progressBar.style.width = '100%';
+                        progressPercent.textContent = '100%';
+                        
+                        setTimeout(() => {
+                            window.location.href = '/complete';
+                        }, 1500);
+                    }
+                }, i * 300);
+            });
+        } else {
+            progressTitle.textContent = '{{ t("error") }}: ' + data.error;
+            progressTitle.style.color = '#f44336';
+        }
+    })
+    .catch(error => {
+        progressTitle.textContent = '{{ t("error") }}: ' + error;
+        progressTitle.style.color = '#f44336';
+    });
+}
+</script>
+{% endblock %}

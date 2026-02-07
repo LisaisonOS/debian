@@ -7,7 +7,29 @@
     "baud": "57600",
     "ptt": "RIG"
   },
+  "varafm": {
+    "pttPort": "COM5",
+    "pttVia": "2",
+    "rts": "1",
+    "dtr": "0"
+  },
   "notes": [
-    "Enable GPS: [MENU] > [SET] > [Connectors] > [USB (B) Function] > GPS Out = ON"
+    "=== USB Cable Configuration ===",
+    "Menu > Set > Connectors > CI-V > CI-V Baud Rate: 57600 (match rigctrl.baud)",
+    "Menu > Set > Connectors > CI-V > CI-V Address: A2 (default)",
+    "Menu > Set > Connectors > CI-V > CI-V USB Echo Back: ON",
+    "Menu > Set > Connectors > USB (B) Function: Enable",
+    "Menu > Set > Connectors > DATA MOD: USB",
+    "",
+    "=== Digirig Configuration ===",
+    "Digirig connects to CI-V jack (3.5mm) for CAT/PTT and DATA jack for audio",
+    "Menu > Set > Connectors > DATA MOD: ACC (for audio from DATA jack)",
+    "Menu > Set > Connectors > ACC Send Output: 144 ON, 430 ON",
+    "PTT is controlled via RTS on the Digirig serial port",
+    "",
+    "=== VARA FM Notes ===",
+    "PTT Via COM port using RTS (not CAT commands)",
+    "Wine COM5 must be symlinked to /dev/ttyUSB0 (Digirig)",
+    "If using USB cable directly, PTT can use CAT instead of RTS"
   ]
 }

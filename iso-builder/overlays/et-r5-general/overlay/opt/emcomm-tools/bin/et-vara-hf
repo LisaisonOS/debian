@@ -1,13 +1,247 @@
 #!/bin/bash
 # Author  : Gaston Gonzalez
 # Date    : 20 January 2025
-# Updated : 7 February 2025
+# Updated : 23 January 2026
 # Purpose : Run VARA HF
+
+# Modified by : Sylvain Deguire - VA2OPS
+# Modified: Added --monitor mode for TCP monitoring 
+#           NO changes to VARA.ini - PTT config left to user
 
 source /opt/emcomm-tools/bin/et-common
 
-EXE="${HOME}/.wine32/drive_c/VARA/VARA.exe"
+# DEBUG - remove after testing
+echo "et-vara-hf called at $(date)" >> /tmp/vara-debug.log
+echo "WINEPREFIX=$WINEPREFIX" >> /tmp/vara-debug.log
 
+EXE="${HOME}/.wine32/drive_c/VARA/VARA.exe"
+VARA_INI="${HOME}/.wine32/drive_c/VARA/VARA.ini"
+export WINEPREFIX="${HOME}/.wine32"
+export WINEARCH="win32"
+
+# TCP Port for VARA HF (will be read from INI)
+VARA_TCP_PORT="8300"
+
+# Monitoring settings
+MONITOR_MODE=0
+MONITOR_INTERVAL=5
+
+# =============================================================================
+# FUNCTIONS
+# =============================================================================
+
+# Display usage
+show_usage() {
+  echo -e "Usage: et-vara-hf [OPTIONS]"
+  echo -e ""
+  echo -e "Options:"
+  echo -e "  --monitor, -m     Run in monitor mode (continuous TCP status)"
+  echo -e "  --interval, -i N  Monitor interval in seconds (default: 5)"
+  echo -e "  --help, -h        Show this help"
+  echo -e ""
+  echo -e "Examples:"
+  echo -e "  et-vara-hf                  # Normal start"
+  echo -e "  et-vara-hf --monitor        # Start with monitoring"
+  echo -e "  et-vara-hf -m -i 10         # Monitor every 10 seconds"
+}
+
+# Display banner
+show_banner() {
+  echo -e "${BLUE}============================================${NC}"
+  echo -e "${BLUE}       VARA HF Launcher - EmComm-Tools      ${NC}"
+  echo -e "${BLUE}============================================${NC}"
+}
+
+# Read TCP port from VARA.ini
+read_tcp_port_from_ini() {
+  if [[ -f "${VARA_INI}" ]]; then
+    local port=$(grep "^TCP Command Port=" "${VARA_INI}" | cut -d'=' -f2 | tr -d '\r\n ')
+    if [[ -n "${port}" ]]; then
+      VARA_TCP_PORT="${port}"
+    fi
+  fi
+  echo -e "${GREEN}  ✓ TCP Port: ${VARA_TCP_PORT}${NC}"
+}
+
+# Check audio device
+check_audio_device() {
+  echo -e "${YELLOW}[CHECK]${NC} Audio device..."
+  
+  if [[ -e /dev/et-audio ]]; then
+    echo -e "${GREEN}  ✓ /dev/et-audio found${NC}"
+    
+    # Get device details
+    local audio_info=$(arecord -l 2>/dev/null | grep -i ET_AUDIO | head -1)
+    if [[ -n "${audio_info}" ]]; then
+      echo -e "${GREEN}  ✓ ${audio_info}${NC}"
+    fi
+  else
+    echo -e "${RED}  ✗ /dev/et-audio not found${NC}"
+    return 1
+  fi
+  
+  return 0
+}
+
+# Wait for TCP port to become available
+wait_for_tcp() {
+  local max_wait=30
+  local wait_time=0
+  local interval=2
+  
+  echo -e "${YELLOW}[WAIT]${NC} Waiting for TCP port ${VARA_TCP_PORT} to become available..."
+  
+  while [[ ${wait_time} -lt ${max_wait} ]]; do
+    # Use Linux ss command (more reliable than wine netstat)
+    if ss -tlnp 2>/dev/null | grep -q ":${VARA_TCP_PORT}"; then
+      echo -e "${GREEN}  ✓ TCP port ${VARA_TCP_PORT} is now active (after ${wait_time}s)${NC}"
+      return 0
+    fi
+    
+    sleep ${interval}
+    wait_time=$((wait_time + interval))
+    echo -e "${YELLOW}  ... waiting (${wait_time}s/${max_wait}s)${NC}"
+  done
+  
+  echo -e "${RED}  ✗ Timeout waiting for TCP port ${VARA_TCP_PORT}${NC}"
+  return 1
+}
+
+# Get local IP address
+get_local_ip() {
+  hostname -I | awk '{print $1}'
+}
+
+# Show connection info
+show_connection_info() {
+  local ip=$(get_local_ip)
+  echo -e "${BLUE}============================================${NC}"
+  echo -e "${BLUE}           Connection Information           ${NC}"
+  echo -e "${BLUE}============================================${NC}"
+  echo -e "${WHITE}  VARA HF TCP: ${ip}:${VARA_TCP_PORT}${NC}"
+  echo -e "${WHITE}  LinBPQ Config:${NC}"
+  echo -e "${WHITE}    ADDR ${ip} ${VARA_TCP_PORT}${NC}"
+  echo -e "${BLUE}============================================${NC}"
+}
+
+# Monitor TCP connections
+monitor_tcp() {
+  local ip=$(get_local_ip)
+  local last_state=""
+  local last_connections=""
+  
+  echo -e "${BLUE}============================================${NC}"
+  echo -e "${BLUE}        VARA HF TCP Monitor (Ctrl+C to stop)${NC}"
+  echo -e "${BLUE}============================================${NC}"
+  echo -e "${WHITE}  Monitoring: ${ip}:${VARA_TCP_PORT}${NC}"
+  echo -e "${WHITE}  Interval: ${MONITOR_INTERVAL}s${NC}"
+  echo -e "${BLUE}============================================${NC}"
+  echo ""
+  
+  while true; do
+    local timestamp=$(date '+%H:%M:%S')
+    
+    # Get netstat output from Wine
+    local netstat_out=$(WINEPREFIX="${WINEPREFIX}" wine netstat -an 2>/dev/null | grep ":${VARA_TCP_PORT}")
+    
+    # Check if listening
+    local listening=$(echo "${netstat_out}" | grep -i "listen")
+    
+    # Check for established connections
+    local established=$(echo "${netstat_out}" | grep -i "established")
+    
+    # Count connections
+    local conn_count=0
+    if [[ -n "${established}" ]]; then
+      conn_count=$(echo "${established}" | grep -ci "established" 2>/dev/null || echo "0")
+    fi
+    
+    # Determine state
+    local current_state=""
+    if [[ -n "${listening}" ]] || [[ ${conn_count} -gt 0 ]]; then
+      if [[ ${conn_count} -gt 0 ]]; then
+        current_state="CONNECTED"
+      else
+        current_state="LISTENING"
+      fi
+    else
+      if [[ -n "${netstat_out}" ]]; then
+        current_state="ACTIVE"
+      else
+        current_state="NOT LISTENING"
+      fi
+    fi
+    
+    # Only print if state changed or connections changed
+    if [[ "${current_state}" != "${last_state}" ]] || [[ "${established}" != "${last_connections}" ]]; then
+      echo -e "${YELLOW}[${timestamp}]${NC} Status changed:"
+      
+      case "${current_state}" in
+        "CONNECTED")
+          echo -e "${GREEN}  ✓ Port ${VARA_TCP_PORT}: ACTIVE${NC}"
+          echo -e "${GREEN}  ✓ Connections: ${conn_count}${NC}"
+          echo "${established}" | while read line; do
+            if [[ -n "${line}" ]]; then
+              local remote=$(echo "${line}" | awk '{print $3}')
+              echo -e "${GREEN}    → ${remote}${NC}"
+            fi
+          done
+          ;;
+        "LISTENING")
+          echo -e "${GREEN}  ✓ Port ${VARA_TCP_PORT}: LISTENING${NC}"
+          echo -e "${YELLOW}  ! No active connections${NC}"
+          ;;
+        "ACTIVE")
+          echo -e "${GREEN}  ✓ Port ${VARA_TCP_PORT}: ACTIVE${NC}"
+          ;;
+        "NOT LISTENING")
+          echo -e "${RED}  ✗ Port ${VARA_TCP_PORT}: NOT LISTENING${NC}"
+          echo -e "${RED}    VARA HF may have crashed or TCP is disabled${NC}"
+          ;;
+      esac
+      echo ""
+      
+      last_state="${current_state}"
+      last_connections="${established}"
+    fi
+    
+    sleep ${MONITOR_INTERVAL}
+  done
+}
+
+# =============================================================================
+# PARSE ARGUMENTS
+# =============================================================================
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --monitor|-m)
+      MONITOR_MODE=1
+      shift
+      ;;
+    --interval|-i)
+      MONITOR_INTERVAL="$2"
+      shift 2
+      ;;
+    --help|-h)
+      show_usage
+      exit 0
+      ;;
+    *)
+      echo -e "${RED}Unknown option: $1${NC}"
+      show_usage
+      exit 1
+      ;;
+  esac
+done
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+show_banner
+
+# Check if VARA HF executable exists
 if [[ ! -e ${EXE} ]]; then
   echo -e "${RED}"
   echo -e "${EXE} does not exist."
@@ -17,22 +251,51 @@ if [[ ! -e ${EXE} ]]; then
   echo -e "${NC}"
   exit 1
 fi
+echo -e "${GREEN}[OK]${NC} VARA HF executable found"
 
-# 1. Check if the symlink was created by the udev rules
-if [[ -e /dev/et-audio ]]; then
-
-  # 2. Check that this device was properly tagged with the ET_AUDIO env variable with a udev rule
-  APLAY_OUT=$(arecord -l | grep ET_AUDIO)
-  if [[ $? -eq 0 ]]; then
-    # Configure ALSA settings for sound card
-    /opt/emcomm-tools/bin/et-audio update-config
-  else
-    echo -e "${RED}No ET_AUDIO device detected.${NC}"
-    exit 1
-  fi
-else
-  echo -e "${RED}No ET_AUDIO device plugged in.${NC}"
+# 1. Check audio device
+if ! check_audio_device; then
+  echo -e "${RED}[FAIL]${NC} Audio device check failed"
   exit 1
 fi
 
-wine ${EXE}
+# Configure ALSA settings for sound card
+APLAY_OUT=$(arecord -l | grep ET_AUDIO)
+if [[ $? -eq 0 ]]; then
+  echo -e "${YELLOW}[CONFIG]${NC} Configuring ALSA..."
+  /opt/emcomm-tools/bin/et-audio update-config
+  echo -e "${GREEN}  ✓ ALSA configured${NC}"
+else
+  echo -e "${RED}[FAIL]${NC} No ET_AUDIO device detected"
+  exit 1
+fi
+
+# 2. Read TCP port from INI (read only, no modifications)
+echo -e "${YELLOW}[CONFIG]${NC} Reading TCP settings..."
+read_tcp_port_from_ini
+
+# 3. Launch VARA HF
+echo -e "${YELLOW}[LAUNCH]${NC} Starting VARA HF..."
+wine "${EXE}" &
+VARA_PID=$!
+echo -e "${GREEN}  ✓ VARA HF started (PID: ${VARA_PID})${NC}"
+
+# 4. Wait for TCP port to become available
+sleep 3
+if wait_for_tcp; then
+  show_connection_info
+  echo -e "${GREEN}[SUCCESS]${NC} VARA HF is ready!"
+else
+  echo -e "${RED}[WARNING]${NC} TCP port may not be available for remote connections"
+  echo -e "${YELLOW}  Check VARA HF settings and try restarting${NC}"
+fi
+
+# 5. Enter monitor mode if requested
+if [[ ${MONITOR_MODE} -eq 1 ]]; then
+  echo ""
+  monitor_tcp
+else
+  echo -e "${YELLOW}[INFO]${NC} VARA HF is running. Use --monitor for TCP monitoring."
+  echo -e "${YELLOW}[INFO]${NC} Press Ctrl+C to stop."
+  wait ${VARA_PID}
+fi

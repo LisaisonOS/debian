@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=EmComm-Tools Setup Wizard
+Name[fr]=Assistant de configuration EmComm-Tools
+Comment=Configure your EmComm-Tools system
+Comment[fr]=Configurez votre système EmComm-Tools
+Exec=/opt/emcomm-tools/bin/et-flask-apps/et-firstboot/et-firstboot.py
+Icon=/usr/share/pixmaps/emcomm-icon.png
+Terminal=false
+Type=Application
+Categories=HamRadio;Settings;
+Keywords=setup;wizard;configuration;radio;emcomm;

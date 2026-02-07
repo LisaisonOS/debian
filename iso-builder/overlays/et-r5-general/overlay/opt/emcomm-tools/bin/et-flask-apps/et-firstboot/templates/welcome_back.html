@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('welcome_back') }} {{ callsign }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🛰️ EmComm-Tools</h1>
+        <p style="color: #888; margin-top: 10px;">Emergency Communications System</p>
+    </div>
+    
+    <div class="card" style="text-align: center;">
+        <div id="welcome-icon" style="font-size: 48px; margin-bottom: 20px;">👋</div>
+        <h2 id="welcome-title">{{ t('welcome_back') }}, {{ callsign }}!</h2>
+        <p id="welcome-msg" style="color: #aaa; margin: 20px 0;">{{ t('welcome_back_msg') }}</p>
+        
+        <!-- Progress container (hidden initially) -->
+        <div id="progress-container" style="display: none; margin: 20px 0; text-align: left;">
+            <div style="background: #333; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span id="progress-title" style="color: #4CAF50; font-weight: bold;">Restoring configuration...</span>
+                    <span id="progress-percent" style="color: #888;">0%</span>
+                </div>
+                <div style="background: #222; border-radius: 4px; height: 8px; overflow: hidden;">
+                    <div id="progress-bar" style="background: linear-gradient(90deg, #4CAF50, #8BC34A); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div id="progress-log" style="background: #1a1a1a; border-radius: 8px; padding: 15px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 11px; color: #aaa;">
+            </div>
+        </div>
+        
+        <div id="buttons-container" style="display: flex; flex-direction: column; gap: 15px; margin-top: 30px; max-width: 300px; margin-left: auto; margin-right: auto;">
+            <button id="btn-restore" class="btn btn-primary" style="padding: 15px 30px; font-size: 16px; border: none; cursor: pointer;" onclick="startRestore()">
+                ✅ {{ t('load_config') }}
+                <br><small style="opacity: 0.7; font-weight: normal;">{{ t('load_config_desc') }}</small>
+            </button>
+            
+            <a href="{{ url_for('fresh_start') }}" id="btn-fresh" class="btn btn-secondary" style="padding: 15px 30px; font-size: 14px; text-decoration: none; display: block; background: #444; border: 1px solid #555;">
+                🔄 {{ t('fresh_start') }}
+                <br><small style="opacity: 0.7; font-weight: normal;">{{ t('fresh_start_desc') }}</small>
+            </a>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
+        <p>📁 USB: {{ session.get('persistence_usb_path', 'detected') }}</p>
+    </div>
+</div>
+
+<style>
+.btn-primary {
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+.btn-secondary {
+    color: #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-secondary:hover:not(.disabled) {
+    background: #555;
+}
+.btn-secondary.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+}
+.log-item {
+    padding: 2px 0;
+    border-bottom: 1px solid #2a2a2a;
+    word-break: break-all;
+}
+.log-item:last-child {
+    border-bottom: none;
+}
+.log-item.success { color: #4CAF50; }
+.log-item.skip { color: #888; }
+.log-item.error { color: #f44336; }
+.log-item.info { color: #2196F3; }
+</style>
+
+<script>
+let restoreRunning = false;
+
+function startRestore() {
+    if (restoreRunning) return;
+    restoreRunning = true;
+    
+    // Disable buttons
+    document.getElementById('btn-restore').disabled = true;
+    document.getElementById('btn-fresh').classList.add('disabled');
+    
+    // Update header
+    document.getElementById('welcome-icon').textContent = '⏳';
+    document.getElementById('welcome-title').textContent = 'Restoring your configuration...';
+    document.getElementById('welcome-msg').style.display = 'none';
+    
+    // Show progress
+    document.getElementById('progress-container').style.display = 'block';
+    document.getElementById('buttons-container').style.display = 'none';
+    
+    // Start restore with streaming
+    const logDiv = document.getElementById('progress-log');
+    const progressBar = document.getElementById('progress-bar');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressTitle = document.getElementById('progress-title');
+    
+    fetch('/api/restore_stream')
+        .then(response => {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            function read() {
+                reader.read().then(({done, value}) => {
+                    if (done) {
+                        return;
+                    }
+                    
+                    const text = decoder.decode(value);
+                    const lines = text.split('\n').filter(l => l.trim());
+                    
+                    lines.forEach(line => {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                
+                                if (data.log) {
+                                    // Add log entry
+                                    const item = document.createElement('div');
+                                    item.className = 'log-item';
+                                    if (data.log.includes('✓')) item.className += ' success';
+                                    else if (data.log.includes('⏭')) item.className += ' skip';
+                                    else if (data.log.includes('✗') || data.log.includes('ERROR')) item.className += ' error';
+                                    else if (data.log.includes('Starting') || data.log.includes('RESTORE')) item.className += ' info';
+                                    item.textContent = data.log;
+                                    logDiv.appendChild(item);
+                                    logDiv.scrollTop = logDiv.scrollHeight;
+                                }
+                                
+                                if (data.progress !== undefined) {
+                                    progressBar.style.width = data.progress + '%';
+                                    progressPercent.textContent = data.progress + '%';
+                                }
+                                
+                                if (data.status) {
+                                    progressTitle.textContent = data.status;
+                                }
+                                
+                                if (data.complete) {
+                                    // Restore complete - check if HDD install for data transfer
+                                    document.getElementById('welcome-icon').textContent = '✅';
+                                    document.getElementById('welcome-title').textContent = 'Configuration restored!';
+                                    progressTitle.textContent = '✓ All done!';
+                                    progressTitle.style.color = '#4CAF50';
+                                    
+                                    // Notify server restore is complete, then redirect
+                                    fetch('/api/restore_complete', {method: 'POST'})
+                                        .then(() => {
+                                            setTimeout(() => {
+                                                // Server will determine if data_transfer or complete
+                                                window.location.href = '/post_restore';
+                                            }, 1000);
+                                        });
+                                }
+                                
+                                if (data.error) {
+                                    document.getElementById('welcome-icon').textContent = '❌';
+                                    document.getElementById('welcome-title').textContent = 'Restore failed';
+                                    progressTitle.textContent = '✗ Error: ' + data.error;
+                                    progressTitle.style.color = '#f44336';
+                                    
+                                    // Show retry option after delay
+                                    setTimeout(() => {
+                                        document.getElementById('buttons-container').style.display = 'flex';
+                                        document.getElementById('btn-restore').disabled = false;
+                                        document.getElementById('btn-restore').innerHTML = '🔄 Retry<br><small style="opacity: 0.7; font-weight: normal;">Try restoring again</small>';
+                                        document.getElementById('btn-fresh').classList.remove('disabled');
+                                        restoreRunning = false;
+                                    }, 2000);
+                                }
+                            } catch (e) {
+                                // Ignore parse errors
+                                console.log('Parse error:', e, line);
+                            }
+                        }
+                    });
+                    
+                    read();
+                });
+            }
+            
+            read();
+        })
+        .catch(error => {
+            document.getElementById('welcome-icon').textContent = '❌';
+            document.getElementById('welcome-title').textContent = 'Connection error';
+            progressTitle.textContent = '✗ Failed to connect';
+            progressTitle.style.color = '#f44336';
+            console.error('Restore error:', error);
+            
+            // Show retry
+            setTimeout(() => {
+                document.getElementById('buttons-container').style.display = 'flex';
+                document.getElementById('btn-restore').disabled = false;
+                document.getElementById('btn-fresh').classList.remove('disabled');
+                restoreRunning = false;
+            }, 2000);
+        });
+}
+</script>
+{% endblock %}

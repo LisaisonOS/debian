@@ -75,11 +75,10 @@ log_audit() {
 
 generate_hash() {
     local license_content="$1"
-    local machine_id
-    machine_id=$(cat /etc/machine-id 2>/dev/null || echo "fallback-id")
     
-    # Create hash from: license content + machine ID + salt
-    echo -n "${license_content}${machine_id}${HASH_SALT}" | sha256sum | cut -d' ' -f1
+    # NOTE: Don't include machine-id - it changes on Live systems between boots
+    # This allows license acceptance to persist via USB backup/restore
+    echo -n "${license_content}${HASH_SALT}" | sha256sum | cut -d' ' -f1
 }
 
 create_license_flag() {
@@ -468,7 +467,8 @@ update-config() {
     if [ -f "${ACTIVE_RADIO}" ]; then
       MODEL=$(jq -r '.model // ""' "${ACTIVE_RADIO}" 2>/dev/null)
       if [ -n "${MODEL}" ] && [ "${MODEL}" != "null" ]; then
-        MYRIG="${MODEL}"
+        # Remove parenthetical notes like (DigiRig), replace spaces with underscores
+        MYRIG=$(echo "${MODEL}" | sed 's/ *([^)]*)//g' | tr ' ' '_')
       fi
     fi
 
@@ -498,12 +498,14 @@ update-config() {
         sed -i "/^\[MY_INFO\]/a MyLocator=${GRID}" ${VARAC_INI}
       fi
 
-      # Update MyRIG (if radio is selected)
+      # Update MyRIG - only replace first word, keep user's description
+      # Example: "MyRIG=FT-857D emcomm-tools.ca" -> "MyRIG=IC-705 emcomm-tools.ca"
       if [ -n "${MYRIG}" ]; then
         if grep -qi "^MyRIG=" "${VARAC_INI}"; then
-          sed -i "s|^MyRIG=.*|MyRIG=${MYRIG}|i" ${VARAC_INI}
+          # Replace first word only, keep the rest of the line
+          sed -i "s|^\(MyRIG=\)[^ ]*\(.*\)|\1${MYRIG}\2|i" ${VARAC_INI}
         elif grep -qi "^\[MY_INFO\]" "${VARAC_INI}"; then
-          sed -i "/^\[MY_INFO\]/a MyRIG=${MYRIG}" ${VARAC_INI}
+          sed -i "/^\[MY_INFO\]/a MyRIG=${MYRIG} emcomm-tools.ca" ${VARAC_INI}
         fi
       fi
 

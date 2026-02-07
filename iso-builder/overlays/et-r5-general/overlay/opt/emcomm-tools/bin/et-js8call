@@ -72,13 +72,22 @@ update-config() {
     sed -i "s|^MyCall.*|MyCall=${CALLSIGN}|" ${JS8CALL_CONF_FILE} 
     sed -i "s|^MyGrid.*|MyGrid=${GRID}|" ${JS8CALL_CONF_FILE} 
 
-    # Set MyInfo to the selected radio (from et-radio)
+    # Set MyInfo - only replace first word, keep user's description
+    # Example: "MyInfo=FT-857D emcomm-tools.ca" -> "MyInfo=IC-705 emcomm-tools.ca"
     ACTIVE_RADIO_FILE="/opt/emcomm-tools/conf/radios.d/active-radio.json"
     if [ -e "${ACTIVE_RADIO_FILE}" ]; then
         RADIO_MODEL=$(jq -r '.model // empty' "${ACTIVE_RADIO_FILE}")
         if [ -n "${RADIO_MODEL}" ]; then
-            sed -i "s|^MyInfo.*|MyInfo=${RADIO_MODEL}|" ${JS8CALL_CONF_FILE}
-            et-log "Updated JS8Call MyInfo with radio: '${RADIO_MODEL}'"
+            # Remove parenthetical notes like (DigiRig), replace spaces with underscores
+            RADIO_MODEL_SAFE=$(echo "${RADIO_MODEL}" | sed 's/ *([^)]*)//g' | tr ' ' '_')
+            # Replace first word only, keep the rest of the line
+            if grep -q "^MyInfo=" "${JS8CALL_CONF_FILE}"; then
+                sed -i "s|^\(MyInfo=\)[^ ]*\(.*\)|\1${RADIO_MODEL_SAFE}\2|" ${JS8CALL_CONF_FILE}
+            else
+                # Add the line if missing
+                echo "MyInfo=${RADIO_MODEL_SAFE} emcomm-tools.ca" >> ${JS8CALL_CONF_FILE}
+            fi
+            et-log "Updated JS8Call MyInfo with radio: '${RADIO_MODEL_SAFE}'"
         fi
     fi
 

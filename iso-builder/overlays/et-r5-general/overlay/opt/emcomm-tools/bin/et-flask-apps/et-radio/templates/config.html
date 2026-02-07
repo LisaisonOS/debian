@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ t.config_notes }}{% endblock %}
+
+{% block content %}
+<div class="card-header">
+    <h1>⚙️ {{ t.config_notes }}</h1>
+    <p class="subtitle">{{ radio.model }}</p>
+</div>
+
+<div class="card-body">
+    <!-- Selected radio summary -->
+    <div class="selected-radio">
+        <div class="icon">📻</div>
+        <div class="info">
+            <div class="model">{{ radio.model }}</div>
+            {% if radio.manufacturer %}
+            <div class="vendor">{{ radio.manufacturer }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Config Notes - THE IMPORTANT PART! -->
+    {% if radio.notes %}
+    <div class="config-section">
+        <div class="config-notes-box">
+            <div class="config-notes-title">
+                <span>⚠️</span> {{ t.config_notes_desc }}
+            </div>
+            <ul class="config-notes-list">
+                {% for note in radio.notes %}
+                <li>{{ note }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Next steps instructions -->
+    <div class="instructions-box">
+        <h4>{{ t.instructions }}</h4>
+        <ol>
+            <li>{{ t.instr_1 }}</li>
+            <li>{{ t.instr_2 }}</li>
+            <li>{{ t.instr_3 }}</li>
+        </ol>
+    </div>
+
+    <div class="btn-group">
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">← {{ t.back }}</a>
+        <a href="{{ url_for('done') }}" class="btn btn-success">{{ t.done }} ✓</a>
+    </div>
+</div>
+{% endblock %}

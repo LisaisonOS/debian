@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=EmComm-Tools Auto Scale
+Name[fr]=EmComm-Tools Échelle Auto
+Comment=Automatically adjust display scaling based on screen DPI
+Comment[fr]=Ajuste automatiquement l'échelle d'affichage selon le DPI de l'écran
+Exec=/opt/emcomm-tools/bin/et-auto-scale-once
+Icon=video-display
+Terminal=false
+Hidden=false
+X-XFCE-Autostart-Override=true
+StartupNotify=false
+OnlyShowIn=XFCE;

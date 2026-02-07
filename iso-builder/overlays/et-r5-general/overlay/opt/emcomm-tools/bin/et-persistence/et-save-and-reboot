@@ -1,0 +1,94 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Updated : February 2026
+# Purpose : Save configs to USB then reboot - WITH VISUAL FEEDBACK
+#
+
+SCRIPT_DIR="/opt/emcomm-tools/bin/et-persistence"
+DETECT_SCRIPT="${SCRIPT_DIR}/et-persistence-detect"
+
+# Check if USB persistence exists
+USB_PATH=$("$DETECT_SCRIPT" 2>/dev/null) || true
+
+if [[ -z "$USB_PATH" ]]; then
+    # No USB - reboot directly without question
+    systemctl reboot
+    exit 0
+fi
+
+# USB found - ask if user wants to save
+CHOICE=$(zenity --list --radiolist \
+    --title="EmComm-Tools - Reboot" \
+    --text="USB backup drive detected.\n\nDo you want to save your configuration before reboot?" \
+    --column="Select" --column="Option" \
+    TRUE "Save & Reboot" \
+    FALSE "Reboot without saving" \
+    --width=400 --height=250 2>/dev/null)
+
+case "$CHOICE" in
+    "Save & Reboot")
+        # Show progress window
+        (
+            echo "# Preparing backup..."
+            echo "2"
+            sleep 0.5
+            
+            echo "# Saving configuration..."
+            echo "5"
+            
+            # Run save and capture output line by line
+            "${SCRIPT_DIR}/et-persistence-save" 2>&1 | while IFS= read -r line; do
+                # Extract meaningful status from output
+                if [[ "$line" == *"✓ Saved:"* ]]; then
+                    item=$(echo "$line" | sed 's/.*✓ Saved: //')
+                    echo "# ✓ $item"
+                elif [[ "$line" == *"Saving EmComm"* ]]; then
+                    echo "# Saving configuration..."
+                    echo "10"
+                elif [[ "$line" == *"Firefox"* ]]; then
+                    echo "# Saving Firefox (please wait)..."
+                    echo "50"
+                elif [[ "$line" == *"Thunderbird"* ]]; then
+                    echo "# Saving Thunderbird..."
+                    echo "70"
+                elif [[ "$line" == *"WiFi"* ]]; then
+                    echo "# Saving WiFi networks..."
+                    echo "85"
+                elif [[ "$line" == *"manifest"* ]]; then
+                    echo "# Finalizing..."
+                    echo "95"
+                elif [[ "$line" == *"Save complete"* ]]; then
+                    echo "# Save complete!"
+                    echo "100"
+                fi
+            done
+            
+            sleep 1
+        ) | zenity --progress \
+            --title="EmComm-Tools - Saving..." \
+            --text="Do NOT remove USB drive!" \
+            --percentage=0 \
+            --auto-close \
+            --no-cancel \
+            --width=400 \
+            2>/dev/null
+
+        # Show confirmation briefly
+        zenity --info --title="EmComm-Tools" --text="✓ Configuration saved!\n\nRebooting now..." --timeout=2 2>/dev/null || true
+        
+        # Reboot
+        systemctl reboot
+        ;;
+        
+    "Reboot without saving")
+        # Reboot directly
+        systemctl reboot
+        ;;
+        
+    *)
+        # User cancelled (closed window)
+        exit 0
+        ;;
+esac

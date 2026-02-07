@@ -1,0 +1,668 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Save EmComm-Tools configs to USB persistence
+#
+# Simple approach: Copy actual config files that exist
+#
+
+# NO set -e - we want the script to continue even if some saves fail
+
+# Determine the real user (works whether running as user or root)
+if [[ $EUID -eq 0 ]]; then
+    # Running as root - find the real logged-in user
+    REAL_USER=$(who | grep -E "tty|:0" | head -1 | awk '{print $1}')
+    if [[ -z "$REAL_USER" ]]; then
+        # Fallback: check SUDO_USER
+        REAL_USER="${SUDO_USER:-root}"
+    fi
+    export HOME="/home/$REAL_USER"
+else
+    # Running as regular user
+    REAL_USER=$(whoami)
+fi
+
+# File owner for all saved files (ensures portability)
+FILE_OWNER="$REAL_USER:$REAL_USER"
+
+
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+QUIET=0
+
+# ===========================================================================
+# PLYMOUTH FUNCTIONS - Show status on shutdown screen
+# ===========================================================================
+
+plymouth_available() {
+    command -v plymouth &>/dev/null && plymouth --ping 2>/dev/null
+}
+
+plymouth_msg() {
+    local msg="$1"
+    if plymouth_available; then
+        plymouth display-message --text="$msg" 2>/dev/null || true
+    fi
+}
+
+# ===========================================================================
+# LOGGING FUNCTIONS
+# ===========================================================================
+
+# Detect persistence location early for debug log
+PERSISTENCE_PATH=$("${SCRIPT_DIR}/et-persistence-detect" 2>/dev/null) || true
+
+# Prevent USB unmount during save
+if [[ -n "$PERSISTENCE_PATH" ]]; then
+    exec 9<"$PERSISTENCE_PATH"  # Hold file descriptor to prevent unmount
+fi
+
+# Debug log file - write to USB for troubleshooting
+if [[ -n "$PERSISTENCE_PATH" ]]; then
+    DEBUG_LOG="${PERSISTENCE_PATH}/save-debug.log"
+else
+    DEBUG_LOG="/tmp/et-persistence-save-debug.log"
+fi
+
+debug() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$DEBUG_LOG" 2>/dev/null || true
+}
+
+debug "=== SAVE SCRIPT STARTED ==="
+debug "Called with args: $*"
+debug "Running as user: $(whoami)"
+debug "HOME=$HOME"
+debug "PERSISTENCE_PATH=$PERSISTENCE_PATH"
+
+# Parse arguments
+if [[ "$1" == "--quiet" || "$1" == "-q" ]]; then
+    QUIET=1
+fi
+
+log() {
+    if [[ $QUIET -eq 0 ]]; then
+        echo "[$(date '+%H:%M:%S')] $1"
+    fi
+    debug "LOG: $1"
+}
+
+error() {
+    echo "[$(date '+%H:%M:%S')] ERROR: $1" >&2
+    debug "ERROR: $1"
+    plymouth_msg "EmComm-Tools: Error - $1"
+    sleep 10
+    exit 1
+}
+
+if [[ -z "$PERSISTENCE_PATH" ]]; then
+    error "No EmComm-Tools persistence drive found (et-config folder). Please insert your USB drive."
+fi
+
+log "Found persistence at: ${PERSISTENCE_PATH}"
+
+# Show initial Plymouth message
+plymouth_msg "EmComm-Tools: Saving your configuration..."
+
+# Create directories
+mkdir -p "${PERSISTENCE_PATH}/configs/pat"
+mkdir -p "${PERSISTENCE_PATH}/configs/js8call"
+mkdir -p "${PERSISTENCE_PATH}/configs/wsjtx"
+mkdir -p "${PERSISTENCE_PATH}/configs/fldigi"
+mkdir -p "${PERSISTENCE_PATH}/configs/vara"
+mkdir -p "${PERSISTENCE_PATH}/configs/varac"
+mkdir -p "${PERSISTENCE_PATH}/configs/direwolf"
+mkdir -p "${PERSISTENCE_PATH}/configs/yaac"
+mkdir -p "${PERSISTENCE_PATH}/configs/navit"
+mkdir -p "${PERSISTENCE_PATH}/configs/firefox"
+mkdir -p "${PERSISTENCE_PATH}/configs/thunderbird"
+mkdir -p "${PERSISTENCE_PATH}/configs/wifi"
+mkdir -p "${PERSISTENCE_PATH}/varac"
+mkdir -p "${PERSISTENCE_PATH}/mailbox"
+
+# ===========================================================================
+# SAVE FUNCTIONS
+# ===========================================================================
+
+save_file() {
+    local src="$1"
+    local dest="$2"
+    local name="$3"
+    
+    if [[ -f "$src" ]]; then
+        cp -v "$src" "$dest"
+        log "✓ Saved: $name"
+    fi
+}
+
+save_dir() {
+    local src="$1"
+    local dest="$2"
+    local name="$3"
+    
+    if [[ -d "$src" ]]; then
+        cp -rv "$src"/* "$dest"/ 2>/dev/null || true
+        log "✓ Saved: $name"
+    fi
+}
+
+# ===========================================================================
+# FIREFOX FUNCTIONS
+# ===========================================================================
+
+# Find the default Firefox profile directory
+find_firefox_profile() {
+    local firefox_dir="${HOME}/.mozilla/firefox"
+    local profiles_ini="${firefox_dir}/profiles.ini"
+    local profile_path=""
+    
+    if [[ ! -d "$firefox_dir" ]]; then
+        return 1
+    fi
+    
+    # Method 1: Check [Install*] section in profiles.ini (most reliable for Firefox ESR)
+    if [[ -f "$profiles_ini" ]]; then
+        local install_default
+        install_default=$(grep -A2 '^\[Install' "$profiles_ini" 2>/dev/null | grep '^Default=' | head -1 | cut -d'=' -f2)
+        if [[ -n "$install_default" && -d "${firefox_dir}/${install_default}" ]]; then
+            profile_path="${firefox_dir}/${install_default}"
+        fi
+    fi
+    
+    # Method 2: Find profile with places.sqlite (actual user data)
+    if [[ -z "$profile_path" || ! -f "${profile_path}/places.sqlite" ]]; then
+        profile_path=$(find "$firefox_dir" -maxdepth 2 -name "places.sqlite" -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null)
+    fi
+    
+    # Method 3: Try known profile patterns (prefer -esr for Debian)
+    if [[ -z "$profile_path" || ! -d "$profile_path" ]]; then
+        for pattern in "*.default-esr" "*.default-release" "*.default"; do
+            profile_path=$(find "$firefox_dir" -maxdepth 1 -type d -name "$pattern" 2>/dev/null | head -1)
+            [[ -d "$profile_path" ]] && break
+        done
+    fi
+    
+    if [[ -d "$profile_path" ]]; then
+        echo "$profile_path"
+        return 0
+    fi
+    
+    return 1
+}
+
+# Check if Firefox is running
+is_firefox_running() {
+    pgrep -x "firefox" > /dev/null 2>&1 || pgrep -x "firefox-esr" > /dev/null 2>&1
+}
+
+save_firefox_profile() {
+    local dest_dir="${PERSISTENCE_PATH}/configs/firefox"
+    
+    # Check if Firefox is running
+    if is_firefox_running; then
+        log "⚠ Firefox is running - skipping save to prevent database corruption"
+        log "  Close Firefox and run save again to backup browser data"
+        return 1
+    fi
+    
+    # Find Firefox profile
+    local profile_dir
+    profile_dir=$(find_firefox_profile)
+    
+    if [[ -z "$profile_dir" || ! -d "$profile_dir" ]]; then
+        log "⚠ No Firefox profile found"
+        return 1
+    fi
+    
+    log "Found Firefox profile: $(basename "$profile_dir")"
+    
+    # Save the profile folder name for restore
+    basename "$profile_dir" > "${dest_dir}/profile_name.txt"
+    
+    # Files to save (critical user data)
+    local files=(
+        "places.sqlite"           # Bookmarks & history
+        "places.sqlite-wal"       # Write-ahead log (if exists)
+        "favicons.sqlite"         # Favicon cache for bookmarks
+        "cookies.sqlite"          # Cookies
+        "cookies.sqlite-wal"
+        "logins.json"             # Saved passwords (encrypted)
+        "key4.db"                 # Password encryption key
+        "cert9.db"                # Certificates
+        "formhistory.sqlite"      # Form autofill data
+        "permissions.sqlite"      # Site permissions
+        "prefs.js"                # Preferences
+        "search.json.mozlz4"      # Search engines
+        "handlers.json"           # Protocol handlers
+        "containers.json"         # Container tabs
+        "extension-settings.json" # Extension settings
+        "extensions.json"         # Extension list
+    )
+    
+    # Save individual files
+    for file in "${files[@]}"; do
+        if [[ -f "${profile_dir}/${file}" ]]; then
+            cp "${profile_dir}/${file}" "${dest_dir}/"
+        fi
+    done
+    
+    # Save extensions directory
+    if [[ -d "${profile_dir}/extensions" ]]; then
+        rm -rf "${dest_dir}/extensions" 2>/dev/null
+        cp -r "${profile_dir}/extensions" "${dest_dir}/"
+    fi
+    
+    # Save localStorage/IndexedDB (can be large, but important for web apps)
+    if [[ -d "${profile_dir}/storage" ]]; then
+        rm -rf "${dest_dir}/storage" 2>/dev/null
+        cp -r "${profile_dir}/storage" "${dest_dir}/"
+    fi
+    
+    # Save browser-extension-data (extension storage)
+    if [[ -d "${profile_dir}/browser-extension-data" ]]; then
+        rm -rf "${dest_dir}/browser-extension-data" 2>/dev/null
+        cp -r "${profile_dir}/browser-extension-data" "${dest_dir}/"
+    fi
+    
+    # Fix ownership (use et-data group for portability)
+    chown -R :et-data "${dest_dir}/" 2>/dev/null || true
+    chmod -R g+rw "${dest_dir}/" 2>/dev/null || true
+    
+    log "✓ Saved: Firefox profile"
+    return 0
+}
+
+# ===========================================================================
+# THUNDERBIRD FUNCTIONS
+# ===========================================================================
+
+# Find the default Thunderbird profile directory
+find_thunderbird_profile() {
+    local thunderbird_dir="${HOME}/.thunderbird"
+    local profiles_ini="${thunderbird_dir}/profiles.ini"
+    local profile_path=""
+    
+    if [[ ! -d "$thunderbird_dir" ]]; then
+        return 1
+    fi
+    
+    # Method 1: Check [Install*] section in profiles.ini
+    if [[ -f "$profiles_ini" ]]; then
+        local install_default
+        install_default=$(grep -A2 '^\[Install' "$profiles_ini" 2>/dev/null | grep '^Default=' | head -1 | cut -d'=' -f2)
+        if [[ -n "$install_default" && -d "${thunderbird_dir}/${install_default}" ]]; then
+            profile_path="${thunderbird_dir}/${install_default}"
+        fi
+    fi
+    
+    # Method 2: Find profile with prefs.js (actual user data)
+    if [[ -z "$profile_path" || ! -f "${profile_path}/prefs.js" ]]; then
+        profile_path=$(find "$thunderbird_dir" -maxdepth 2 -name "prefs.js" -type f 2>/dev/null | head -1 | xargs dirname 2>/dev/null)
+    fi
+    
+    # Method 3: Try known profile patterns
+    if [[ -z "$profile_path" || ! -d "$profile_path" ]]; then
+        for pattern in "*.default-esr" "*.default-release" "*.default"; do
+            profile_path=$(find "$thunderbird_dir" -maxdepth 1 -type d -name "$pattern" 2>/dev/null | head -1)
+            [[ -d "$profile_path" ]] && break
+        done
+    fi
+    
+    if [[ -d "$profile_path" ]]; then
+        echo "$profile_path"
+        return 0
+    fi
+    
+    return 1
+}
+
+# Check if Thunderbird is running
+is_thunderbird_running() {
+    pgrep -x "thunderbird" > /dev/null 2>&1
+}
+
+# Check if enough space for Thunderbird backup (with 10% safety margin)
+check_thunderbird_space() {
+    local profile_dir="$1"
+    local dest="${PERSISTENCE_PATH}"
+    
+    if [[ ! -d "$profile_dir" ]]; then
+        return 0  # No profile = no space needed
+    fi
+    
+    # Calculate profile size (in KB)
+    local needed_kb=$(du -sk "$profile_dir" 2>/dev/null | cut -f1)
+    if [[ -z "$needed_kb" || "$needed_kb" -eq 0 ]]; then
+        return 0
+    fi
+    
+    # Available space on USB (in KB)
+    local available_kb=$(df -k "$dest" | tail -1 | awk '{print $4}')
+    
+    # Add 10% safety margin
+    local needed_with_margin=$(( (needed_kb * 110) / 100 ))
+    
+    # Log sizes for debugging
+    local needed_mb=$((needed_kb / 1024))
+    local available_mb=$((available_kb / 1024))
+    local margin_mb=$((needed_with_margin / 1024))
+    debug "Thunderbird space check: need ${needed_mb}MB (+10% = ${margin_mb}MB), available ${available_mb}MB"
+    
+    if [[ $needed_with_margin -gt $available_kb ]]; then
+        log "⚠ CODE ROUGE: Espace insuffisant pour Thunderbird!"
+        log "  Besoin: ${margin_mb}MB (avec marge 10%), Disponible: ${available_mb}MB"
+        log "  La sauvegarde Thunderbird sera ignorée."
+        return 1
+    fi
+    
+    log "Thunderbird space OK: ${needed_mb}MB requis, ${available_mb}MB disponible"
+    return 0
+}
+
+save_thunderbird_profile() {
+    local dest_dir="${PERSISTENCE_PATH}/configs/thunderbird"
+    local thunderbird_dir="${HOME}/.thunderbird"
+    
+    # Check if Thunderbird is installed
+    if ! command -v thunderbird &>/dev/null; then
+        log "⏭ Thunderbird not installed - skipping"
+        return 0
+    fi
+    
+    # Check if Thunderbird profile directory exists
+    if [[ ! -d "$thunderbird_dir" ]]; then
+        log "⏭ No Thunderbird profile directory - skipping"
+        return 0
+    fi
+    
+    # Check if Thunderbird is running
+    if is_thunderbird_running; then
+        log "⚠ Thunderbird is running - skipping save to prevent database corruption"
+        log "  Close Thunderbird and run save again to backup email data"
+        return 1
+    fi
+    
+    # Find Thunderbird profile
+    local profile_dir
+    profile_dir=$(find_thunderbird_profile)
+    
+    if [[ -z "$profile_dir" || ! -d "$profile_dir" ]]; then
+        log "⏭ No Thunderbird profile found - skipping"
+        return 0
+    fi
+    
+    log "Found Thunderbird profile: $(basename "$profile_dir")"
+    
+    # Check available space with 10% margin
+    if ! check_thunderbird_space "$profile_dir"; then
+        return 1
+    fi
+    
+    # Remove old backup if exists
+    rm -f "${dest_dir}/profile.tar.gz" 2>/dev/null
+    
+    # Compress ENTIRE .thunderbird directory (profile + profiles.ini + installs.ini)
+    log "Compressing Thunderbird data (this may take a moment)..."
+    log "Source: $thunderbird_dir"
+    log "Destination: ${dest_dir}/profile.tar.gz"
+    
+    if tar -czf "${dest_dir}/profile.tar.gz" -C "${HOME}" ".thunderbird"; then
+        # Flush to disk (critical for USB drives!)
+        sync
+        
+        # Verify archive integrity
+        if tar -tzf "${dest_dir}/profile.tar.gz" &>/dev/null; then
+            # Fix ownership (use et-data group for portability)
+            chown -R :et-data "${dest_dir}/" 2>/dev/null || true
+            chmod -R g+rw "${dest_dir}/" 2>/dev/null || true
+            
+            local size_mb=$(du -sm "${dest_dir}/profile.tar.gz" | cut -f1)
+            log "✓ Saved: Thunderbird profile (${size_mb}MB compressed)"
+            return 0
+        else
+            log "✗ Thunderbird archive corrupted after creation!"
+            rm -f "${dest_dir}/profile.tar.gz" 2>/dev/null
+            return 1
+        fi
+    else
+        log "✗ Failed to compress Thunderbird profile (tar error)"
+        rm -f "${dest_dir}/profile.tar.gz" 2>/dev/null
+        return 1
+    fi
+}
+
+# ===========================================================================
+# SAVE ALL CONFIGS
+# ===========================================================================
+
+log "Saving EmComm-Tools configurations..."
+plymouth_msg "EmComm-Tools: Saving user settings..."
+
+# --- EmComm-Tools Core ---
+# SAFETY CHECK: Don't overwrite a valid callsign with N0CALL/empty!
+LOCAL_USER_JSON="${HOME}/.config/emcomm-tools/user.json"
+USB_USER_JSON="${PERSISTENCE_PATH}/user.json"
+
+if [[ -f "$LOCAL_USER_JSON" ]]; then
+    LOCAL_CALLSIGN=$(jq -r '.callsign // "N0CALL"' "$LOCAL_USER_JSON" 2>/dev/null)
+    
+    # Check if local has default/empty callsign
+    if [[ "$LOCAL_CALLSIGN" == "N0CALL" || -z "$LOCAL_CALLSIGN" ]]; then
+        # Local is empty - check if USB has real data we should preserve
+        if [[ -f "$USB_USER_JSON" ]]; then
+            USB_CALLSIGN=$(jq -r '.callsign // "N0CALL"' "$USB_USER_JSON" 2>/dev/null)
+            
+            if [[ "$USB_CALLSIGN" != "N0CALL" && -n "$USB_CALLSIGN" ]]; then
+                log "⚠ SAFETY: Local has '${LOCAL_CALLSIGN}' but USB has '${USB_CALLSIGN}'"
+                log "  → USB user.json preserved (not overwritten)"
+            else
+                # Both are N0CALL/empty, OK to save
+                save_file "$LOCAL_USER_JSON" "$USB_USER_JSON" "user.json"
+            fi
+        else
+            # No USB file exists yet, OK to save even if N0CALL
+            save_file "$LOCAL_USER_JSON" "$USB_USER_JSON" "user.json"
+        fi
+    else
+        # Local has real callsign, safe to save
+        save_file "$LOCAL_USER_JSON" "$USB_USER_JSON" "user.json"
+    fi
+else
+    log "⚠ Local user.json not found: $LOCAL_USER_JSON"
+fi
+
+# --- Active Radio (symlink target) ---
+ACTIVE_RADIO="/opt/emcomm-tools/conf/radios.d/active-radio.json"
+if [[ -L "$ACTIVE_RADIO" ]]; then
+    # Save the symlink target name (e.g., "ic-705.json")
+    RADIO_TARGET=$(readlink "$ACTIVE_RADIO" | xargs basename)
+    echo "$RADIO_TARGET" > "${PERSISTENCE_PATH}/active-radio.txt"
+    log "✓ Saved: Active radio ($RADIO_TARGET)"
+fi
+
+# --- VarAC License (IMPORTANT!) ---
+save_file "${HOME}/.config/emcomm-tools/varac/license.flag" "${PERSISTENCE_PATH}/varac/license.flag" "VarAC license"
+save_file "${HOME}/.config/emcomm-tools/varac/license-audit.log" "${PERSISTENCE_PATH}/varac/license-audit.log" "VarAC audit log"
+
+# --- Pat Winlink ---
+plymouth_msg "EmComm-Tools: Saving Pat/Winlink..."
+save_file "${HOME}/.config/pat/config.json" "${PERSISTENCE_PATH}/configs/pat/config.json" "Pat config"
+if [[ -d "${HOME}/.local/share/pat/mailbox" ]]; then
+    save_dir "${HOME}/.local/share/pat/mailbox" "${PERSISTENCE_PATH}/mailbox" "Pat mailbox"
+fi
+
+# --- JS8Call ---
+save_file "${HOME}/.config/JS8Call.ini" "${PERSISTENCE_PATH}/configs/js8call/JS8Call.ini" "JS8Call"
+
+# --- WSJT-X ---
+save_file "${HOME}/.config/WSJT-X.ini" "${PERSISTENCE_PATH}/configs/wsjtx/WSJT-X.ini" "WSJT-X"
+
+# --- Fldigi (entire directory) ---
+plymouth_msg "EmComm-Tools: Saving Fldigi..."
+if [[ -d "${HOME}/.fldigi" ]]; then
+    mkdir -p "${PERSISTENCE_PATH}/configs/fldigi"
+    cp -r "${HOME}/.fldigi/"* "${PERSISTENCE_PATH}/configs/fldigi/" 2>/dev/null
+    log "✓ Saved: Fldigi (full directory)"
+fi
+
+# --- VARA HF ---
+save_file "${HOME}/.wine32/drive_c/VARA/VARA.ini" "${PERSISTENCE_PATH}/configs/vara/VARA.ini" "VARA HF"
+
+# --- VARA FM ---
+save_file "${HOME}/.wine32/drive_c/VARA FM/VARAFM.ini" "${PERSISTENCE_PATH}/configs/vara/VARAFM.ini" "VARA FM"
+
+# --- VarAC (full directory - ini, db, logs, configs) ---
+plymouth_msg "EmComm-Tools: Saving VarAC..."
+mkdir -p "${PERSISTENCE_PATH}/configs/varac"
+save_file "${HOME}/.wine32/drive_c/VarAC/VarAC.ini" "${PERSISTENCE_PATH}/configs/varac/VarAC.ini" "VarAC ini"
+save_file "${HOME}/.wine32/drive_c/VarAC/VarAC.db" "${PERSISTENCE_PATH}/configs/varac/VarAC.db" "VarAC database"
+save_file "${HOME}/.wine32/drive_c/VarAC/VarAC.log" "${PERSISTENCE_PATH}/configs/varac/VarAC.log" "VarAC log"
+save_file "${HOME}/.wine32/drive_c/VarAC/VarAC_traffic.log" "${PERSISTENCE_PATH}/configs/varac/VarAC_traffic.log" "VarAC traffic log"
+save_file "${HOME}/.wine32/drive_c/VarAC/VarAC_callsign_tags.conf" "${PERSISTENCE_PATH}/configs/varac/VarAC_callsign_tags.conf" "VarAC callsign tags"
+save_file "${HOME}/.wine32/drive_c/VarAC/VarAC_alert_tags.conf" "${PERSISTENCE_PATH}/configs/varac/VarAC_alert_tags.conf" "VarAC alert tags"
+save_file "${HOME}/.wine32/drive_c/VarAC/VarAC_templates.ini" "${PERSISTENCE_PATH}/configs/varac/VarAC_templates.ini" "VarAC templates"
+save_file "${HOME}/.wine32/drive_c/VarAC/VarAC_frequency_schedule.conf" "${PERSISTENCE_PATH}/configs/varac/VarAC_frequency_schedule.conf" "VarAC freq schedule"
+# Save log folder
+if [[ -d "${HOME}/.wine32/drive_c/VarAC/log" ]]; then
+    mkdir -p "${PERSISTENCE_PATH}/configs/varac/log"
+    cp -r "${HOME}/.wine32/drive_c/VarAC/log/"* "${PERSISTENCE_PATH}/configs/varac/log/" 2>/dev/null && log "✓ Saved: VarAC log folder"
+fi
+
+# --- YAAC (entire Java preferences directory) ---
+plymouth_msg "EmComm-Tools: Saving YAAC..."
+YAAC_PREFS_DIR="${HOME}/.java/.userPrefs/org/ka2ddo/yaac"
+if [[ -d "$YAAC_PREFS_DIR" ]]; then
+    mkdir -p "${PERSISTENCE_PATH}/configs/yaac"
+    cp -r "$YAAC_PREFS_DIR"/* "${PERSISTENCE_PATH}/configs/yaac/" 2>/dev/null
+    log "✓ Saved: YAAC (full preferences)"
+fi
+
+# --- Navit (config and bookmarks) ---
+NAVIT_CONF_DIR="${HOME}/.navit"
+if [[ -d "$NAVIT_CONF_DIR" ]]; then
+    mkdir -p "${PERSISTENCE_PATH}/configs/navit"
+    # Save navit.xml config (contains home position, settings)
+    [[ -f "$NAVIT_CONF_DIR/navit.xml" ]] && cp "$NAVIT_CONF_DIR/navit.xml" "${PERSISTENCE_PATH}/configs/navit/"
+    # Save bookmarks
+    [[ -f "$NAVIT_CONF_DIR/bookmark.txt" ]] && cp "$NAVIT_CONF_DIR/bookmark.txt" "${PERSISTENCE_PATH}/configs/navit/"
+    # Save destination history
+    [[ -f "$NAVIT_CONF_DIR/destination.txt" ]] && cp "$NAVIT_CONF_DIR/destination.txt" "${PERSISTENCE_PATH}/configs/navit/"
+    log "✓ Saved: Navit config"
+fi
+
+# --- Direwolf ---
+save_file "${HOME}/.config/direwolf/direwolf.conf" "${PERSISTENCE_PATH}/configs/direwolf/direwolf.conf" "Direwolf"
+
+# --- Firefox ---
+plymouth_msg "EmComm-Tools: Saving Firefox (this may take a moment)..."
+# Force Firefox to flush data to disk by terminating any lingering processes
+if pgrep -x "firefox-esr" > /dev/null 2>&1 || pgrep -x "firefox" > /dev/null 2>&1; then
+    log "Closing Firefox to flush data..."
+    pkill -TERM firefox-esr 2>/dev/null || pkill -TERM firefox 2>/dev/null
+    sleep 3
+fi
+save_firefox_profile
+
+# --- WiFi Networks (NetworkManager) ---
+# NOTE: WiFi save requires sudo access. Works automatically in Live mode.
+#       On installed systems, user needs NOPASSWD sudo or WiFi backup is skipped.
+plymouth_msg "EmComm-Tools: Saving WiFi networks..."
+WIFI_SRC="/etc/NetworkManager/system-connections"
+WIFI_DEST="${PERSISTENCE_PATH}/configs/wifi"
+if [[ -d "$WIFI_SRC" ]]; then
+    WIFI_SAVED=0
+    WIFI_SKIPPED=0
+    
+    for wifi_file in "$WIFI_SRC"/*.nmconnection; do
+        [[ ! -f "$wifi_file" ]] && continue
+        filename=$(basename "$wifi_file")
+        
+        # Skip files with spaces (NM-created duplicates)
+        if [[ "$filename" == *" "* ]]; then
+            log "⏭ Skipping duplicate: $filename"
+            continue
+        fi
+        
+        # Try to read file with sudo, strip interface-name (hardware-specific)
+        wifi_content=$(sudo cat "$wifi_file" 2>/dev/null | grep -v "^interface-name=")
+        
+        # Only save if we got actual content
+        if [[ -n "$wifi_content" ]]; then
+            echo "$wifi_content" > "${WIFI_DEST}/${filename}"
+            ((WIFI_SAVED++))
+        else
+            # sudo failed or file empty - keep existing backup intact
+            log "⏭ Skipped WiFi (no sudo access): $filename"
+            ((WIFI_SKIPPED++))
+        fi
+    done
+    
+    # Fix ownership on saved files
+    if [[ $WIFI_SAVED -gt 0 ]]; then
+        chown -R :et-data "$WIFI_DEST/" 2>/dev/null || true
+        chmod -R g+rw "$WIFI_DEST/" 2>/dev/null || true
+        log "✓ Saved: WiFi networks ($WIFI_SAVED connections)"
+    fi
+    
+    if [[ $WIFI_SKIPPED -gt 0 ]]; then
+        log "⚠ WiFi skipped: $WIFI_SKIPPED (requires sudo - existing backups preserved)"
+    fi
+    
+    if [[ $WIFI_SAVED -eq 0 && $WIFI_SKIPPED -eq 0 ]]; then
+        log "⚠ No WiFi connections found"
+    fi
+else
+    log "⚠ NetworkManager connections directory not found"
+fi
+
+# --- Thunderbird (LAST - can be large, compressed) ---
+plymouth_msg "EmComm-Tools: Saving Thunderbird (this may take a moment)..."
+# Force Thunderbird to flush data to disk by terminating any lingering processes
+if pgrep -x "thunderbird" > /dev/null 2>&1; then
+    log "Closing Thunderbird to flush data..."
+    pkill -TERM thunderbird 2>/dev/null
+    sleep 3
+fi
+save_thunderbird_profile
+
+# ===========================================================================
+# FIX ALL FILE OWNERSHIP
+# ===========================================================================
+# Use et-data group for portability between EmComm-Tools users/systems
+# Any user in et-data group can read/write these files
+log "Fixing file ownership (group: et-data)..."
+chown -R :et-data "${PERSISTENCE_PATH}/" 2>/dev/null || true
+chmod -R g+rw "${PERSISTENCE_PATH}/" 2>/dev/null || true
+
+# ===========================================================================
+# UPDATE MANIFEST
+# ===========================================================================
+
+CALLSIGN="UNKNOWN"
+if [[ -f "${HOME}/.config/emcomm-tools/user.json" ]]; then
+    CALLSIGN=$(jq -r '.callsign // "UNKNOWN"' "${HOME}/.config/emcomm-tools/user.json")
+fi
+
+cat > "${PERSISTENCE_PATH}/manifest.json" << EOF
+{
+  "version": "2.1.0",
+  "callsign": "${CALLSIGN}",
+  "last_save": "$(date -Iseconds)",
+  "hostname": "$(hostname)"
+}
+EOF
+
+log "✓ Updated manifest for ${CALLSIGN}"
+
+# Final sync to ensure all data is written to USB
+log "Syncing data to USB..."
+sync
+
+log ""
+log "=========================================="
+log "  Save complete!"
+log "=========================================="
+
+plymouth_msg "EmComm-Tools: Save complete!"
+sleep 1
+
+debug "=== SAVE SCRIPT COMPLETED SUCCESSFULLY ==="

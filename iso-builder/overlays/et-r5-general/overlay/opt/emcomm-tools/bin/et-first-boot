@@ -5,14 +5,22 @@
 # Purpose: EmComm-Tools First Boot Configuration Wizard
 #          Runs on first boot to configure user, radio, and maps
 #
-# This is a temporary CLI solution until a GUI app is developed.
+# This is a CLI solution that complements the Flask-based GUI wizard.
 #
 FLAG_FILE="${HOME}/.config/emcomm-tools/.first-boot-done"
 USER_CONF="${HOME}/.config/emcomm-tools/user.json"
+
+# Map directories
+MBTILES_DIR="${HOME}/.local/share/emcomm-tools/mbtileserver/tilesets"
+OSM_DIR="${HOME}/my-maps"
+NAVIT_DIR="${HOME}/.navit/maps"
+WIKIPEDIA_DIR="${HOME}/wikipedia"
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 # =============================================================================
@@ -27,15 +35,19 @@ fi
 if [ -f "${FLAG_FILE}" ]; then
     exit 0
 fi
+
 # Ensure config directory exists
 mkdir -p "$(dirname ${FLAG_FILE})"
 mkdir -p "$(dirname ${USER_CONF})"
+
 # Copy default user config if not exists
 if [ ! -f "${USER_CONF}" ]; then
     cp /etc/skel/.config/emcomm-tools/user.json "${USER_CONF}" 2>/dev/null || \
     echo '{"language":"en","callsign":"N0CALL","grid":"AA00aa","winlinkPasswd":null}' > "${USER_CONF}"
 fi
+
 clear
+
 # =============================================================================
 # Welcome Screen 
 # =============================================================================
@@ -48,13 +60,14 @@ echo -e "${GREEN}║   Welcome! This wizard will help you configure:            
 echo -e "${GREEN}║                                                               ║${NC}"
 echo -e "${GREEN}║     1. User Settings (callsign, grid, Winlink password)       ║${NC}"
 echo -e "${GREEN}║     2. Radio Configuration (select your transceiver)          ║${NC}"
-echo -e "${GREEN}║     3. Offline Maps (optional - requires USB drive)           ║${NC}"
+echo -e "${GREEN}║     3. Offline Maps (download or link USB drive)              ║${NC}"
 echo -e "${GREEN}║                                                               ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${YELLOW}Bienvenue! Cet assistant vous aidera à configurer EmComm-Tools.${NC}"
 echo ""
 read -p "Press Enter to begin / Appuyez sur Entrée pour commencer... "
+
 # =============================================================================
 # Step 1: User Configuration
 # =============================================================================
@@ -64,14 +77,17 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  STEP 1/3: User Configuration / Configuration utilisateur${NC}"
 echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
 echo ""
+
 if [ -x /opt/emcomm-tools/bin/et-user ]; then
     /opt/emcomm-tools/bin/et-user
 else
     echo "Warning: et-user not found, skipping..."
     sleep 2
 fi
+
 echo ""
 read -p "Press Enter to continue to Radio Configuration... "
+
 # =============================================================================
 # Step 2: Radio Configuration
 # =============================================================================
@@ -81,16 +97,19 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  STEP 2/3: Radio Configuration / Configuration radio${NC}"
 echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
 echo ""
+
 if [ -x /opt/emcomm-tools/bin/et-radio ]; then
     /opt/emcomm-tools/bin/et-radio
 else
     echo "Warning: et-radio not found, skipping..."
     sleep 2
 fi
+
 echo ""
 read -p "Press Enter to continue to Maps Setup... "
+
 # =============================================================================
-# Step 3: External Maps Setup
+# Step 3: Offline Maps Setup
 # =============================================================================
 clear
 echo ""
@@ -98,31 +117,172 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  STEP 3/3: Offline Maps Setup / Configuration des cartes${NC}"
 echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
 echo ""
-echo "This step configures offline maps stored on an external USB drive."
-echo "Cette étape configure les cartes hors-ligne sur une clé USB externe."
-echo ""
-echo -e "${YELLOW}┌─────────────────────────────────────────────────────────────────┐${NC}"
-echo -e "${YELLOW}│  ⚠️  IMPORTANT - Live Mode Warning / Mode Live ⚠️               │${NC}"
-echo -e "${YELLOW}├─────────────────────────────────────────────────────────────────┤${NC}"
-echo -e "${YELLOW}│  In Live mode, USB drives do NOT auto-mount!                   │${NC}"
-echo -e "${YELLOW}│  En mode Live, les clés USB ne sont PAS montées auto!          │${NC}"
-echo -e "${YELLOW}│                                                                 │${NC}"
-echo -e "${YELLOW}│  Before continuing, open Thunar and CLICK on your USB drive    │${NC}"
-echo -e "${YELLOW}│  Avant de continuer, ouvrez Thunar et CLIQUEZ sur votre clé    │${NC}"
-echo -e "${YELLOW}└─────────────────────────────────────────────────────────────────┘${NC}"
-echo ""
-echo -e "${YELLOW}Note: You can skip this step and run it later with 'et-maps-setup'${NC}"
-echo -e "${YELLOW}Note: Vous pouvez passer cette étape et l'exécuter plus tard${NC}"
-echo ""
-read -p "Configure maps now? / Configurer les cartes maintenant? (y/n): " maps_choice
-if [ "${maps_choice,,}" == "y" ] || [ "${maps_choice,,}" == "o" ]; then
-    if [ -x /opt/emcomm-tools/bin/et-maps-setup ]; then
-        /opt/emcomm-tools/bin/et-maps-setup
-    else
-        echo "Warning: et-maps-setup not found, skipping..."
-        sleep 2
-    fi
+
+# Check internet connectivity
+check_internet() {
+    wget -q --spider http://google.com
+    return $?
+}
+
+echo "Checking internet connection..."
+if check_internet; then
+    echo -e "${GREEN}✓ Internet connection available${NC}"
+    HAS_INTERNET=true
+else
+    echo -e "${YELLOW}⚠ No internet connection detected${NC}"
+    HAS_INTERNET=false
 fi
+echo ""
+
+# Show menu options
+echo -e "${CYAN}What would you like to do?${NC}"
+echo -e "${CYAN}Que voulez-vous faire?${NC}"
+echo ""
+echo "  1) Download maps from internet / Télécharger des cartes"
+echo "  2) Link to USB drive with maps / Lier une clé USB"
+echo "  3) Skip for now / Passer"
+echo ""
+
+read -p "Select option (1-3): " maps_choice
+
+case $maps_choice in
+    1)
+        if [ "$HAS_INTERNET" = true ]; then
+            clear
+            echo ""
+            echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+            echo -e "${GREEN}  Download Maps / Téléchargement des cartes${NC}"
+            echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
+            echo ""
+            
+            # Show download sub-menu
+            echo "Available downloads / Téléchargements disponibles:"
+            echo ""
+            echo "  1) ET Map Tilesets (US, Canada, World) - for mbtileserver"
+            echo "  2) OSM Maps for Navit (Canadian provinces)"
+            echo "  3) Wikipedia offline (English topics)"
+            echo "  4) All of the above"
+            echo "  5) Cancel / Annuler"
+            echo ""
+            
+            read -p "Select (1-5): " download_choice
+            
+            case $download_choice in
+                1)
+                    echo ""
+                    echo "Downloading ET Map Tilesets..."
+                    mkdir -p "${MBTILES_DIR}"
+                    
+                    # Download ET maps (using the download script if available)
+                    if [ -x /opt/emcomm-tools/installer/download-et-maps.sh ]; then
+                        /opt/emcomm-tools/installer/download-et-maps.sh
+                    else
+                        # Inline download
+                        BASE_URL="https://github.com/thetechprepper/emcomm-tools-os-community/releases/download"
+                        RELEASE="emcomm-tools-os-community-20251128-r5-final-5.0.0"
+                        
+                        FILES=(
+                            "osm-us-zoom0to11-20251120.mbtiles"
+                            "osm-ca-zoom0to10-20251120.mbtiles"
+                            "osm-world-zoom0to7-20251121.mbtiles"
+                        )
+                        
+                        for file in "${FILES[@]}"; do
+                            if [ -f "${MBTILES_DIR}/${file}" ]; then
+                                echo "  ✓ ${file} already exists"
+                            else
+                                echo "  Downloading ${file}..."
+                                curl -L -f -o "${MBTILES_DIR}/${file}" "${BASE_URL}/${RELEASE}/${file}"
+                                if [ $? -eq 0 ]; then
+                                    echo "  ✓ ${file} downloaded"
+                                else
+                                    echo "  ✗ Failed to download ${file}"
+                                fi
+                            fi
+                        done
+                    fi
+                    ;;
+                2)
+                    echo ""
+                    echo "Downloading OSM Maps for Navit..."
+                    mkdir -p "${OSM_DIR}"
+                    mkdir -p "${NAVIT_DIR}"
+                    
+                    # Use the existing download script if available
+                    if [ -x /opt/emcomm-tools/installer/download-osm-maps.sh ]; then
+                        /opt/emcomm-tools/installer/download-osm-maps.sh
+                    else
+                        echo "OSM download script not found. Please use the GUI wizard."
+                    fi
+                    ;;
+                3)
+                    echo ""
+                    echo "Downloading Wikipedia files..."
+                    mkdir -p "${WIKIPEDIA_DIR}"
+                    
+                    if [ -x /opt/emcomm-tools/installer/download-wikipedia.sh ]; then
+                        /opt/emcomm-tools/installer/download-wikipedia.sh
+                    else
+                        echo "Wikipedia download script not found. Please use the GUI wizard."
+                    fi
+                    ;;
+                4)
+                    echo ""
+                    echo "Downloading all maps... This may take a while."
+                    
+                    # ET Maps
+                    mkdir -p "${MBTILES_DIR}"
+                    if [ -x /opt/emcomm-tools/installer/download-et-maps.sh ]; then
+                        /opt/emcomm-tools/installer/download-et-maps.sh
+                    fi
+                    
+                    # OSM Maps
+                    mkdir -p "${OSM_DIR}"
+                    mkdir -p "${NAVIT_DIR}"
+                    if [ -x /opt/emcomm-tools/installer/download-osm-maps.sh ]; then
+                        /opt/emcomm-tools/installer/download-osm-maps.sh
+                    fi
+                    
+                    # Wikipedia
+                    mkdir -p "${WIKIPEDIA_DIR}"
+                    if [ -x /opt/emcomm-tools/installer/download-wikipedia.sh ]; then
+                        /opt/emcomm-tools/installer/download-wikipedia.sh
+                    fi
+                    ;;
+                *)
+                    echo "Cancelled."
+                    ;;
+            esac
+        else
+            echo -e "${RED}Internet connection required for downloads.${NC}"
+            echo "Please connect to internet and run 'et-maps-download' later."
+        fi
+        ;;
+    2)
+        echo ""
+        echo -e "${YELLOW}┌─────────────────────────────────────────────────────────────────┐${NC}"
+        echo -e "${YELLOW}│  ⚠️  IMPORTANT - Live Mode Warning / Mode Live ⚠️               │${NC}"
+        echo -e "${YELLOW}├─────────────────────────────────────────────────────────────────┤${NC}"
+        echo -e "${YELLOW}│  In Live mode, USB drives do NOT auto-mount!                   │${NC}"
+        echo -e "${YELLOW}│  En mode Live, les clés USB ne sont PAS montées auto!          │${NC}"
+        echo -e "${YELLOW}│                                                                 │${NC}"
+        echo -e "${YELLOW}│  Before continuing, open Thunar and CLICK on your USB drive    │${NC}"
+        echo -e "${YELLOW}│  Avant de continuer, ouvrez Thunar et CLIQUEZ sur votre clé    │${NC}"
+        echo -e "${YELLOW}└─────────────────────────────────────────────────────────────────┘${NC}"
+        echo ""
+        
+        if [ -x /opt/emcomm-tools/bin/et-maps-setup ]; then
+            /opt/emcomm-tools/bin/et-maps-setup
+        else
+            echo "Warning: et-maps-setup not found, skipping..."
+            sleep 2
+        fi
+        ;;
+    *)
+        echo "Skipping maps setup. You can run 'et-maps-setup' or 'et-maps-download' later."
+        ;;
+esac
+
 # =============================================================================
 # Completion Screen
 # =============================================================================
@@ -137,22 +297,27 @@ echo ""
 echo -e "${YELLOW}To modify your settings later, use these commands:${NC}"
 echo -e "${YELLOW}Pour modifier vos paramètres plus tard, utilisez:${NC}"
 echo ""
-echo -e "  ${CYAN}et-user${NC}        - Change callsign, grid, Winlink password"
-echo -e "                   Changer indicatif, grille, mot de passe Winlink"
+echo -e "  ${CYAN}et-user${NC}           - Change callsign, grid, Winlink password"
+echo -e "                      Changer indicatif, grille, mot de passe Winlink"
 echo ""
-echo -e "  ${CYAN}et-radio${NC}       - Change radio/transceiver selection"
-echo -e "                   Changer la sélection de radio"
+echo -e "  ${CYAN}et-radio${NC}          - Change radio/transceiver selection"
+echo -e "                      Changer la sélection de radio"
 echo ""
-echo -e "  ${CYAN}et-maps-setup${NC}  - Download and configure offline maps"
-echo -e "                   Télécharger et configurer les cartes hors-ligne"
+echo -e "  ${CYAN}et-maps-setup${NC}     - Link USB drive with offline maps"
+echo -e "                      Lier une clé USB avec cartes hors-ligne"
 echo ""
-echo -e "  ${CYAN}et-mode${NC}        - Select operating mode (JS8Call, VarAC, etc.)"
-echo -e "                   Sélectionner le mode d'opération"
+echo -e "  ${CYAN}et-maps-download${NC}  - Download maps from internet"
+echo -e "                      Télécharger des cartes depuis internet"
+echo ""
+echo -e "  ${CYAN}et-mode${NC}           - Select operating mode (JS8Call, VarAC, etc.)"
+echo -e "                      Sélectionner le mode d'opération"
 echo ""
 echo -e "${GREEN}══════════════════════════════════════════════════════════════════${NC}"
 echo ""
 echo "73 de VA2OPS!"
 echo ""
+
 # Create flag file to prevent running again
 touch "${FLAG_FILE}"
+
 read -p "Press Enter to close this wizard... "

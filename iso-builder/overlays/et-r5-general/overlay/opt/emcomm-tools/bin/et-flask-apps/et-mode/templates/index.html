@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card-header">
+    <h1>📻 {{ t['title'] }}</h1>
+    <p class="subtitle">{{ t['subtitle'] }}</p>
+</div>
+
+<div class="card-body">
+    <!-- Current status -->
+    <div class="current-status {% if current_mode == 'none' %}stopped{% endif %}">
+        <span class="label">{{ t['current_mode'] }}:</span>
+        <span class="value">
+            <span class="dot"></span>
+            {% if current_mode == 'none' %}
+                {{ 'Arrêté' if lang == 'fr' else 'Stopped' }}
+            {% else %}
+                {% for mode in modes %}
+                    {% if mode.id == current_mode %}
+                        {{ mode.name_fr if lang == 'fr' else mode.name }}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </span>
+    </div>
+
+    <!-- System modes (None) -->
+    {% if 'system' in categories %}
+    <div class="mode-grid" style="margin-bottom: 8px;">
+        {% for mode in categories['system'] %}
+        <div class="mode-card system {% if mode.id == current_mode %}current{% endif %}" 
+             data-mode="{{ mode.id }}"
+             data-needs-modem="{{ 'true' if mode.modem else 'false' }}"
+             onclick="selectMode('{{ mode.id }}')">
+            <div class="mode-icon">{{ mode.icon }}</div>
+            <div class="mode-name">{{ mode.name_fr if lang == 'fr' else mode.name }}</div>
+            <div class="mode-desc">{{ mode.description_fr if lang == 'fr' else mode.description }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- APRS modes -->
+    {% if 'aprs' in categories %}
+    <div class="category-header">{{ t['categories']['aprs'] }}</div>
+    <div class="mode-grid">
+        {% for mode in categories['aprs'] %}
+        <div class="mode-card {% if mode.id == current_mode %}current{% endif %}" 
+             data-mode="{{ mode.id }}"
+             data-needs-modem="{{ 'true' if mode.modem else 'false' }}"
+             onclick="selectMode('{{ mode.id }}')">
+            <div class="mode-icon">{{ mode.icon }}</div>
+            <div class="mode-name">{{ mode.name_fr if lang == 'fr' else mode.name }}</div>
+            <div class="mode-desc">{{ mode.description_fr if lang == 'fr' else mode.description }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- BBS/Packet modes -->
+    {% if 'bbs' in categories %}
+    <div class="category-header">{{ t['categories']['bbs'] }}</div>
+    <div class="mode-grid">
+        {% for mode in categories['bbs'] %}
+        <div class="mode-card {% if mode.id == current_mode %}current{% endif %}" 
+             data-mode="{{ mode.id }}"
+             data-needs-modem="{{ 'true' if mode.modem else 'false' }}"
+             onclick="selectMode('{{ mode.id }}')">
+            <div class="mode-icon">{{ mode.icon }}</div>
+            <div class="mode-name">{{ mode.name_fr if lang == 'fr' else mode.name }}</div>
+            <div class="mode-desc">{{ mode.description_fr if lang == 'fr' else mode.description }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Chat modes -->
+    {% if 'chat' in categories %}
+    <div class="category-header">{{ t['categories']['chat'] }}</div>
+    <div class="mode-grid">
+        {% for mode in categories['chat'] %}
+        <div class="mode-card {% if mode.id == current_mode %}current{% endif %}" 
+             data-mode="{{ mode.id }}"
+             data-needs-modem="{{ 'true' if mode.modem else 'false' }}"
+             onclick="selectMode('{{ mode.id }}')">
+            <div class="mode-icon">{{ mode.icon }}</div>
+            <div class="mode-name">{{ mode.name_fr if lang == 'fr' else mode.name }}</div>
+            <div class="mode-desc">{{ mode.description_fr if lang == 'fr' else mode.description }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Packet modes -->
+    {% if 'packet' in categories %}
+    <div class="category-header">{{ t['categories']['packet'] }}</div>
+    <div class="mode-grid">
+        {% for mode in categories['packet'] %}
+        <div class="mode-card {% if mode.id == current_mode %}current{% endif %}" 
+             data-mode="{{ mode.id }}"
+             data-needs-modem="{{ 'true' if mode.modem else 'false' }}"
+             onclick="selectMode('{{ mode.id }}')">
+            <div class="mode-icon">{{ mode.icon }}</div>
+            <div class="mode-name">{{ mode.name_fr if lang == 'fr' else mode.name }}</div>
+            <div class="mode-desc">{{ mode.description_fr if lang == 'fr' else mode.description }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Winlink modes -->
+    {% if 'winlink' in categories %}
+    <div class="category-header">{{ t['categories']['winlink'] }}</div>
+    <div class="mode-grid">
+        {% for mode in categories['winlink'] %}
+        <div class="mode-card {% if mode.id == current_mode %}current{% endif %}" 
+             data-mode="{{ mode.id }}"
+             data-needs-modem="{{ 'true' if mode.modem else 'false' }}"
+             onclick="selectMode('{{ mode.id }}')">
+            <div class="mode-icon">{{ mode.icon }}</div>
+            <div class="mode-name">{{ mode.name_fr if lang == 'fr' else mode.name }}</div>
+            <div class="mode-desc">{{ mode.description_fr if lang == 'fr' else mode.description }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="btn-group">
+        {% if current_mode != 'none' %}
+        <button onclick="stopAll()" class="btn btn-danger">🛑 {{ t['stop_all'] }}</button>
+        {% endif %}
+        <button id="start-btn" onclick="startMode()" class="btn btn-success" style="flex: 1;">
+            ▶ {{ t['start'] }}
+        </button>
+    </div>
+</div>
+{% endblock %}

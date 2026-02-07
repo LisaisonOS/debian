@@ -7,6 +7,7 @@
 # Purpose : Wrapper script for starting Pat Winlink with PnP support
 #
 # Changes: Added automatic browser launch after starting Pat HTTP server
+#          Added URL parameters for mode and band pre-selection
 #
 # Preconditions:
 # 1. Supported radio and audio interface are connected and properly detected
@@ -15,14 +16,14 @@
 # Postconditions:
 # 1. Callsign, Winlink password, and grid are updated 
 # 2. pat http is started
-# 3. Browser opens automatically to Pat web interface
+# 3. Browser opens automatically to Pat web interface with mode/band pre-selected
 
 source /opt/emcomm-tools/bin/et-common
 
 PAT_CONF_FILE=${HOME}/.config/pat/config.json
 PAT_CONF_FILE_TEMPLATE=/etc/skel/.config/pat/config.json
 PAT_PORT=8080
-PAT_URL="http://localhost:${PAT_PORT}"
+PAT_URL_BASE="http://localhost:${PAT_PORT}/ui"
 
 usage() {
   echo "usage: $(basename $0) <command>"
@@ -47,6 +48,31 @@ notify_user() {
    "$1"
 }
 
+get_band_from_radio() {
+  # Get frequency from rigctld (tail -1 to skip header line)
+  FREQ=$(rigctl -m 2 f 2>/dev/null | tail -1)
+  if [ $? -eq 0 ] && [ -n "$FREQ" ]; then
+    # Convert Hz to band
+    MHZ=$((FREQ / 1000000))
+    case $MHZ in
+      1)   echo "160m" ;;
+      3|4) echo "80m" ;;
+      5)   echo "60m" ;;
+      7)   echo "40m" ;;
+      10)  echo "30m" ;;
+      14)  echo "20m" ;;
+      18)  echo "17m" ;;
+      21)  echo "15m" ;;
+      24)  echo "12m" ;;
+      28|29) echo "10m" ;;
+      50|51|52|53|54) echo "6m" ;;
+      144|145|146|147|148) echo "2m" ;;
+      430|431|432|433|434|435|436|437|438|439|440) echo "70cm" ;;
+      *) echo "" ;;
+    esac
+  fi
+}
+
 open_browser() {
   # Wait for Pat to be ready
   sleep 2
@@ -68,7 +94,6 @@ open_browser() {
 }
 
 start_ardop() {
-
   ps -ef | grep "[a]rdopcf"
   if [ $? -ne 0 ]; then
     et-log "Can't start Pat in ARDOP mode. ARDOP not running. Run: et-ardop"
@@ -78,15 +103,20 @@ start_ardop() {
 
   update_config ardop
 
-  CMD="pat-winlink http"
+  CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
+  BAND=$(get_band_from_radio)
+  if [ -n "$BAND" ]; then
+    PAT_URL="${PAT_URL_BASE}?mode=ardop&band=${BAND}#"
+  else
+    PAT_URL="${PAT_URL_BASE}?mode=ardop#"
+  fi
   open_browser
 }
 
 start_packet() {
-  
   RIGCTLD_OUT=$(ps -ef | grep "[d]irewolf")
   if [ $? -ne 0 ]; then
     et-log "Can't start Pat in packet mode. Dire Wolf not running. Run: et-direwolf simple-packet"
@@ -96,16 +126,21 @@ start_packet() {
   
   update_config packet
 
-  CMD="pat-winlink http"
+  CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
+  BAND=$(get_band_from_radio)
+  if [ -n "$BAND" ]; then
+    PAT_URL="${PAT_URL_BASE}?mode=packet&band=${BAND}#"
+  else
+    PAT_URL="${PAT_URL_BASE}?mode=packet#"
+  fi
   open_browser
 }
 
 # Only the BTECH UV PRO is supported in this mode
 start_native_packet() {
- 
   BLUETOOTH_TNC_CHECK=$(ps -ef | grep "[r]fcomm connect")
   if [[ $? -ne 0 ]]; then
     echo -e "Can't start Pat in native AX.25 packet mode."
@@ -115,43 +150,58 @@ start_native_packet() {
 
   update_config native-packet
 
-  CMD="pat-winlink http"
+  CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
+  BAND=$(get_band_from_radio)
+  if [ -n "$BAND" ]; then
+    PAT_URL="${PAT_URL_BASE}?mode=ax25%2Blinux&band=${BAND}#"
+  else
+    PAT_URL="${PAT_URL_BASE}?mode=ax25%2Blinux#"
+  fi
   open_browser
 }
 
 start_vara_fm() {
- 
   update_config vara-fm
 
-  CMD="pat-winlink http"
+  CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
+  BAND=$(get_band_from_radio)
+  if [ -n "$BAND" ]; then
+    PAT_URL="${PAT_URL_BASE}?mode=varafm&band=${BAND}#"
+  else
+    PAT_URL="${PAT_URL_BASE}?mode=varafm#"
+  fi
   open_browser
 }
 
 start_vara_hf() {
- 
   update_config vara-hf
 
-  CMD="pat-winlink http"
+  CMD="pat http"
   et-log "Starting Pat with: ${CMD}"
 
   ${CMD} &
+  BAND=$(get_band_from_radio)
+  if [ -n "$BAND" ]; then
+    PAT_URL="${PAT_URL_BASE}?mode=varahf&band=${BAND}#"
+  else
+    PAT_URL="${PAT_URL_BASE}?mode=varahf#"
+  fi
   open_browser
 }
 
 stop() {
-  pkill -f "pat-winlink http"
+  pkill -f "pat http"
   notify_user "Pat Winlink stopped"
   et-log "Pat Winlink stopped"
 }
 
 update_config () {
-
   [ -z "$ET_USER_CONFIG" ] && ET_USER_CONFIG="${HOME}/.config/emcomm-tools/user.json"
 
   CALLSIGN=$(cat ${ET_USER_CONFIG} | jq -r .callsign)
