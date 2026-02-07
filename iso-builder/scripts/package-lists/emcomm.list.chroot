@@ -35,9 +35,14 @@ meld
 vim
 udiskie
 
+# Email client
+thunderbird
+thunderbird-l10n-fr
+
 #Python depencencies
 python3-flask 
 python3-werkzeug
+python3-webview
 
 # Dev libraries
 libfltk1.3-dev
@@ -134,7 +139,6 @@ libcanberra-gtk3-dev
 maptool
 espeak
 osmium-tool
-pat
 
 
 #debian dependencies for Calamare installer
