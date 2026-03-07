@@ -1,0 +1,585 @@
+#!/bin/bash
+# =============================================================================
+# et-patch-apply - Apply offline patch to EmComm-Tools
+# Version: 1.0.0
+# Updated: 2026-03-02
+# Author: Sylvain Deguire (VA2OPS)
+#
+# Applies a patch .tar.gz created by et-patch-build.
+# Auto-detects patches on USB or accepts an explicit path.
+#
+# Usage:
+#   et-patch-apply                          # auto-detect patch on USB
+#   et-patch-apply /path/to/patch.tar.gz    # explicit path
+#   et-patch-apply --dry-run                # preview only
+#   et-patch-apply --dry-run /path/to/patch.tar.gz
+# =============================================================================
+
+set -e
+
+ET_HOME="/opt/emcomm-tools"
+ET_VERSION_FILE="${ET_HOME}/version.txt"
+ET_MANIFEST="${ET_HOME}/manifest.json"
+ET_BACKUP_DIR="${ET_HOME}/backup"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+log() {
+    local level="$1"; shift
+    case "$level" in
+        INFO)  echo -e "${GREEN}[INFO]${NC} $*" ;;
+        WARN)  echo -e "${YELLOW}[WARN]${NC} $*" ;;
+        ERROR) echo -e "${RED}[ERROR]${NC} $*" ;;
+        STEP)  echo -e "${CYAN}[STEP]${NC} $*" ;;
+    esac
+}
+
+show_help() {
+    cat << 'EOF'
+EmComm-Tools Offline Patch Applier
+
+Applies a patch package (.tar.gz) created by et-patch-build.
+Backs up all modified files before applying and can roll back on failure.
+
+Usage: et-patch-apply [OPTIONS] [PATCH_FILE]
+
+Arguments:
+  PATCH_FILE               Path to patch .tar.gz (optional — auto-detects from USB)
+
+Options:
+  -n, --dry-run            Preview changes without applying
+  -y, --yes                Skip confirmation prompt
+  -h, --help               Show this help message
+
+USB Auto-Detection:
+  Scans /media/*/*/update/ and /run/media/*/*/update/ for
+  emcomm-tools-patch-*.tar.gz files. If multiple found, prompts for selection.
+
+Examples:
+  et-patch-apply                                       # auto-detect from USB
+  et-patch-apply /media/user/USB/update/patch.tar.gz   # explicit path
+  et-patch-apply --dry-run                              # preview from USB
+  et-patch-apply -y /tmp/patch.tar.gz                   # apply without prompt
+
+EOF
+}
+
+# =============================================================================
+# SHA256 helpers
+# =============================================================================
+calculate_sha256() {
+    sha256sum "$1" | cut -d' ' -f1
+}
+
+verify_sha256() {
+    local file="$1"
+    local expected="$2"
+    local actual
+    actual=$(calculate_sha256 "$file")
+    if [ "$actual" != "$expected" ]; then
+        log ERROR "SHA256 mismatch: $file"
+        log ERROR "  Expected: $expected"
+        log ERROR "  Actual:   $actual"
+        return 1
+    fi
+    return 0
+}
+
+# =============================================================================
+# Find patches on USB drives
+# =============================================================================
+find_patches_on_usb() {
+    local patches=()
+
+    local search_dirs=()
+    # /media/user/DRIVE/update/
+    if [ -d "/media" ]; then
+        for user_dir in /media/*/; do
+            if [ -d "$user_dir" ]; then
+                for drive in "$user_dir"*/; do
+                    if [ -d "${drive}update" ]; then
+                        search_dirs+=("${drive}update")
+                    fi
+                done
+            fi
+        done
+    fi
+    # /run/media/user/DRIVE/update/
+    if [ -d "/run/media" ]; then
+        for user_dir in /run/media/*/; do
+            if [ -d "$user_dir" ]; then
+                for drive in "$user_dir"*/; do
+                    if [ -d "${drive}update" ]; then
+                        search_dirs+=("${drive}update")
+                    fi
+                done
+            fi
+        done
+    fi
+
+    for dir in "${search_dirs[@]}"; do
+        for f in "$dir"/emcomm-tools-patch-*.tar.gz; do
+            if [ -f "$f" ]; then
+                patches+=("$f")
+            fi
+        done
+    done
+
+    if [ ${#patches[@]} -eq 0 ]; then
+        return 1
+    fi
+
+    if [ ${#patches[@]} -eq 1 ]; then
+        echo "${patches[0]}"
+        return 0
+    fi
+
+    # Multiple patches — let user pick
+    echo "" >&2
+    log INFO "Multiple patches found:" >&2
+    echo "" >&2
+    local i=1
+    for p in "${patches[@]}"; do
+        echo "  $i) $(basename "$p")" >&2
+        echo "     $p" >&2
+        ((i++))
+    done
+    echo "" >&2
+
+    local choice
+    while true; do
+        read -p "Select patch (1-${#patches[@]}): " choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#patches[@]} ]; then
+            echo "${patches[$((choice - 1))]}"
+            return 0
+        fi
+        echo "Invalid selection. Enter a number between 1 and ${#patches[@]}." >&2
+    done
+}
+
+# =============================================================================
+# Rollback — restore all files from backup
+# =============================================================================
+rollback() {
+    local backup_dir="$1"
+    local applied_file="$2"
+
+    log WARN "Rolling back changes..."
+
+    if [ ! -f "$applied_file" ]; then
+        log ERROR "No apply log found — manual cleanup may be needed"
+        return 1
+    fi
+
+    local fail=false
+    while IFS='|' read -r action path backup_path; do
+        case "$action" in
+            INSTALL|UPDATE)
+                if [ -n "$backup_path" ] && [ -f "$backup_path" ]; then
+                    log INFO "  Restoring: $path"
+                    cp -p "$backup_path" "${ET_HOME}/${path}"
+                elif [ "$action" = "INSTALL" ]; then
+                    # New file added — remove it
+                    log INFO "  Removing added file: $path"
+                    rm -f "${ET_HOME}/${path}"
+                fi
+                ;;
+            DELETE)
+                if [ -n "$backup_path" ] && [ -f "$backup_path" ]; then
+                    log INFO "  Restoring deleted: $path"
+                    mkdir -p "$(dirname "${ET_HOME}/${path}")"
+                    cp -p "$backup_path" "${ET_HOME}/${path}"
+                fi
+                ;;
+        esac
+    done < "$applied_file"
+
+    if [ "$fail" = true ]; then
+        log ERROR "Rollback had errors — check files manually"
+        return 1
+    fi
+
+    log INFO "Rollback complete"
+    return 0
+}
+
+# =============================================================================
+# Main apply logic
+# =============================================================================
+apply_patch() {
+    local patch_archive="$1"
+    local dry_run="$2"
+    local auto_yes="$3"
+
+    # --- Extract to temp ---
+    local work_dir
+    work_dir=$(mktemp -d /tmp/et-patch-XXXXX)
+    trap 'rm -rf "$work_dir"' EXIT
+
+    log STEP "Extracting patch..."
+    if ! tar xzf "$patch_archive" -C "$work_dir"; then
+        log ERROR "Failed to extract: $patch_archive"
+        exit 1
+    fi
+
+    # Find the extracted directory (should be single dir)
+    local patch_dir
+    patch_dir=$(find "$work_dir" -mindepth 1 -maxdepth 1 -type d | head -1)
+    if [ -z "$patch_dir" ]; then
+        log ERROR "Invalid patch archive — no directory found inside"
+        exit 1
+    fi
+
+    local manifest_file="${patch_dir}/patch-manifest.json"
+    if [ ! -f "$manifest_file" ]; then
+        log ERROR "patch-manifest.json not found in archive"
+        exit 1
+    fi
+
+    # --- Read patch metadata ---
+    local from_version to_version release_date
+    from_version=$(jq -r '.from_version' "$manifest_file")
+    to_version=$(jq -r '.to_version' "$manifest_file")
+    release_date=$(jq -r '.release_date' "$manifest_file")
+
+    # --- Verify current version ---
+    local current_version="unknown"
+    if [ -f "$ET_VERSION_FILE" ]; then
+        current_version=$(cat "$ET_VERSION_FILE" | tr -d '[:space:]')
+    fi
+
+    if [ "$current_version" != "$from_version" ]; then
+        log ERROR "Version mismatch!"
+        log ERROR "  Patch expects:    $from_version"
+        log ERROR "  Installed version: $current_version"
+        log ERROR ""
+        log ERROR "This patch can only be applied to version $from_version"
+        exit 1
+    fi
+
+    # --- Count changes ---
+    local added_count modified_count deleted_count total_count
+    added_count=$(jq '[.files[] | select(.action == "add")] | length' "$manifest_file")
+    modified_count=$(jq '[.files[] | select(.action == "update")] | length' "$manifest_file")
+    deleted_count=$(jq '[.files[] | select(.action == "delete")] | length' "$manifest_file")
+    total_count=$(jq '.files | length' "$manifest_file")
+
+    # --- Show summary ---
+    echo ""
+    echo "────────────────────────────────────────────────────"
+    echo "  EmComm-Tools Patch"
+    echo "────────────────────────────────────────────────────"
+    echo "  From:       $from_version"
+    echo "  To:         $to_version"
+    echo "  Date:       $release_date"
+    echo "  Added:      $added_count file(s)"
+    echo "  Modified:   $modified_count file(s)"
+    echo "  Deleted:    $deleted_count file(s)"
+    echo "────────────────────────────────────────────────────"
+
+    # List files
+    if [ "$total_count" -le 30 ]; then
+        jq -r '.files[] | "  \(.action | ascii_upcase): \(.path)"' "$manifest_file"
+    else
+        echo "  (${total_count} files — use --dry-run to see full list)"
+    fi
+    echo "────────────────────────────────────────────────────"
+    echo ""
+
+    if [ "$dry_run" = "true" ]; then
+        # In dry-run mode, always show full list if we skipped above
+        if [ "$total_count" -gt 30 ]; then
+            echo "Files in patch:"
+            echo "────────────────"
+            jq -r '.files[] | "  \(.action | ascii_upcase): \(.path)"' "$manifest_file"
+            echo ""
+        fi
+        log INFO "Dry run complete. No changes made."
+        return 0
+    fi
+
+    # --- Confirm ---
+    if [ "$auto_yes" != "true" ]; then
+        read -p "Apply this patch? (y/N): " confirm
+        if [ "${confirm,,}" != "y" ]; then
+            log INFO "Cancelled by user"
+            return 0
+        fi
+    fi
+
+    # --- Create backup directory ---
+    local backup_tag="pre-patch-${to_version}"
+    local backup_dir="${ET_BACKUP_DIR}/${backup_tag}"
+    mkdir -p "$backup_dir"
+
+    # Track applied changes for rollback
+    local apply_log="${work_dir}/apply.log"
+    touch "$apply_log"
+
+    local failed=false
+
+    # --- Process each file ---
+    log STEP "Applying patch..."
+
+    while IFS= read -r entry; do
+        local path action sha256 permissions
+        path=$(echo "$entry" | jq -r '.path')
+        action=$(echo "$entry" | jq -r '.action')
+        sha256=$(echo "$entry" | jq -r '.sha256 // empty')
+        permissions=$(echo "$entry" | jq -r '.permissions // "644"')
+
+        local target="${ET_HOME}/${path}"
+
+        case "$action" in
+            add)
+                # Verify patch file SHA256
+                local src="${patch_dir}/files/${path}"
+                if [ ! -f "$src" ]; then
+                    log ERROR "Patch file missing: files/$path"
+                    failed=true
+                    break
+                fi
+                if [ -n "$sha256" ]; then
+                    if ! verify_sha256 "$src" "$sha256"; then
+                        log ERROR "Patch file corrupted: $path"
+                        failed=true
+                        break
+                    fi
+                fi
+
+                # If file exists already, back it up
+                if [ -f "$target" ]; then
+                    mkdir -p "$(dirname "${backup_dir}/${path}")"
+                    cp -p "$target" "${backup_dir}/${path}"
+                fi
+
+                mkdir -p "$(dirname "$target")"
+                cp -p "$src" "$target"
+                chmod "$permissions" "$target"
+                echo "INSTALL|${path}|${backup_dir}/${path}" >> "$apply_log"
+                log INFO "  ADD: $path"
+                ;;
+
+            update)
+                # Verify patch file SHA256
+                local src="${patch_dir}/files/${path}"
+                if [ ! -f "$src" ]; then
+                    log ERROR "Patch file missing: files/$path"
+                    failed=true
+                    break
+                fi
+                if [ -n "$sha256" ]; then
+                    if ! verify_sha256 "$src" "$sha256"; then
+                        log ERROR "Patch file corrupted: $path"
+                        failed=true
+                        break
+                    fi
+                fi
+
+                # Backup existing file
+                if [ -f "$target" ]; then
+                    mkdir -p "$(dirname "${backup_dir}/${path}")"
+                    cp -p "$target" "${backup_dir}/${path}"
+                fi
+
+                mkdir -p "$(dirname "$target")"
+                cp -p "$src" "$target"
+                chmod "$permissions" "$target"
+                echo "UPDATE|${path}|${backup_dir}/${path}" >> "$apply_log"
+                log INFO "  UPDATE: $path"
+                ;;
+
+            delete)
+                if [ -f "$target" ]; then
+                    mkdir -p "$(dirname "${backup_dir}/${path}")"
+                    cp -p "$target" "${backup_dir}/${path}"
+                    rm -f "$target"
+                    echo "DELETE|${path}|${backup_dir}/${path}" >> "$apply_log"
+                    log INFO "  DELETE: $path"
+                else
+                    log WARN "  DELETE (already gone): $path"
+                fi
+                ;;
+
+            *)
+                log WARN "  Unknown action '$action' for: $path"
+                ;;
+        esac
+
+    done < <(jq -c '.files[]' "$manifest_file")
+
+    # --- Handle failure ---
+    if [ "$failed" = "true" ]; then
+        log ERROR "Patch failed — rolling back..."
+        rollback "$backup_dir" "$apply_log"
+        log ERROR "Patch NOT applied. System restored to $from_version."
+        exit 1
+    fi
+
+    # --- Post-install verification ---
+    log STEP "Verifying installed files..."
+
+    local verify_fail=false
+    while IFS= read -r entry; do
+        local path action sha256
+        path=$(echo "$entry" | jq -r '.path')
+        action=$(echo "$entry" | jq -r '.action')
+        sha256=$(echo "$entry" | jq -r '.sha256 // empty')
+
+        if [ "$action" = "delete" ]; then
+            if [ -f "${ET_HOME}/${path}" ]; then
+                log ERROR "  File should be deleted but exists: $path"
+                verify_fail=true
+            fi
+        elif [ -n "$sha256" ]; then
+            if ! verify_sha256 "${ET_HOME}/${path}" "$sha256" 2>/dev/null; then
+                log ERROR "  Verification failed: $path"
+                verify_fail=true
+            fi
+        fi
+    done < <(jq -c '.files[]' "$manifest_file")
+
+    if [ "$verify_fail" = "true" ]; then
+        log ERROR "Post-install verification failed — rolling back..."
+        rollback "$backup_dir" "$apply_log"
+        log ERROR "Patch NOT applied. System restored to $from_version."
+        exit 1
+    fi
+
+    # --- Update version.txt ---
+    echo -n "$to_version" > "$ET_VERSION_FILE"
+    log INFO "Updated version.txt → $to_version"
+
+    # --- Update manifest.json (merge patch changes into existing manifest) ---
+    if [ -f "$ET_MANIFEST" ]; then
+        log STEP "Updating manifest.json..."
+
+        local new_manifest="${work_dir}/manifest-updated.json"
+
+        jq --arg version "$to_version" \
+           --arg release_date "$release_date" \
+           --slurpfile patch "$manifest_file" \
+        '
+            .version = $version |
+            .release_date = $release_date |
+
+            # Build lookup of patch changes
+            ($patch[0].files | map({(.path): .}) | add // {}) as $changes |
+
+            # Remove deleted files, update modified files
+            .files = [
+                .files[] |
+                . as $f |
+                ($changes[$f.path] // null) as $c |
+                if $c == null then
+                    $f
+                elif $c.action == "delete" then
+                    empty
+                elif $c.action == "update" then
+                    $f + {sha256: $c.sha256, size: $c.size, permissions: $c.permissions}
+                else
+                    $f
+                end
+            ] + [
+                # Add new files
+                $patch[0].files[] | select(.action == "add") |
+                {path: .path, version: "patch", sha256: .sha256, size: .size, permissions: .permissions}
+            ]
+        ' "$ET_MANIFEST" > "$new_manifest"
+
+        cp "$new_manifest" "$ET_MANIFEST"
+        log INFO "Updated manifest.json"
+    fi
+
+    # --- Done ---
+    echo ""
+    echo "────────────────────────────────────────────────────"
+    echo "  Patch Applied Successfully!"
+    echo "────────────────────────────────────────────────────"
+    echo "  Version:  $from_version → $to_version"
+    echo "  Files:    ${total_count} processed"
+    echo "  Backup:   $backup_tag"
+    echo ""
+    echo "  To undo: et-restore $backup_tag"
+    echo "────────────────────────────────────────────────────"
+
+    # Notify dashboard to reload version label
+    pkill -USR1 -f et-dashboard 2>/dev/null || true
+}
+
+# =============================================================================
+# Main
+# =============================================================================
+main() {
+    local patch_file=""
+    local dry_run="false"
+    local auto_yes="false"
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -n|--dry-run)
+                dry_run="true"
+                shift
+                ;;
+            -y|--yes)
+                auto_yes="true"
+                shift
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -*)
+                log ERROR "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+            *)
+                patch_file="$1"
+                shift
+                ;;
+        esac
+    done
+
+    # Check jq
+    if ! command -v jq &>/dev/null; then
+        log ERROR "jq is required but not installed (sudo apt install jq)"
+        exit 1
+    fi
+
+    # Auto-detect or validate patch file
+    if [ -z "$patch_file" ]; then
+        log INFO "Searching for patches on USB drives..."
+        patch_file=$(find_patches_on_usb)
+        if [ -z "$patch_file" ]; then
+            log ERROR "No patch files found on USB drives"
+            log INFO "Place emcomm-tools-patch-*.tar.gz in the update/ folder on a USB drive"
+            log INFO "Or specify the path: et-patch-apply /path/to/patch.tar.gz"
+            exit 1
+        fi
+        log INFO "Found: $(basename "$patch_file")"
+    fi
+
+    if [ ! -f "$patch_file" ]; then
+        log ERROR "Patch file not found: $patch_file"
+        exit 1
+    fi
+
+    # Check we can write to ET_HOME
+    if [ "$dry_run" != "true" ]; then
+        if [ ! -w "$ET_HOME" ]; then
+            log ERROR "Cannot write to $ET_HOME — run with sudo or as root"
+            exit 1
+        fi
+    fi
+
+    apply_patch "$patch_file" "$dry_run" "$auto_yes"
+}
+
+main "$@"

@@ -1,0 +1,19 @@
+#!/bin/bash
+dpkg --add-architecture i386
+apt-get update
+apt-get install -y wine32
+
+# LinBPQ 32-bit dependencies
+apt-get install -y \
+  libpcap0.8-dev:i386 \
+  libasound2-dev:i386 \
+  zlib1g:i386
+
+curl -o /usr/local/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
+chmod +x /usr/local/bin/winetricks
+# Qt5 i386 libraries for QtTermTCP (32-bit)
+apt-get install -y \
+  libqt5widgets5t64:i386 \
+  libqt5multimedia5:i386 \
+  libqt5network5:i386 \
+  libqt5serialport5:i386

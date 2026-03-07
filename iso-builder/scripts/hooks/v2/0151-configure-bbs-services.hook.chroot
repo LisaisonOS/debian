@@ -1,0 +1,69 @@
+#!/bin/bash
+set -e
+
+echo "Configuring BBS inetd services..."
+
+# ─── /etc/services ────────────────────────────────────────────────
+# Static name→port mappings. Costs nothing — just a text lookup table.
+# Only add if not already present (idempotent).
+if ! grep -q "# EmComm-Tools BBS" /etc/services; then
+    cat >> /etc/services << 'SERVICES'
+
+# EmComm-Tools BBS Server applications
+hamqsl          63020/tcp                       # Solar Data
+space           63030/tcp                       # Space Weather Report
+wiki            63050/tcp                       # Offline Wikipedia
+aprs            63093/tcp                       # APRS-IS Report
+news            63095/tcp                       # News Feed
+SERVICES
+    echo "/etc/services: BBS entries added"
+else
+    echo "/etc/services: BBS entries already present, skipping"
+fi
+
+# ─── Helper script for /etc/inetd.conf ───────────────────────────
+# Called by et-supervisor when BBS Server mode starts.
+# Writes inetd.conf entries with the correct user paths, then
+# restarts inetutils-inetd to pick up changes.
+cat > /opt/emcomm-tools/bin/et-configure-bbs-inetd << 'SCRIPT'
+#!/bin/bash
+set -e
+
+USER_NAME="${1:?Usage: et-configure-bbs-inetd <username>}"
+USER_HOME=$(eval echo "~${USER_NAME}")
+APPS_DIR="${USER_HOME}/.local/share/emcomm-tools/bbs-server/apps"
+
+if [ ! -d "${APPS_DIR}" ]; then
+    echo "ERROR: Apps directory not found: ${APPS_DIR}"
+    exit 1
+fi
+
+# Remove old EmComm BBS section if present
+sed -i '/^#:HAM-RADIO: EmComm-Tools BBS/,/^$/d' /etc/inetd.conf
+
+# Remove any stale individual service lines
+for svc in hamqsl space wiki aprs news; do
+    sed -i "/^${svc}[[:space:]]/d" /etc/inetd.conf
+done
+
+# Append fresh entries
+cat >> /etc/inetd.conf << EOF
+
+#:HAM-RADIO: EmComm-Tools BBS applications
+hamqsl  stream  tcp     nowait  ${USER_NAME}    ${APPS_DIR}/hamqsl.py
+space   stream  tcp     nowait  ${USER_NAME}    ${APPS_DIR}/space.py
+wiki    stream  tcp     nowait  ${USER_NAME}    ${APPS_DIR}/wiki.py
+aprs    stream  tcp     nowait  ${USER_NAME}    ${APPS_DIR}/aprs/aprs_position.py
+news    stream  tcp     nowait  ${USER_NAME}    ${APPS_DIR}/news.py
+
+EOF
+
+# Restart inetd to pick up changes
+systemctl restart inetutils-inetd.service 2>/dev/null || true
+
+echo "BBS inetd services configured for user: ${USER_NAME}"
+SCRIPT
+
+chmod +x /opt/emcomm-tools/bin/et-configure-bbs-inetd
+
+echo "BBS services configuration complete"

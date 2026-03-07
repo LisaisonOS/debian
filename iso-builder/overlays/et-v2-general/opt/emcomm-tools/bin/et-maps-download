@@ -1,0 +1,384 @@
+#!/bin/bash
+#
+# Author : Sylvain Deguire (VA2OPS)
+# Date   : January 2026
+# Purpose: Download offline maps for EmComm-Tools
+#          Supports ET Map Tilesets, OSM maps for Navit, and Wikipedia
+#
+
+# Map directories
+MBTILES_DIR="${HOME}/.local/share/emcomm-tools/mbtileserver/tilesets"
+OSM_DIR="${HOME}/my-maps"
+NAVIT_DIR="${HOME}/.navit/maps"
+WIKIPEDIA_DIR="${HOME}/wikipedia"
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# ET Maps configuration
+ET_BASE_URL="https://sourceforge.net/projects/emcomm-tools/files/MAPS"
+
+# Geofabrik configuration
+GEOFABRIK_BASE="http://download.geofabrik.de/north-america/canada"
+
+# Kiwix configuration
+KIWIX_BASE="http://download.kiwix.org/zim/wikipedia"
+
+# =============================================================================
+# Functions
+# =============================================================================
+
+check_internet() {
+    wget -q --spider http://google.com 2>/dev/null
+    return $?
+}
+
+show_progress() {
+    local filename="$1"
+    echo -ne "\r  Downloading ${filename}... "
+}
+
+download_with_progress() {
+    local url="$1"
+    local output="$2"
+    local filename=$(basename "$output")
+    
+    echo -e "  ${CYAN}Downloading:${NC} ${filename}"
+    
+    curl -L -f --progress-bar -o "${output}" "${url}"
+    
+    if [ $? -eq 0 ]; then
+        echo -e "  ${GREEN}✓${NC} ${filename} downloaded successfully"
+        return 0
+    else
+        echo -e "  ${RED}✗${NC} Failed to download ${filename}"
+        rm -f "${output}" 2>/dev/null
+        return 1
+    fi
+}
+
+# =============================================================================
+# ET Map Tilesets Download
+# =============================================================================
+
+download_et_maps() {
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}  ET Map Tilesets (mbtiles) - Pre-rendered map tiles${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    
+    mkdir -p "${MBTILES_DIR}"
+    
+    declare -A ET_MAPS
+    ET_MAPS["osm-world-zoom0to7.mbtiles"]="World (zoom 0-7) [505 MB]"
+    ET_MAPS["osm-us-zoom0to11.mbtiles"]="United States (zoom 0-11) [662 MB]"
+    ET_MAPS["osm-ca-zoom0to10.mbtiles"]="Canada (zoom 0-10) [496 MB]"
+    ET_MAPS["osm-west-eu-zoom0to10.mbtiles"]="Western Europe (zoom 0-10) [1.4 GB]"
+    ET_MAPS["osm-east-eu-zoom0to10.mbtiles"]="Eastern Europe (zoom 0-10) [1.7 GB]"
+    
+    # Build options array
+    OPTIONS=()
+    for file in "${!ET_MAPS[@]}"; do
+        desc="${ET_MAPS[$file]}"
+        if [ -f "${MBTILES_DIR}/${file}" ]; then
+            OPTIONS+=("${file}" "[✓] ${desc}" "off")
+        else
+            OPTIONS+=("${file}" "[ ] ${desc}" "off")
+        fi
+    done
+    
+    # Add "All" option
+    OPTIONS+=("ALL" "Download all tilesets" "off")
+    
+    SELECTED=$(dialog --clear --backtitle "EmComm-Tools Map Download" \
+        --title "Select ET Map Tilesets" \
+        --checklist "Use SPACE to select, ENTER to confirm:" 15 70 6 \
+        "${OPTIONS[@]}" 2>&1 >/dev/tty)
+    
+    EXIT_STATUS=$?
+    clear
+    
+    if [ $EXIT_STATUS -ne 0 ]; then
+        echo "Cancelled."
+        return
+    fi
+    
+    # Process selections
+    if echo "$SELECTED" | grep -q "ALL"; then
+        SELECTED=$(echo "${!ET_MAPS[@]}" | tr ' ' '\n')
+    fi
+    
+    for file in $SELECTED; do
+        file=$(echo "$file" | tr -d '"')
+        
+        if [ -f "${MBTILES_DIR}/${file}" ]; then
+            echo -e "  ${GREEN}✓${NC} ${file} already exists, skipping..."
+            continue
+        fi
+        
+        url="${ET_BASE_URL}/${file}/download"
+        download_with_progress "$url" "${MBTILES_DIR}/${file}"
+    done
+    
+    echo ""
+    echo -e "${GREEN}ET Map download complete!${NC}"
+}
+
+# =============================================================================
+# OSM Maps Download (for Navit navigation)
+# =============================================================================
+
+download_osm_maps() {
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}  OSM Maps for Navit Navigation - Canadian Provinces${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    
+    mkdir -p "${OSM_DIR}"
+    mkdir -p "${NAVIT_DIR}"
+    
+    # Fetch list of available provinces
+    echo "Fetching available regions..."
+    
+    HTML_FILE="/tmp/geofabrik-canada.html"
+    curl -s -L -f -o "${HTML_FILE}" "${GEOFABRIK_BASE}.html"
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to fetch region list from Geofabrik${NC}"
+        return 1
+    fi
+    
+    # Extract province list
+    OPTIONS=()
+    while IFS= read -r line; do
+        file=$(echo "$line" | sed -n 's|.*href="\([^"]*\.osm\.pbf\)".*|\1|p')
+        if [ -n "$file" ] && ! echo "$file" | grep -q "canada-latest"; then
+            name=$(echo "$file" | sed 's|-latest.osm.pbf||' | sed 's|-| |g' | sed 's/.*/\u&/')
+            
+            # Check if already downloaded
+            bin_file=$(echo "$file" | sed 's|.osm.pbf|.osm.bin|')
+            if [ -f "${NAVIT_DIR}/${bin_file}" ]; then
+                OPTIONS+=("${file}" "[✓] ${name}" "off")
+            elif [ -f "${OSM_DIR}/${file}" ]; then
+                OPTIONS+=("${file}" "[P] ${name}" "off")
+            else
+                OPTIONS+=("${file}" "[ ] ${name}" "off")
+            fi
+        fi
+    done < <(grep -E '\.osm\.pbf"' "${HTML_FILE}" | sort)
+    
+    rm -f "${HTML_FILE}"
+    
+    if [ ${#OPTIONS[@]} -eq 0 ]; then
+        echo -e "${RED}No regions found${NC}"
+        return 1
+    fi
+    
+    SELECTED=$(dialog --clear --backtitle "EmComm-Tools Map Download" \
+        --title "Select Canadian Province/Territory" \
+        --checklist "✓=Navit ready, P=PBF only. Use SPACE to select:" 20 70 12 \
+        "${OPTIONS[@]}" 2>&1 >/dev/tty)
+    
+    EXIT_STATUS=$?
+    clear
+    
+    if [ $EXIT_STATUS -ne 0 ]; then
+        echo "Cancelled."
+        return
+    fi
+    
+    for file in $SELECTED; do
+        file=$(echo "$file" | tr -d '"')
+        
+        pbf_path="${OSM_DIR}/${file}"
+        bin_file=$(echo "$file" | sed 's|.osm.pbf|.osm.bin|')
+        bin_path="${NAVIT_DIR}/${bin_file}"
+        
+        # Check if Navit file exists
+        if [ -f "${bin_path}" ]; then
+            echo -e "  ${GREEN}✓${NC} ${bin_file} already exists, skipping..."
+            continue
+        fi
+        
+        # Download PBF if not exists
+        if [ ! -f "${pbf_path}" ]; then
+            url="${GEOFABRIK_BASE}/${file}"
+            download_with_progress "$url" "${pbf_path}"
+            
+            if [ $? -ne 0 ]; then
+                continue
+            fi
+        fi
+        
+        # Convert to Navit format
+        if [ -f "${pbf_path}" ]; then
+            echo -e "  ${CYAN}Converting${NC} to Navit format..."
+            
+            if command -v maptool &> /dev/null; then
+                maptool --protobuf -i "${pbf_path}" "${bin_path}"
+                
+                if [ $? -eq 0 ]; then
+                    echo -e "  ${GREEN}✓${NC} ${bin_file} created successfully"
+                else
+                    echo -e "  ${RED}✗${NC} Failed to convert ${file}"
+                fi
+            else
+                echo -e "  ${YELLOW}⚠${NC} maptool not installed, PBF saved but not converted"
+            fi
+        fi
+    done
+    
+    echo ""
+    echo -e "${GREEN}OSM Map download complete!${NC}"
+}
+
+# =============================================================================
+# Wikipedia Download
+# =============================================================================
+
+download_wikipedia() {
+    echo ""
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}  Offline Wikipedia (ZIM files) - English Topics${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
+    echo ""
+    
+    mkdir -p "${WIKIPEDIA_DIR}"
+    
+    # Fetch list of available Wikipedia files
+    echo "Fetching available Wikipedia files..."
+    
+    HTML_FILE="/tmp/kiwix-wiki.html"
+    curl -s -L -f -o "${HTML_FILE}" "${KIWIX_BASE}/"
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to fetch file list from Kiwix${NC}"
+        return 1
+    fi
+    
+    # Extract file list (English, nopic versions, specific categories)
+    OPTIONS=()
+    while IFS= read -r line; do
+        file=$(echo "$line" | sed -n 's|.*href="\([^"]*\.zim\)".*|\1|p')
+        if [ -n "$file" ] && echo "$file" | grep -q "wikipedia_en" && echo "$file" | grep -q "nopic"; then
+            # Filter to specific categories
+            if echo "$file" | grep -qE "computer|history|mathematics|medicine|simple"; then
+                # Create display name
+                name=$(echo "$file" | sed 's|wikipedia_en_||' | sed 's|_nopic.*||' | sed 's|_| |g')
+                
+                if [ -f "${WIKIPEDIA_DIR}/${file}" ]; then
+                    OPTIONS+=("${file}" "[✓] ${name}" "off")
+                else
+                    OPTIONS+=("${file}" "[ ] ${name}" "off")
+                fi
+            fi
+        fi
+    done < <(grep -E '\.zim"' "${HTML_FILE}" | sort)
+    
+    rm -f "${HTML_FILE}"
+    
+    if [ ${#OPTIONS[@]} -eq 0 ]; then
+        echo -e "${RED}No Wikipedia files found${NC}"
+        return 1
+    fi
+    
+    SELECTED=$(dialog --clear --backtitle "EmComm-Tools Map Download" \
+        --title "Select Wikipedia Topics" \
+        --checklist "Use SPACE to select, ENTER to confirm:" 18 70 10 \
+        "${OPTIONS[@]}" 2>&1 >/dev/tty)
+    
+    EXIT_STATUS=$?
+    clear
+    
+    if [ $EXIT_STATUS -ne 0 ]; then
+        echo "Cancelled."
+        return
+    fi
+    
+    for file in $SELECTED; do
+        file=$(echo "$file" | tr -d '"')
+        
+        if [ -f "${WIKIPEDIA_DIR}/${file}" ]; then
+            echo -e "  ${GREEN}✓${NC} ${file} already exists, skipping..."
+            continue
+        fi
+        
+        url="${KIWIX_BASE}/${file}"
+        download_with_progress "$url" "${WIKIPEDIA_DIR}/${file}"
+    done
+    
+    echo ""
+    echo -e "${GREEN}Wikipedia download complete!${NC}"
+}
+
+# =============================================================================
+# Main Menu
+# =============================================================================
+
+main_menu() {
+    while true; do
+        CHOICE=$(dialog --clear --backtitle "EmComm-Tools Map Download" \
+            --title "Offline Maps Download" \
+            --menu "Select what to download:" 15 60 6 \
+            "1" "ET Map Tilesets (World, US, CA, EU)" \
+            "2" "OSM Maps for Navit (Canadian provinces)" \
+            "3" "Offline Wikipedia (English topics)" \
+            "4" "Download all recommended" \
+            "5" "Exit" \
+            2>&1 >/dev/tty)
+        
+        EXIT_STATUS=$?
+        clear
+        
+        if [ $EXIT_STATUS -ne 0 ] || [ "$CHOICE" = "5" ]; then
+            echo "Goodbye! 73 de VA2OPS"
+            exit 0
+        fi
+        
+        case $CHOICE in
+            1) download_et_maps ;;
+            2) download_osm_maps ;;
+            3) download_wikipedia ;;
+            4)
+                download_et_maps
+                read -p "Press Enter to continue to OSM maps..."
+                download_osm_maps
+                read -p "Press Enter to continue to Wikipedia..."
+                download_wikipedia
+                ;;
+        esac
+        
+        echo ""
+        read -p "Press Enter to return to menu..."
+    done
+}
+
+# =============================================================================
+# Entry Point
+# =============================================================================
+
+# Check for dialog
+if ! command -v dialog &> /dev/null; then
+    echo -e "${RED}Error: 'dialog' command not found${NC}"
+    echo "Please install with: sudo apt install dialog"
+    exit 1
+fi
+
+# Check internet
+echo "Checking internet connection..."
+if ! check_internet; then
+    echo -e "${RED}No internet connection detected!${NC}"
+    echo "Please connect to the internet and try again."
+    exit 1
+fi
+echo -e "${GREEN}✓ Internet connection OK${NC}"
+echo ""
+
+# Show main menu
+main_menu

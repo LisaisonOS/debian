@@ -1,0 +1,231 @@
+#!/usr/bin/env python3
+"""
+et-supervisor-ctl: CLI client for et-supervisor daemon.
+
+Usage:
+    et-supervisor-ctl status                Show current mode and process states
+    et-supervisor-ctl start-mode <mode-id>  Start a mode
+    et-supervisor-ctl stop                  Stop current mode
+    et-supervisor-ctl health                Run health checks
+    et-supervisor-ctl list-modes            List available modes
+"""
+
+import json
+import os
+import socket
+import sys
+import time
+
+SOCKET_PATH = f"/run/user/{os.getuid()}/et-supervisor.sock"
+TIMEOUT = 10
+TIMEOUT_START = 120  # Wine/VARA can take 60s+ to start on USB
+
+# Bilingual strings
+_TR = {
+    "err_not_running":     {"en": "Error: et-supervisor is not running.",
+                            "fr": "Erreur : et-supervisor n'est pas en cours."},
+    "err_socket":          {"en": "Socket not found: {}",
+                            "fr": "Socket introuvable : {}"},
+    "err_refused":         {"en": "Error: Connection refused. Is et-supervisor running?",
+                            "fr": "Erreur : Connexion refusée. et-supervisor est-il en cours ?"},
+    "err_timeout":         {"en": "Error: Timeout waiting for response.",
+                            "fr": "Erreur : Délai d'attente dépassé."},
+    "no_mode":             {"en": "No mode running.",
+                            "fr": "Aucun mode en cours."},
+    "starting_mode":       {"en": "Starting mode: {}...",
+                            "fr": "Démarrage du mode : {}..."},
+    "mode_started":        {"en": "Mode {} started.",
+                            "fr": "Mode {} démarré."},
+    "stopped":             {"en": "Stopped.",
+                            "fr": "Arrêté."},
+    "no_modes_found":      {"en": "No mode configs found.",
+                            "fr": "Aucune configuration de mode trouvée."},
+}
+
+
+def _get_lang():
+    """Read language from user.json."""
+    try:
+        import pathlib
+        cfg = pathlib.Path.home() / ".config/emcomm-tools/user.json"
+        if cfg.exists():
+            with open(cfg) as f:
+                return json.load(f).get("language", "en")
+    except Exception:
+        pass
+    return "en"
+
+
+_LANG = _get_lang()
+
+
+def _t(key, *args):
+    entry = _TR.get(key, {})
+    msg = entry.get(_LANG, entry.get("en", key))
+    if args:
+        msg = msg.format(*args)
+    return msg
+
+
+def send_command(cmd_dict, timeout=None):
+    """Send a command to the supervisor and return the response."""
+    if timeout is None:
+        timeout = TIMEOUT
+
+    if not os.path.exists(SOCKET_PATH):
+        print(_t("err_not_running"), file=sys.stderr)
+        print(_t("err_socket", SOCKET_PATH), file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        sock.connect(SOCKET_PATH)
+        sock.sendall(json.dumps(cmd_dict).encode() + b"\n")
+        data = sock.recv(8192)
+        sock.close()
+        return json.loads(data.decode("utf-8"))
+    except ConnectionRefusedError:
+        print(_t("err_refused"), file=sys.stderr)
+        sys.exit(1)
+    except socket.timeout:
+        print(_t("err_timeout"), file=sys.stderr)
+        sys.exit(1)
+
+
+def format_uptime(seconds):
+    """Format seconds as human-readable uptime."""
+    if seconds < 60:
+        return f"{seconds}s"
+    elif seconds < 3600:
+        return f"{seconds // 60}m{seconds % 60:02d}s"
+    else:
+        h = seconds // 3600
+        m = (seconds % 3600) // 60
+        return f"{h}h{m:02d}m"
+
+
+def cmd_status():
+    resp = send_command({"cmd": "status"})
+    mode = resp.get("mode")
+    processes = resp.get("processes", [])
+
+    if not mode:
+        print(_t("no_mode"))
+        return
+
+    print(f"Mode: {mode}")
+    for p in processes:
+        state = p["state"]
+        name = p["name"]
+        pid = p.get("pid", "—")
+        uptime = format_uptime(p.get("uptime", 0))
+
+        # State indicator
+        if state == "RUNNING":
+            indicator = "\033[32mRUNNING\033[0m"
+        elif state == "CRASHED":
+            indicator = "\033[31mCRASHED\033[0m"
+        elif state == "FAILED":
+            indicator = "\033[31mFAILED\033[0m"
+        elif state == "STOPPED":
+            indicator = "\033[33mSTOPPED\033[0m"
+        else:
+            indicator = state
+
+        line = f"  {indicator:>16s}  {name:<20s}  PID {pid:<8}"
+        if state == "RUNNING":
+            line += f"  uptime {uptime}"
+        print(line)
+
+
+def cmd_start_mode(mode_id):
+    print(_t("starting_mode", mode_id))
+    resp = send_command({"cmd": "start-mode", "mode": mode_id},
+                        timeout=TIMEOUT_START)
+    if resp.get("status") == "ok":
+        print(_t("mode_started", mode_id))
+    else:
+        msg = resp.get("message", "Unknown error")
+        print(f"Error: {msg}", file=sys.stderr)
+        sys.exit(1)
+
+
+def cmd_stop():
+    resp = send_command({"cmd": "stop"})
+    print(resp.get("message", _t("stopped")))
+
+
+def cmd_health():
+    resp = send_command({"cmd": "health"})
+    mode = resp.get("mode")
+    health = resp.get("health", {})
+
+    if not mode:
+        print(_t("no_mode"))
+        return
+
+    print(f"Mode: {mode}")
+    for name, checks in health.items():
+        pid_ok = checks.get("pid_alive", False)
+        port_ok = checks.get("port_ok")
+
+        pid_str = "\033[32mOK\033[0m" if pid_ok else "\033[31mDEAD\033[0m"
+        line = f"  {name:<20s}  PID: {pid_str}"
+
+        if port_ok is not None:
+            port_str = "\033[32mOK\033[0m" if port_ok else "\033[31mDOWN\033[0m"
+            line += f"  Port: {port_str}"
+
+        print(line)
+
+
+def cmd_list_modes():
+    resp = send_command({"cmd": "list-modes"})
+    modes = resp.get("modes", [])
+
+    if not modes:
+        print(_t("no_modes_found"))
+        return
+
+    print(f"{'ID':<25s}  {'Category':<12s}  Name")
+    print("-" * 65)
+    for m in modes:
+        name = m.get("name", {}).get(_LANG, m.get("name", {}).get("en", "—"))
+        print(f"  {m['id']:<23s}  {m.get('category', '—'):<12s}  {name}")
+
+
+def usage():
+    print(__doc__.strip())
+    sys.exit(1)
+
+
+def main():
+    if len(sys.argv) < 2:
+        usage()
+
+    cmd = sys.argv[1]
+
+    if cmd == "status":
+        cmd_status()
+    elif cmd == "start-mode":
+        if len(sys.argv) < 3:
+            print("Usage: et-supervisor-ctl start-mode <mode-id>",
+                  file=sys.stderr)
+            sys.exit(1)
+        cmd_start_mode(sys.argv[2])
+    elif cmd == "stop":
+        cmd_stop()
+    elif cmd == "health":
+        cmd_health()
+    elif cmd == "list-modes":
+        cmd_list_modes()
+    elif cmd in ("-h", "--help", "help"):
+        usage()
+    else:
+        print(f"Unknown command: {cmd}", file=sys.stderr)
+        usage()
+
+
+if __name__ == "__main__":
+    main()

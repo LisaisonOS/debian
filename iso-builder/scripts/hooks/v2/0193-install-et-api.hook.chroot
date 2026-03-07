@@ -1,0 +1,61 @@
+#!/bin/bash
+set -e
+
+echo "Installing ET-API (callsign lookup)..."
+
+APP="et-api"
+VERSION="1.2.0-ca"
+ET_API_JAR="emcomm-tools-api-1.2.0.jar"
+BASE_URL="https://github.com/emcomm-tools/et-api-java/releases/download/${VERSION}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
+INSTALL_DIR="/opt/emcomm-tools-api"
+BIN_DIR="${INSTALL_DIR}/bin"
+DATA_DIR="${INSTALL_DIR}/data"
+INDEX_DIR="${INSTALL_DIR}/index"
+
+rm -rf ${INSTALL_DIR}
+mkdir -p "${BIN_DIR}" "${DATA_DIR}" "${INDEX_DIR}"
+
+# Download et-api JAR
+JAR_FALLBACK="${REPO_ROOT}/downloads/${ET_API_JAR}"
+echo "Downloading ET-API JAR from ${BASE_URL}/${ET_API_JAR}..."
+if curl -s -L -o "/tmp/${ET_API_JAR}" --fail --retry 3 --retry-delay 5 "${BASE_URL}/${ET_API_JAR}"; then
+    echo "Download successful."
+elif [ -f "${JAR_FALLBACK}" ]; then
+    echo "GitHub download failed. Using local fallback: ${JAR_FALLBACK}"
+    cp "${JAR_FALLBACK}" "/tmp/${ET_API_JAR}"
+else
+    echo "ERROR: ET-API JAR download failed and no local fallback at ${JAR_FALLBACK}"
+    exit 1
+fi
+
+cp "/tmp/${ET_API_JAR}" "${BIN_DIR}/${APP}"
+chmod 755 "${BIN_DIR}/${APP}"
+rm -f "/tmp/${ET_API_JAR}"
+[ -f "${BIN_DIR}/${APP}" ] || { echo "ERROR: ET-API JAR not found after copy"; exit 1; }
+
+# Download data files
+for file in faa.csv license.csv zip2geo.csv zip2geo-elevation.csv; do
+    FILE_FALLBACK="${REPO_ROOT}/downloads/${file}"
+    echo "Downloading ${file}..."
+    if curl -s -L -o "/tmp/${file}" --fail --retry 3 --retry-delay 5 "${BASE_URL}/${file}"; then
+        echo "Downloaded ${file}."
+    elif [ -f "${FILE_FALLBACK}" ]; then
+        echo "GitHub download failed. Using local fallback: ${FILE_FALLBACK}"
+        cp "${FILE_FALLBACK}" "/tmp/${file}"
+    else
+        echo "ERROR: ${file} download failed and no local fallback at ${FILE_FALLBACK}"
+        exit 1
+    fi
+    cp "/tmp/${file}" "${DATA_DIR}/${file}"
+    rm -f "/tmp/${file}"
+done
+
+# Fix permissions
+chgrp -R et-data ${DATA_DIR} ${INDEX_DIR}
+chmod 775 ${DATA_DIR} ${INDEX_DIR}
+chmod 664 ${DATA_DIR}/*.csv
+
+echo "ET-API installation complete"

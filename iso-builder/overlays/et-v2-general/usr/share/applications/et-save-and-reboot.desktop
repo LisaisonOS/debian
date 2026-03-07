@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Save & Reboot
+Name[fr]=Sauvegarder & Redémarrer
+Comment=Save your configuration to USB then reboot
+Comment[fr]=Sauvegarder votre configuration sur USB puis redémarrer
+Exec=/opt/emcomm-tools/bin/et-persistence/et-save-and-reboot
+Icon=system-reboot
+Terminal=false
+Categories=X-XFCE;X-Xfce-Toplevel;

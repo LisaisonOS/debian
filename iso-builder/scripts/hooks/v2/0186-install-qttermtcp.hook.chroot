@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
+echo "Installing QtTermTCP..."
+
+VERSION="latest"
+BIN_FILE="QtTermTCP"
+INSTALL_DIR="/opt/qttermtcp-${VERSION}"
+INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
+LINK_PATH="/opt/qttermtcp"
+LOCAL_FALLBACK="${REPO_ROOT}/downloads/${BIN_FILE}"
+
+URL="https://www.cantab.net/users/john.wiseman/Downloads/${BIN_FILE}"
+
+# Qt5 libs (also in package list, but ensure they're present)
+apt-get install -y libqt5core5t64 libqt5gui5t64 libqt5widgets5t64 libqt5network5t64 libqt5multimedia5 libqt5serialport5
+
+rm -rf ${INSTALL_DIR}
+mkdir -p ${INSTALL_BIN_DIR}
+
+echo "Downloading QtTermTCP from ${URL}..."
+if curl -s -L -o "/tmp/${BIN_FILE}" --fail --retry 3 --retry-delay 5 "${URL}"; then
+    echo "Download successful."
+elif [ -f "${LOCAL_FALLBACK}" ]; then
+    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
+    cp "${LOCAL_FALLBACK}" "/tmp/${BIN_FILE}"
+else
+    echo "ERROR: QtTermTCP download failed and no local fallback at ${LOCAL_FALLBACK}"
+    exit 1
+fi
+
+cp "/tmp/${BIN_FILE}" "${INSTALL_BIN_DIR}/${BIN_FILE}"
+chmod 755 ${INSTALL_BIN_DIR}/${BIN_FILE}
+rm -f "/tmp/${BIN_FILE}"
+[ -f ${INSTALL_BIN_DIR}/${BIN_FILE} ] || { echo "ERROR: QtTermTCP binary not found after copy"; exit 1; }
+
+rm -rf ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+stow -D -d /opt qttermtcp -t /usr/local 2>/dev/null || true
+stow -v -d /opt qttermtcp -t /usr/local
+
+echo "QtTermTCP installation complete"

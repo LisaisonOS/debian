@@ -1,0 +1,333 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : 1 March 2026
+# Purpose : USB device diagnostic — dumps serial/audio/symlink/rigctld state
+#           in one shot for quick troubleshooting and remote support.
+
+source /opt/emcomm-tools/bin/et-common
+
+# ---------------------------------------------------------------------------
+# Local helpers
+# ---------------------------------------------------------------------------
+header() { echo -e "\n${BLUE}=== $* ===${NC}"; }
+ok()     { echo -e "  ${GREEN}$*${NC}"; }
+warn()   { echo -e "  ${YELLOW}$*${NC}"; }
+fail()   { echo -e "  ${RED}$*${NC}"; }
+info()   { echo -e "  $*"; }
+
+# Map vendor:product to human-readable chip name
+chip_name() {
+  case "$1" in
+    10c4:ea60) echo "CP210x"       ;;
+    10c4:ea70) echo "CP2105 Dual"  ;;
+    1a86:7523) echo "CH340"        ;;
+    0483:5740) echo "STM32 VCP"    ;;
+    1546:01a7) echo "u-Blox GPS"   ;;
+    0403:6001) echo "FTDI FT232R"  ;;
+    0403:6015) echo "FTDI FT-X"    ;;
+    0403:6010) echo "FTDI FT2232"  ;;
+    *)         echo "Unknown ($1)" ;;
+  esac
+}
+
+# ---------------------------------------------------------------------------
+# Section 1: Active Radio Config
+# ---------------------------------------------------------------------------
+section_radio_config() {
+  header "Active Radio Config"
+
+  if [ ! -L "$ET_ACTIVE_RADIO_CONF" ]; then
+    fail "No active radio configured (symlink missing: $ET_ACTIVE_RADIO_CONF)"
+    return
+  fi
+
+  local target
+  target=$(readlink -f "$ET_ACTIVE_RADIO_CONF")
+  info "Config file : $target"
+
+  local vendor model rig_id baud ptt conf
+  vendor=$(jq -r '.vendor // "N/A"' "$ET_ACTIVE_RADIO_CONF")
+  model=$(jq  -r '.model  // "N/A"' "$ET_ACTIVE_RADIO_CONF")
+  rig_id=$(jq -r '.rigctrl.id   // "N/A"' "$ET_ACTIVE_RADIO_CONF")
+  baud=$(jq   -r '.rigctrl.baud // "N/A"' "$ET_ACTIVE_RADIO_CONF")
+  ptt=$(jq    -r '.rigctrl.ptt  // "N/A"' "$ET_ACTIVE_RADIO_CONF")
+  conf=$(jq   -r '.rigctrl.conf // empty'  "$ET_ACTIVE_RADIO_CONF" 2>/dev/null)
+
+  info "Radio       : ${vendor} ${model}"
+  info "Hamlib ID   : ${rig_id}$([ "$rig_id" = "1" ] && echo ' (dummy / audio-only)')"
+  info "Baud        : ${baud}"
+  info "PTT         : ${ptt}"
+  if [ -n "$conf" ]; then
+    info "Extra conf  : ${conf}"
+  fi
+
+  # Print notes array if present
+  local notes_count
+  notes_count=$(jq -r '.notes | length // 0' "$ET_ACTIVE_RADIO_CONF" 2>/dev/null)
+  if [ "$notes_count" -gt 0 ] 2>/dev/null; then
+    info "Notes:"
+    jq -r '.notes[]' "$ET_ACTIVE_RADIO_CONF" | while IFS= read -r line; do
+      echo "    - ${line}"
+    done
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Section 2: USB Serial Devices
+# ---------------------------------------------------------------------------
+section_usb_serial() {
+  header "USB Serial Devices"
+
+  local devices
+  devices=(/dev/ttyUSB*)
+
+  if [ ! -e "${devices[0]}" ]; then
+    warn "No USB serial devices found (/dev/ttyUSB*)"
+    return
+  fi
+
+  local et_cat_target=""
+  if [ -L "$ET_DEVICE_CAT" ]; then
+    et_cat_target=$(readlink -f "$ET_DEVICE_CAT")
+  fi
+
+  for dev in "${devices[@]}"; do
+    local vid pid vendor_db model_db serial iface
+    vid=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_VENDOR_ID='  | cut -d= -f2)
+    pid=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_MODEL_ID='   | cut -d= -f2)
+    vendor_db=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_VENDOR_FROM_DATABASE='  | cut -d= -f2-)
+    model_db=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_MODEL_FROM_DATABASE='   | cut -d= -f2-)
+    serial=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_SERIAL_SHORT=' | cut -d= -f2)
+    iface=$(udevadm info --attribute-walk --name="$dev" 2>/dev/null | grep 'bInterfaceNumber' | head -1 | sed 's/.*=="\(.*\)".*/\1/')
+
+    local chip
+    chip=$(chip_name "${vid}:${pid}")
+
+    local label="$dev"
+    local dev_real
+    dev_real=$(readlink -f "$dev")
+    if [ "$dev_real" = "$et_cat_target" ]; then
+      label="${dev}  <-- ${ET_DEVICE_CAT}"
+    fi
+
+    echo ""
+    ok "$label"
+    info "  Chip       : ${chip}"
+    info "  VID:PID    : ${vid:-?}:${pid:-?}"
+    [ -n "$vendor_db" ] && info "  Vendor     : ${vendor_db}"
+    [ -n "$model_db" ]  && info "  Model      : ${model_db}"
+    [ -n "$serial" ]    && info "  Serial     : ${serial}"
+    [ -n "$iface" ]     && info "  Interface# : ${iface}"
+    info "  Perms      : $(ls -l "$dev" 2>/dev/null | awk '{print $1, $3, $4}')"
+  done
+}
+
+# ---------------------------------------------------------------------------
+# Section 3: USB Audio Devices
+# ---------------------------------------------------------------------------
+section_usb_audio() {
+  header "USB Audio Devices"
+
+  local arecord_out
+  arecord_out=$(arecord -l 2>/dev/null)
+
+  if [ -z "$arecord_out" ]; then
+    warn "No capture devices found (arecord -l)"
+  else
+    echo "$arecord_out" | while IFS= read -r line; do
+      info "$line"
+    done
+  fi
+
+  echo ""
+  if [ -L "$ET_DEVICE_AUDIO" ]; then
+    local audio_target
+    audio_target=$(readlink -f "$ET_DEVICE_AUDIO")
+    ok "${ET_DEVICE_AUDIO} -> ${audio_target}"
+  elif [ -e "$ET_DEVICE_AUDIO" ]; then
+    warn "${ET_DEVICE_AUDIO} exists but is not a symlink"
+  else
+    fail "${ET_DEVICE_AUDIO} NOT FOUND"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Section 4: ET Symlink Status
+# ---------------------------------------------------------------------------
+section_symlinks() {
+  header "ET Symlink Status"
+
+  local symlinks=("$ET_DEVICE_CAT" "$ET_DEVICE_AUDIO" "$ET_DEVICE_GPS" "$ET_DEVICE_SDR" "/dev/rfcomm0")
+
+  for link in "${symlinks[@]}"; do
+    if [ -L "$link" ]; then
+      local target
+      target=$(readlink -f "$link")
+      if [ -e "$target" ]; then
+        ok "$link -> $target"
+      else
+        warn "$link -> BROKEN (target: $target)"
+      fi
+    elif [ -e "$link" ]; then
+      # /dev/rfcomm0 is a device node, not a symlink
+      ok "$link (device present)"
+    else
+      fail "$link NOT FOUND"
+    fi
+  done
+}
+
+# ---------------------------------------------------------------------------
+# Section 5: rigctld Status
+# ---------------------------------------------------------------------------
+section_rigctld() {
+  header "rigctld Status"
+
+  local count
+  count=$(pgrep -c rigctld 2>/dev/null || true)
+
+  if [ "$count" -eq 0 ]; then
+    fail "rigctld is NOT running"
+  else
+    if [ "$count" -gt 1 ]; then
+      warn "rigctld instance count: ${count} (expected 1 — possible duplicate!)"
+    else
+      ok "rigctld is running (${count} instance)"
+    fi
+    echo ""
+    info "Process details:"
+    ps -eo pid,args 2>/dev/null | grep '[r]igctld' | while IFS= read -r line; do
+      info "  ${line}"
+    done
+  fi
+
+  echo ""
+  info "Quick frequency check (localhost:4532):"
+  local freq
+  freq=$(timeout 2 rigctl -m 2 -r localhost:4532 f 2>&1)
+  if [ $? -eq 0 ] && [ -n "$freq" ]; then
+    ok "Frequency: ${freq} Hz"
+  else
+    fail "Could not connect: ${freq}"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Section 6: CAT Port Test (--test only)
+# ---------------------------------------------------------------------------
+section_cat_test() {
+  header "CAT Port Test (probing all /dev/ttyUSB*)"
+
+  if [ ! -L "$ET_ACTIVE_RADIO_CONF" ]; then
+    fail "No active radio config — cannot run port test"
+    return 1
+  fi
+
+  local rig_id baud ptt conf set_conf=""
+  rig_id=$(jq -r '.rigctrl.id'   "$ET_ACTIVE_RADIO_CONF")
+  baud=$(jq   -r '.rigctrl.baud' "$ET_ACTIVE_RADIO_CONF")
+  ptt=$(jq    -r '.rigctrl.ptt'  "$ET_ACTIVE_RADIO_CONF")
+  conf=$(jq   -r '.rigctrl.conf // empty' "$ET_ACTIVE_RADIO_CONF" 2>/dev/null)
+
+  if [ "$rig_id" = "1" ]; then
+    warn "Active radio uses dummy rig (audio-only) — port test not applicable"
+    return 0
+  fi
+
+  if [ -n "$conf" ]; then
+    set_conf="--set-conf=${conf}"
+  fi
+
+  local model
+  model=$(jq -r '.model // "radio"' "$ET_ACTIVE_RADIO_CONF")
+  info "Testing with: Hamlib ID=${rig_id}, baud=${baud}, PTT=${ptt}, model=${model}"
+
+  # Kill any existing rigctld so we can bind port 4532
+  killall rigctld 2>/dev/null
+  sleep 1
+
+  local devices
+  devices=(/dev/ttyUSB*)
+
+  if [ ! -e "${devices[0]}" ]; then
+    fail "No /dev/ttyUSB* devices to test"
+    return 1
+  fi
+
+  local found=0
+  for dev in "${devices[@]}"; do
+    info ""
+    info "Trying ${dev} ..."
+
+    rigctld -m "$rig_id" -r "$dev" -s "$baud" -P "$ptt" $set_conf &
+    local rgpid=$!
+    sleep 2
+
+    # Check rigctld is still alive
+    if ! kill -0 "$rgpid" 2>/dev/null; then
+      fail "  rigctld exited immediately on ${dev}"
+      continue
+    fi
+
+    local freq
+    freq=$(timeout 2 rigctl -m 2 -r localhost:4532 f 2>&1)
+    if [ $? -eq 0 ] && [ -n "$freq" ]; then
+      ok "  SUCCESS on ${dev} — Frequency: ${freq} Hz"
+      ok "  rigctld left running (PID ${rgpid})"
+      found=1
+      break
+    else
+      fail "  No response on ${dev}"
+      kill "$rgpid" 2>/dev/null
+      wait "$rgpid" 2>/dev/null
+    fi
+  done
+
+  if [ "$found" -eq 0 ]; then
+    echo ""
+    fail "No working CAT port found on any /dev/ttyUSB* device"
+    info "Check: cable connection, radio power, correct Hamlib rig ID (${rig_id})"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+usage() {
+  echo "Usage: $(basename "$0") [--test] [--help]"
+  echo ""
+  echo "  (no args)  Run all diagnostic sections (radio config, USB serial,"
+  echo "             audio, symlinks, rigctld status)"
+  echo "  --test     Also probe all /dev/ttyUSB* ports for working CAT"
+  echo "             (kills any running rigctld, leaves working one running)"
+  echo "  --help     Show this help"
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+RUN_TEST=0
+
+case "${1:-}" in
+  --test)  RUN_TEST=1 ;;
+  --help)  usage; exit 0 ;;
+  "")      ;;
+  *)       echo "Unknown option: $1"; usage; exit 1 ;;
+esac
+
+echo -e "${WHITE}EmComm-Tools USB Diagnostic${NC}"
+echo "Date: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+echo "Host: $(hostname)"
+
+section_radio_config
+section_usb_serial
+section_usb_audio
+section_symlinks
+section_rigctld
+
+if [ "$RUN_TEST" -eq 1 ]; then
+  section_cat_test
+fi
+
+echo ""

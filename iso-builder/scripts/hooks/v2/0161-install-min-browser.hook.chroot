@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
+echo "Installing Min browser..."
+
+MIN_VERSION="1.34.1"
+MIN_DEB="min-${MIN_VERSION}-amd64.deb"
+MIN_URL="https://github.com/minbrowser/min/releases/download/v${MIN_VERSION}/${MIN_DEB}"
+LOCAL_FALLBACK="${REPO_ROOT}/downloads/${MIN_DEB}"
+
+echo "Downloading Min browser from ${MIN_URL}..."
+if curl -s -L -o "/tmp/${MIN_DEB}" --fail --retry 3 --retry-delay 5 "${MIN_URL}"; then
+    echo "Download successful."
+elif [ -f "${LOCAL_FALLBACK}" ]; then
+    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
+    cp "${LOCAL_FALLBACK}" "/tmp/${MIN_DEB}"
+else
+    echo "Warning: Min browser download failed - will use firefox-esr as fallback"
+    exit 0
+fi
+
+if [ -f "/tmp/${MIN_DEB}" ] && [ -s "/tmp/${MIN_DEB}" ]; then
+    dpkg -i "/tmp/${MIN_DEB}" || apt-get install -f -y
+    rm -f "/tmp/${MIN_DEB}"
+    echo "Min browser installation complete"
+else
+    echo "Warning: Min browser .deb empty or missing - will use firefox-esr as fallback"
+    rm -f "/tmp/${MIN_DEB}"
+fi

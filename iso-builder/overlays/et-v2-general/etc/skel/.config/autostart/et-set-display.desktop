@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=EmComm Display Settings
+Comment=Set display resolution for EmComm-Tools
+Exec=/opt/emcomm-tools/bin/et-set-display
+Icon=preferences-desktop-display
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-XFCE-Autostart-enabled=true
+StartupNotify=false
+NoDisplay=true
+X-GNOME-Autostart-Delay=2

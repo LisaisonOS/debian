@@ -1,0 +1,332 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Mount/symlink pre-loaded USB data (maps, wikipedia, docs)
+#           into the live system WITHOUT copying to RAM
+#
+# This is key for 64GB "Ready Kit" USBs with pre-loaded content!
+#
+
+set -e
+
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    logger -t "et-mount-usb-data" "$1" 2>/dev/null || true
+}
+
+error() {
+    log "ERROR: $1"
+    exit 1
+}
+
+# Find the Ventoy/USB data partition
+find_usb_data() {
+    local found=""
+    
+    # Search common mount points
+    for base in /media /run/media /mnt; do
+        [[ ! -d "$base" ]] && continue
+        
+        while IFS= read -r -d '' candidate; do
+            # Check for our data directories
+            if [[ -d "${candidate}/maps" ]] || [[ -d "${candidate}/wikipedia" ]] || [[ -d "${candidate}/emcomm-data" ]]; then
+                found="$candidate"
+                break 2
+            fi
+        done < <(find "$base" -maxdepth 3 -type d \( -name "VENTOY" -o -name "EMCOMM*" -o -name "emcomm-data" \) -print0 2>/dev/null)
+        
+        # Also check direct mount points
+        for mp in "$base"/*/*; do
+            [[ ! -d "$mp" ]] && continue
+            if [[ -d "${mp}/maps" ]] || [[ -d "${mp}/wikipedia" ]]; then
+                found="$mp"
+                break 2
+            fi
+        done
+    done
+    
+    echo "$found"
+}
+
+# Create symlinks for mbtiles (map tiles)
+setup_mbtiles() {
+    local usb_path="$1"
+    local mbtiles_src="${usb_path}/maps/mbtiles"
+    local mbtiles_dest="${HOME}/.local/share/emcomm-tools/mbtileserver/tilesets"
+    
+    # Also check tilesets directly on USB (legacy from et-firstboot)
+    if [[ ! -d "$mbtiles_src" ]]; then
+        mbtiles_src="${usb_path}/tilesets"
+    fi
+    
+    if [[ ! -d "$mbtiles_src" ]]; then
+        log "No mbtiles directory found on USB"
+        return 1
+    fi
+    
+    log "Setting up mbtiles from USB..."
+    
+    # Create destination directory
+    mkdir -p "$mbtiles_dest"
+    
+    # Symlink each .mbtiles file
+    for mbtile in "${mbtiles_src}"/*.mbtiles; do
+        [[ ! -f "$mbtile" ]] && continue
+        
+        local filename=$(basename "$mbtile")
+        local dest_link="${mbtiles_dest}/${filename}"
+        
+        # Remove existing file/link if present
+        [[ -e "$dest_link" ]] && rm -f "$dest_link"
+        
+        ln -sv "$mbtile" "$dest_link"
+        log "Linked: ${filename}"
+    done
+    
+    log "mbtiles setup complete!"
+    return 0
+}
+
+# Create symlinks for Navit maps
+setup_navit() {
+    local usb_path="$1"
+    local navit_src="${usb_path}/maps/navit"
+    local navit_dest="${HOME}/.navit/maps"
+    
+    # Also check my-maps directly on USB (legacy from et-firstboot)
+    if [[ ! -d "$navit_src" ]]; then
+        navit_src="${usb_path}/my-maps"
+    fi
+    
+    if [[ ! -d "$navit_src" ]]; then
+        log "No Navit maps directory found on USB"
+        return 1
+    fi
+    
+    log "Setting up Navit maps from USB..."
+    
+    mkdir -p "$navit_dest"
+    
+    for mapfile in "${navit_src}"/*.bin "${navit_src}"/*.osm.bin "${navit_src}"/*.pbf; do
+        [[ ! -f "$mapfile" ]] && continue
+        
+        local filename=$(basename "$mapfile")
+        local dest_link="${navit_dest}/${filename}"
+        
+        [[ -e "$dest_link" ]] && rm -f "$dest_link"
+        
+        ln -sv "$mapfile" "$dest_link"
+        log "Linked Navit map: ${filename}"
+    done
+    
+    log "Navit maps setup complete!"
+    return 0
+}
+
+# Create symlinks for Wikipedia ZIM files
+setup_wikipedia() {
+    local usb_path="$1"
+    local wiki_src="${usb_path}/wikipedia"
+    local wiki_dest="${HOME}/wikipedia"
+    
+    if [[ ! -d "$wiki_src" ]]; then
+        log "No Wikipedia directory found on USB"
+        return 1
+    fi
+    
+    log "Setting up Wikipedia ZIM files from USB..."
+    
+    mkdir -p "$wiki_dest"
+    
+    for zimfile in "${wiki_src}"/*.zim; do
+        [[ ! -f "$zimfile" ]] && continue
+        
+        local filename=$(basename "$zimfile")
+        local dest_link="${wiki_dest}/${filename}"
+        
+        [[ -e "$dest_link" ]] && rm -f "$dest_link"
+        
+        ln -sv "$zimfile" "$dest_link"
+        log "Linked ZIM: ${filename}"
+    done
+    
+    log "Wikipedia setup complete!"
+    return 0
+}
+
+# Create symlinks for documentation
+setup_docs() {
+    local usb_path="$1"
+    local docs_src="${usb_path}/docs"
+    local docs_dest="${HOME}/Documents/EmComm-Reference"
+    
+    if [[ ! -d "$docs_src" ]]; then
+        log "No docs directory found on USB"
+        return 1
+    fi
+    
+    log "Setting up documentation from USB..."
+    
+    mkdir -p "$docs_dest"
+    
+    # Symlink the entire docs directory content
+    for item in "${docs_src}"/*; do
+        [[ ! -e "$item" ]] && continue
+        
+        local name=$(basename "$item")
+        local dest_link="${docs_dest}/${name}"
+        
+        [[ -e "$dest_link" ]] && rm -rf "$dest_link"
+        
+        ln -sv "$item" "$dest_link"
+        log "Linked doc: ${name}"
+    done
+    
+    log "Documentation setup complete!"
+    return 0
+}
+
+# Setup elevation data for RF prediction
+setup_elevation() {
+    local usb_path="$1"
+    local elev_src="${usb_path}/maps/elevation"
+    local elev_dest="${HOME}/.local/share/emcomm-tools/elevation"
+    
+    if [[ ! -d "$elev_src" ]]; then
+        log "No elevation data found on USB"
+        return 1
+    fi
+    
+    log "Setting up elevation data from USB..."
+    
+    mkdir -p "$elev_dest"
+    
+    for hgtfile in "${elev_src}"/*.hgt "${elev_src}"/*.HGT; do
+        [[ ! -f "$hgtfile" ]] && continue
+        
+        local filename=$(basename "$hgtfile")
+        local dest_link="${elev_dest}/${filename}"
+        
+        [[ -e "$dest_link" ]] && rm -f "$dest_link"
+        
+        ln -sv "$hgtfile" "$dest_link"
+    done
+    
+    log "Elevation data setup complete!"
+    return 0
+}
+
+# Show summary of what's available
+show_summary() {
+    local usb_path="$1"
+    
+    echo ""
+    echo "=============================================="
+    echo "  EmComm-Tools USB Data Summary"
+    echo "=============================================="
+    echo "  USB Path: ${usb_path}"
+    echo ""
+    
+    # Count mbtiles
+    for dir in "${usb_path}/maps/mbtiles" "${usb_path}/tilesets"; do
+        if [[ -d "$dir" ]]; then
+            local count=$(ls -1 "$dir"/*.mbtiles 2>/dev/null | wc -l)
+            local size=$(du -sh "$dir" 2>/dev/null | cut -f1)
+            echo "  🗺️  Map tiles: ${count} files (${size})"
+            break
+        fi
+    done
+    
+    # Count Navit maps
+    for dir in "${usb_path}/maps/navit" "${usb_path}/my-maps"; do
+        if [[ -d "$dir" ]]; then
+            local count=$(ls -1 "$dir"/*.bin "$dir"/*.pbf 2>/dev/null | wc -l)
+            local size=$(du -sh "$dir" 2>/dev/null | cut -f1)
+            echo "  🚗 Navit maps: ${count} files (${size})"
+            break
+        fi
+    done
+    
+    # Count ZIM files
+    if [[ -d "${usb_path}/wikipedia" ]]; then
+        local count=$(ls -1 "${usb_path}/wikipedia/"*.zim 2>/dev/null | wc -l)
+        local size=$(du -sh "${usb_path}/wikipedia" 2>/dev/null | cut -f1)
+        echo "  📚 Wikipedia: ${count} files (${size})"
+    fi
+    
+    # Count docs
+    if [[ -d "${usb_path}/docs" ]]; then
+        local size=$(du -sh "${usb_path}/docs" 2>/dev/null | cut -f1)
+        echo "  📄 Documentation: ${size}"
+    fi
+    
+    # Check persistence
+    if [[ -d "${usb_path}/emcomm-data" ]]; then
+        if [[ -f "${usb_path}/emcomm-data/user.json" ]]; then
+            local call=$(jq -r '.callsign' "${usb_path}/emcomm-data/user.json" 2>/dev/null)
+            echo "  👤 User config: ${call}"
+        else
+            echo "  👤 User config: (not configured)"
+        fi
+    fi
+    
+    echo ""
+    echo "=============================================="
+}
+
+# Main
+main() {
+    log "Searching for EmComm-Tools USB data..."
+    
+    USB_PATH=$(find_usb_data)
+    
+    if [[ -z "$USB_PATH" ]]; then
+        log "No EmComm-Tools USB data found."
+        echo "No USB data partition found."
+        echo "Insert your EmComm-Tools USB and try again."
+        exit 1
+    fi
+    
+    log "Found USB data at: ${USB_PATH}"
+    
+    # Setup all data sources
+    setup_mbtiles "$USB_PATH" || true
+    setup_navit "$USB_PATH" || true
+    setup_wikipedia "$USB_PATH" || true
+    setup_docs "$USB_PATH" || true
+    setup_elevation "$USB_PATH" || true
+    
+    # Show summary
+    show_summary "$USB_PATH"
+    
+    log "USB data mount complete!"
+}
+
+# Parse arguments
+case "${1:-}" in
+    --help|-h)
+        echo "Usage: et-persistence mount"
+        echo ""
+        echo "Symlinks pre-loaded USB data (maps, wikipedia, docs) into"
+        echo "the live system for direct access without copying to RAM."
+        echo ""
+        echo "This script is automatically run at boot when using"
+        echo "EmComm-Tools 'Ready Kit' USB drives."
+        exit 0
+        ;;
+    --summary)
+        USB_PATH=$(find_usb_data)
+        if [[ -n "$USB_PATH" ]]; then
+            show_summary "$USB_PATH"
+        else
+            echo "No USB data found."
+        fi
+        exit 0
+        ;;
+    *)
+        main
+        ;;
+esac

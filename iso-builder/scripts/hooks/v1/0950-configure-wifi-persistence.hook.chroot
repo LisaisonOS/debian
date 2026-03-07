@@ -1,0 +1,112 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Install auto-restore service for WiFi on live boot
+#
+# This hook installs a systemd service that automatically restores
+# WiFi connections from USB persistence when booting in live mode.
+#
+
+set -e
+
+echo "Installing WiFi auto-restore service for live boot..."
+
+# Create the auto-restore script
+cat > /opt/emcomm-tools/bin/et-persistence-wifi-restore << 'EOFSCRIPT'
+#!/bin/bash
+#
+# Auto-restore WiFi from persistence USB on live boot
+# Runs at boot via systemd service
+#
+
+LOG_TAG="et-wifi-restore"
+
+log() {
+    logger -t "$LOG_TAG" "$1"
+    echo "$1"
+}
+
+# Only run in live mode
+is_live_boot() {
+    [[ -d /run/live ]] && return 0
+    grep -q 'overlay / ' /proc/mounts 2>/dev/null && return 0
+    grep -q 'tmpfs / ' /proc/mounts 2>/dev/null && return 0
+    return 1
+}
+
+if ! is_live_boot; then
+    log "Not a live boot - skipping WiFi restore"
+    exit 0
+fi
+
+log "Live boot detected - looking for persistence USB..."
+
+# Wait a bit for USB to be mounted (max 30 seconds)
+WAIT_COUNT=0
+PERSISTENCE_PATH=""
+while [[ $WAIT_COUNT -lt 30 ]]; do
+    # Look for et-config folder on any mounted drive
+    for mount_point in /media/* /mnt/*; do
+        if [[ -d "${mount_point}/et-config/configs/wifi" ]]; then
+            PERSISTENCE_PATH="${mount_point}/et-config"
+            break 2
+        fi
+    done
+    sleep 1
+    ((WAIT_COUNT++))
+done
+
+if [[ -z "$PERSISTENCE_PATH" ]]; then
+    log "No persistence USB found with WiFi configs"
+    exit 0
+fi
+
+WIFI_SRC="${PERSISTENCE_PATH}/configs/wifi"
+WIFI_DEST="/etc/NetworkManager/system-connections"
+
+if [[ ! -d "$WIFI_SRC" ]] || [[ -z "$(ls -A "$WIFI_SRC" 2>/dev/null)" ]]; then
+    log "No WiFi configs in persistence"
+    exit 0
+fi
+
+WIFI_COUNT=$(ls -1 "$WIFI_SRC" 2>/dev/null | wc -l)
+log "Found $WIFI_COUNT WiFi network(s) - restoring..."
+
+# Copy WiFi configs
+cp "$WIFI_SRC"/* "$WIFI_DEST/" 2>/dev/null
+
+# Fix permissions (NetworkManager is strict about this)
+chmod 600 "$WIFI_DEST"/*
+chown root:root "$WIFI_DEST"/*
+
+# Reload NetworkManager
+nmcli general reload 2>/dev/null || systemctl restart NetworkManager 2>/dev/null
+
+log "WiFi networks restored successfully"
+EOFSCRIPT
+
+chmod 755 /opt/emcomm-tools/bin/et-persistence-wifi-restore
+
+# Create systemd service
+cat > /etc/systemd/system/et-wifi-restore.service << 'EOFSERVICE'
+[Unit]
+Description=EmComm-Tools WiFi Auto-Restore (Live Boot)
+After=NetworkManager.service udisks2.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/emcomm-tools/bin/et-persistence-wifi-restore
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOFSERVICE
+
+# Enable the service
+systemctl enable et-wifi-restore.service
+
+echo "WiFi auto-restore service installed and enabled"

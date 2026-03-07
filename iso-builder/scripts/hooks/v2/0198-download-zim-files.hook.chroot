@@ -1,0 +1,76 @@
+#!/bin/bash
+# Download latest ZIM files from SourceForge
+# Language is set during ISO build via setup-emcomm-iso.sh
+
+set -e
+
+ZIM_URL="https://sourceforge.net/projects/emcomm-tools/files/ZIM/"
+ZIM_DIR="/etc/skel/wikipedia"
+LANG_CODE="${ISO_LANG:-}"  # Set by setup script: en, fr, or empty for neutral
+
+mkdir -p "$ZIM_DIR"
+
+echo "Fetching ZIM file list from SourceForge..."
+
+# Get file listing from SourceForge
+FILE_LIST=$(curl -sL "$ZIM_URL" | grep -oP 'emcomm-ham-wiki[^"]+\.zim' | sort -u)
+
+if [ -z "$FILE_LIST" ]; then
+    echo "Warning: Could not fetch ZIM file list"
+    exit 0
+fi
+
+# Filter by language
+for file in $FILE_LIST; do
+    # Extract language code if present (format: name_lang_date.zim or name_date.zim)
+    if [[ "$file" =~ _([a-z]{2})_[0-9]+\.zim$ ]]; then
+        file_lang="${BASH_REMATCH[1]}"
+    else
+        file_lang=""  # Neutral/no language
+    fi
+    
+    # Download if:
+    # - File is neutral (no lang code) and we want neutral OR
+    # - File matches our selected language
+    if [ -z "$LANG_CODE" ] && [ -z "$file_lang" ]; then
+        # Want neutral, file is neutral
+        DOWNLOAD_FILES+=("$file")
+    elif [ "$LANG_CODE" = "$file_lang" ]; then
+        # Language matches
+        DOWNLOAD_FILES+=("$file")
+    elif [ -z "$file_lang" ] && [ -n "$LANG_CODE" ]; then
+        # No translation exists, fall back to neutral
+        DOWNLOAD_FILES+=("$file")
+    fi
+done
+
+# Remove duplicates and get latest version of each base name
+declare -A LATEST_FILES
+for file in "${DOWNLOAD_FILES[@]}"; do
+    # Extract base name (everything before date)
+    base=$(echo "$file" | sed -E 's/_[0-9]{8}\.zim$//')
+    
+    # Keep only if newer or first seen
+    if [ -z "${LATEST_FILES[$base]}" ] || [[ "$file" > "${LATEST_FILES[$base]}" ]]; then
+        LATEST_FILES[$base]="$file"
+    fi
+done
+
+# Download latest files
+for file in "${LATEST_FILES[@]}"; do
+    if [ ! -f "$ZIM_DIR/$file" ]; then
+        echo "Downloading: $file"
+        curl -L -o "$ZIM_DIR/$file" "${ZIM_URL}${file}/download" || true
+        
+        # Remove older versions of same base
+        base=$(echo "$file" | sed -E 's/_[0-9]{8}\.zim$//')
+        find "$ZIM_DIR" -name "${base}*.zim" ! -name "$file" -delete 2>/dev/null || true
+    else
+        echo "Already have: $file"
+    fi
+done
+
+# Clean up old download script if exists
+rm -f "$ZIM_DIR/et-download-wikipedia.sh" 2>/dev/null || true
+
+echo "ZIM files updated."

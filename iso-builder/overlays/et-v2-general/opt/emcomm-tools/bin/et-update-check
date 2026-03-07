@@ -1,0 +1,87 @@
+#!/bin/bash
+# =============================================================================
+# et-update-check - Check for updates (for cron/startup)
+# Version: 1.0.0
+# Updated: 2026-01-10
+# Author: Sylvain Deguire (VA2OPS)
+#
+# Lightweight check for updates, notifies user if available
+# =============================================================================
+
+ET_HOME="/opt/emcomm-tools"
+ET_CONF="${ET_HOME}/conf/update.conf"
+ET_MANIFEST="${ET_HOME}/manifest.json"
+UPDATE_FLAG="/tmp/emcomm-updates-available"
+
+# Load config
+if [ -f "$ET_CONF" ]; then
+    source "$ET_CONF"
+else
+    exit 0
+fi
+
+# Check if updates are enabled
+if [ "$UPDATE_ENABLED" != "true" ]; then
+    exit 0
+fi
+
+# Check interval
+should_check() {
+    case "$CHECK_INTERVAL" in
+        manual)
+            return 1
+            ;;
+        daily)
+            local last=$(date -d "$LAST_CHECK" '+%s' 2>/dev/null || echo 0)
+            local now=$(date '+%s')
+            local diff=$((now - last))
+            [ $diff -gt 86400 ]
+            ;;
+        weekly)
+            local last=$(date -d "$LAST_CHECK" '+%s' 2>/dev/null || echo 0)
+            local now=$(date '+%s')
+            local diff=$((now - last))
+            [ $diff -gt 604800 ]
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+if ! should_check; then
+    exit 0
+fi
+
+# Download remote manifest quietly
+TEMP_MANIFEST="/tmp/et-manifest-check-$$.json"
+MANIFEST_URL="${UPDATE_URL}/${UPDATE_CHANNEL}/manifest.json"
+
+if ! wget -q -O "$TEMP_MANIFEST" "$MANIFEST_URL" 2>/dev/null; then
+    rm -f "$TEMP_MANIFEST"
+    exit 0
+fi
+
+# Compare versions
+if [ -f "$ET_MANIFEST" ]; then
+    LOCAL_VERSION=$(jq -r '.version' "$ET_MANIFEST")
+    REMOTE_VERSION=$(jq -r '.version' "$TEMP_MANIFEST")
+    
+    if [ "$LOCAL_VERSION" != "$REMOTE_VERSION" ]; then
+        echo "$REMOTE_VERSION" > "$UPDATE_FLAG"
+        
+        # Desktop notification if available
+        if command -v notify-send &> /dev/null; then
+            notify-send "EmComm-Tools Update" \
+                "Version $REMOTE_VERSION available\nRun: et-update" \
+                --icon=software-update-available
+        fi
+    else
+        rm -f "$UPDATE_FLAG"
+    fi
+fi
+
+# Update last check time
+sed -i "s/^LAST_CHECK=.*/LAST_CHECK=$(date '+%Y-%m-%d')/" "$ET_CONF"
+
+rm -f "$TEMP_MANIFEST"

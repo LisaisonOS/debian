@@ -1,0 +1,57 @@
+#!/bin/bash
+# =============================================================================
+# 0170-install-yaac.hook.chroot
+# Install YAAC - Yet Another APRS Client
+# https://www.ka2ddo.org/ka2ddo/YAAC.html
+#
+# Modified : Sylvain Deguire (VA2OPS)
+# Date     : 15 February 2026
+# Changes  : Try web download first, fall back to local copy in
+#             /opt/downloads/ if download fails for any reason.
+# =============================================================================
+
+set -e
+
+echo "=== Installing YAAC ==="
+
+VERSION="latest"
+ZIP_FILE="YAAC.zip"
+INSTALL_DIR="/opt/yaac-${VERSION}"
+LINK_PATH="/opt/yaac"
+LOCAL_FALLBACK="/opt/downloads/${ZIP_FILE}"
+
+# 1) Try download from original source first (always get latest)
+URL="https://www.ka2ddo.org/ka2ddo/${ZIP_FILE}"
+echo "Downloading YAAC from ${URL}..."
+if curl -s -L -o "/tmp/${ZIP_FILE}" --fail --retry 3 --retry-delay 5 "${URL}"; then
+    echo "Download successful."
+elif [ -f "${LOCAL_FALLBACK}" ]; then
+    # 2) Download failed — use local fallback
+    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
+    cp "${LOCAL_FALLBACK}" "/tmp/${ZIP_FILE}"
+else
+    echo "ERROR: Download failed and no local fallback at ${LOCAL_FALLBACK}"
+    exit 1
+fi
+
+# Clean stale chroot data and extract
+echo "Extracting YAAC to ${INSTALL_DIR}..."
+rm -rf "${INSTALL_DIR}"
+mkdir -p "${INSTALL_DIR}"
+unzip -o "/tmp/${ZIP_FILE}" -d "${INSTALL_DIR}"
+
+# Verify YAAC.jar exists
+if [ ! -f "${INSTALL_DIR}/YAAC.jar" ]; then
+    echo "ERROR: YAAC.jar not found in ${INSTALL_DIR} after extraction!"
+    ls -la "${INSTALL_DIR}/"
+    exit 1
+fi
+
+# Clean up download
+rm -f "/tmp/${ZIP_FILE}"
+
+# Create symlink (remove old symlink or directory)
+rm -rf "${LINK_PATH}"
+ln -s "${INSTALL_DIR}" "${LINK_PATH}"
+
+echo "=== YAAC installation complete ==="

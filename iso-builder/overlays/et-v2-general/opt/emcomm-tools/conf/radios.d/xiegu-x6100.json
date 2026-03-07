@@ -1,0 +1,24 @@
+{
+  "id": "xiegu-x6100",
+  "vendor": "Xiegu",
+  "model": "X6100",
+  "rigctrl": {
+    "id": "3087",
+    "baud": "19200",
+    "ptt": "RIG",
+    "primeRig": true
+  },
+  "audio": {
+    "script": "/opt/emcomm-tools/conf/radios.d/audio/xiegu-x6100.sh"
+  },
+  "notes": [
+    "Turn on radio",
+    "Plug USB-C cable into the DEV port",
+    "Set mode to U-DIG",
+    "Set filter to FILTER1",
+    "Set AGC to AGC--"
+  ],
+  "fieldNotes": [
+    "Tested with firmware version: 1.1.9 APP / 1.1.8 BASE"
+  ]
+}

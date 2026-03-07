@@ -1,0 +1,76 @@
+#!/bin/bash
+# =============================================================================
+# et-predict - EmComm-Tools HF Propagation Prediction Wrapper
+#
+# Author: Sylvain Deguire (VA2OPS)
+# Date: January 2026
+# Version: 20260106.01
+#
+# Starts required services (et-api, mbtileserver) then launches et-predict-app
+# =============================================================================
+
+APP_NAME="et-predict-app"
+ET_API_PORT=1981
+MBTILES_PORT=1982
+TILESETS_DIR="${HOME}/.local/share/emcomm-tools/mbtileserver/tilesets"
+
+# Check if port is listening
+is_port_open() {
+    ss -tlnp 2>/dev/null | grep -q ":$1 " && return 0 || return 1
+}
+
+# Start et-api if not running
+start_et_api() {
+    if ! is_port_open ${ET_API_PORT}; then
+        echo "Starting et-api on port ${ET_API_PORT}..."
+        /opt/emcomm-tools-api/bin/et-api &
+        sleep 5
+        
+        # Wait for index to build (first run)
+        for i in {1..30}; do
+            if is_port_open ${ET_API_PORT}; then
+                echo "et-api started."
+                return 0
+            fi
+            sleep 1
+        done
+        echo "Warning: et-api may still be building index..."
+    else
+        echo "et-api already running."
+    fi
+}
+
+# Start mbtileserver if not running
+start_mbtileserver() {
+    if ! is_port_open ${MBTILES_PORT}; then
+        # Find actual tiles location (follow symlink if needed)
+        if [ -L "${TILESETS_DIR}" ]; then
+            ACTUAL_TILES=$(readlink -f "${TILESETS_DIR}")
+        else
+            ACTUAL_TILES="${TILESETS_DIR}"
+        fi
+        
+        if [ -d "${ACTUAL_TILES}" ] && ls "${ACTUAL_TILES}"/*.mbtiles &>/dev/null; then
+            echo "Starting mbtileserver on port ${MBTILES_PORT}..."
+            mbtileserver --port ${MBTILES_PORT} -d "${ACTUAL_TILES}" &
+            sleep 2
+            echo "mbtileserver started."
+        else
+            echo "Warning: No map tiles found in ${ACTUAL_TILES}"
+            echo "Run et-maps-setup to configure offline maps."
+        fi
+    else
+        echo "mbtileserver already running."
+    fi
+}
+
+# Main
+echo "═══════════════════════════════════════════════════════════════"
+echo "  EmComm-Tools HF Propagation Prediction"
+echo "═══════════════════════════════════════════════════════════════"
+
+start_et_api
+start_mbtileserver
+
+echo "Launching ${APP_NAME}..."
+exec /usr/bin/et-predict-app "$@"

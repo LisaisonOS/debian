@@ -1,0 +1,25 @@
+{
+  "id": "yaesu-ftx1",
+  "vendor": "Yaesu",
+  "model": "FTX-1 (No CAT)",
+  "rigctrl": {
+    "id": "1",
+    "baud": "38400",
+    "ptt": "RTS",
+    "pttOnly": "true"
+  },
+  "notes": [
+    "Tune radio to desired frequency.",
+    "Long press [MODE], then set accordingly for HF or VHF/UHF.",
+    "For HF operation:",
+    "- First, select 'DATA-U'.",
+    "- Then, long press 'PRESET' and select 'FT8'.",
+    "- The 'PRESET' button should be highlighted in blue.",
+    "For VHF/UHF FM operation:",
+    "- First, select 'FM'.",
+    "- Then, long press 'PRESET' and select 'FT8'.",
+    "- The 'PRESET' button should be highlighted in blue."
+  ],
+  "fieldNotes": [
+  ]
+}

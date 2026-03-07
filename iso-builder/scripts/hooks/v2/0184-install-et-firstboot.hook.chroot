@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# Author : Sylvain Deguire (VA2OPS)
+# Date   : January 2026
+# Purpose: Install et-firstboot dependencies
+#
+
+set -e
+
+echo "Installing et-firstboot dependencies..."
+
+apt install -y python3-requests python3-bs4
+
+echo "et-firstboot dependencies installed."

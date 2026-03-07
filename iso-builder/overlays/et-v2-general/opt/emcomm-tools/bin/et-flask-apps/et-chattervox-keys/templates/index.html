@@ -1,0 +1,481 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card-header">
+    <h1>&#x1F511; {{ t['title'] }}</h1>
+    <p class="subtitle">{{ t['subtitle'] }}</p>
+</div>
+
+<div class="card-body">
+    <!-- Tab navigation -->
+    <div class="tab-nav">
+        <button class="tab-btn active" data-tab="my-keys" onclick="switchTab('my-keys')">
+            &#x1F512; {{ t['tab_my_keys'] }}
+        </button>
+        <button class="tab-btn" data-tab="other-keys" onclick="switchTab('other-keys')">
+            &#x1F465; {{ t['tab_other_keys'] }}
+        </button>
+    </div>
+
+    <!-- My Keys Tab -->
+    <div id="tab-my-keys" class="tab-content active">
+        <!-- Generate key form -->
+        <div class="key-action-bar">
+            <div class="input-with-btn">
+                <input type="text" id="genkey-callsign"
+                       placeholder="{{ t['callsign_placeholder'] }}"
+                       value="{{ user_callsign if user_callsign != 'N0CALL' else '' }}"
+                       style="text-transform: uppercase;">
+                <button class="btn btn-primary" onclick="generateKey()">
+                    + {{ t['generate_key'] }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Own keys list -->
+        <div id="my-keys-list" class="key-list">
+            <div class="key-empty">{{ t['no_own_keys'] }}</div>
+        </div>
+    </div>
+
+    <!-- Other Operators Tab -->
+    <div id="tab-other-keys" class="tab-content">
+        <!-- Add key form -->
+        <div class="key-action-bar">
+            <button class="btn btn-primary" onclick="showAddKeyForm()">
+                + {{ t['add_key'] }}
+            </button>
+            <button class="btn btn-secondary" onclick="scanInbox()">
+                &#x1F4E8; {{ t['check_inbox'] }}
+            </button>
+        </div>
+
+        <!-- Add key inline form (hidden by default) -->
+        <div id="addkey-form" class="addkey-form" style="display: none;">
+            <div class="form-group">
+                <label>{{ t['add_key_callsign'] }}</label>
+                <input type="text" id="addkey-callsign"
+                       placeholder="VE2ABC"
+                       style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+                <label>{{ t['add_key_pubkey'] }}</label>
+                <input type="text" id="addkey-pubkey"
+                       placeholder="a1b2c3d4..."
+                       maxlength="130">
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="hideAddKeyForm()">
+                    {{ t['cancel'] }}
+                </button>
+                <button class="btn btn-primary" onclick="addKey()">
+                    + {{ t['add_key'] }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Other keys list -->
+        <div id="other-keys-list" class="key-list">
+            <div class="key-empty">{{ t['no_other_keys'] }}</div>
+        </div>
+    </div>
+
+    <!-- Alert area -->
+    <div id="alert" class="alert" style="display: none;"></div>
+</div>
+
+<!-- Send Winlink Modal -->
+<div id="send-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h3>&#x1F4E7; {{ t['send_title'] }}</h3>
+        <div class="form-group">
+            <label>{{ t['send_to'] }}</label>
+            <input type="text" id="send-to-callsign"
+                   placeholder="VE2ABC"
+                   style="text-transform: uppercase;">
+        </div>
+        <input type="hidden" id="send-callsign">
+        <input type="hidden" id="send-pubkey">
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeSendModal()">
+                {{ t['cancel'] }}
+            </button>
+            <button class="btn btn-primary" onclick="sendKey()">
+                &#x1F4E8; {{ t['send_btn'] }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Inbox Results Modal -->
+<div id="inbox-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h3>&#x1F4E8; {{ t['inbox_title'] }}</h3>
+        <div id="inbox-results" class="key-list"></div>
+        <div class="btn-group" style="margin-top: 12px;">
+            <button class="btn btn-secondary" onclick="closeInboxModal()">
+                {{ t['close'] }}
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Pass translations to JS
+const T = {{ t | tojson }};
+
+// ============================================================================
+// Tab switching
+// ============================================================================
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+    });
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.toggle('active', tab.id === 'tab-' + tabId);
+    });
+}
+
+// ============================================================================
+// Alert messages
+// ============================================================================
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = 'alert alert-' + (type || 'success');
+    alert.style.display = 'block';
+    setTimeout(() => { alert.style.display = 'none'; }, 4000);
+}
+
+// ============================================================================
+// Key list rendering
+// ============================================================================
+function renderMyKeys(keys) {
+    const list = document.getElementById('my-keys-list');
+    if (!keys || keys.length === 0) {
+        list.innerHTML = '<div class="key-empty">' + T.no_own_keys + '</div>';
+        return;
+    }
+    let html = '';
+    keys.forEach(key => {
+        const sigBadge = key.is_signing
+            ? '<span class="key-badge signing">' + T.signing_key + '</span>'
+            : '';
+        html += `
+            <div class="key-card">
+                <div class="key-header">
+                    <span class="key-callsign">${key.callsign}</span>
+                    ${sigBadge}
+                </div>
+                <div class="key-value" title="${key.public}">${key.public}</div>
+                <div class="key-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="copyKey('${key.public}')">
+                        &#x1F4CB; ${T.copy}
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="openSendModal('${key.callsign}', '${key.public}')">
+                        &#x1F4E7; ${T.send_winlink}
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteKey('${key.callsign}', '${key.public}', true)">
+                        &#x1F5D1; ${T.delete}
+                    </button>
+                </div>
+            </div>`;
+    });
+    list.innerHTML = html;
+}
+
+function renderOtherKeys(keys) {
+    const list = document.getElementById('other-keys-list');
+    if (!keys || keys.length === 0) {
+        list.innerHTML = '<div class="key-empty">' + T.no_other_keys + '</div>';
+        return;
+    }
+    let html = '';
+    keys.forEach(key => {
+        html += `
+            <div class="key-card">
+                <div class="key-header">
+                    <span class="key-callsign">${key.callsign}</span>
+                    <span class="key-badge public">${T.public_only}</span>
+                </div>
+                <div class="key-value" title="${key.public}">${key.public}</div>
+                <div class="key-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="copyKey('${key.public}')">
+                        &#x1F4CB; ${T.copy}
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteKey('${key.callsign}', '${key.public}', false)">
+                        &#x1F5D1; ${T.delete}
+                    </button>
+                </div>
+            </div>`;
+    });
+    list.innerHTML = html;
+}
+
+function loadKeys() {
+    fetch('/api/my-keys').then(r => r.json()).then(data => renderMyKeys(data.keys));
+    fetch('/api/other-keys').then(r => r.json()).then(data => renderOtherKeys(data.keys));
+}
+
+// ============================================================================
+// Key operations
+// ============================================================================
+async function generateKey() {
+    const callsign = document.getElementById('genkey-callsign').value.trim().toUpperCase();
+    if (!callsign) {
+        showAlert(T.error_no_callsign, 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/genkey', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callsign: callsign })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(T.key_generated + ' ' + result.callsign + '. ' + (result.reloaded ? T.restart_notice : T.restart_required), 'success');
+            loadKeys();
+        } else {
+            showAlert(T.error_genkey + ': ' + result.error, 'error');
+        }
+    } catch (e) {
+        showAlert(T.error + ': ' + e.message, 'error');
+    }
+}
+
+function showAddKeyForm() {
+    document.getElementById('addkey-form').style.display = 'block';
+}
+
+function hideAddKeyForm() {
+    document.getElementById('addkey-form').style.display = 'none';
+    document.getElementById('addkey-callsign').value = '';
+    document.getElementById('addkey-pubkey').value = '';
+}
+
+async function addKey() {
+    const callsign = document.getElementById('addkey-callsign').value.trim().toUpperCase();
+    const pubkey = document.getElementById('addkey-pubkey').value.trim();
+
+    if (!callsign) {
+        showAlert(T.error_no_callsign, 'error');
+        return;
+    }
+    if (!pubkey) {
+        showAlert(T.error_no_key, 'error');
+        return;
+    }
+    if (!/^[0-9a-fA-F]{64,130}$/.test(pubkey)) {
+        showAlert(T.error_invalid_key, 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/addkey', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callsign: callsign, public_key: pubkey })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(T.key_added + ' ' + result.callsign + '. ' + (result.reloaded ? T.restart_notice : T.restart_required), 'success');
+            hideAddKeyForm();
+            loadKeys();
+        } else {
+            showAlert(T.error_addkey + ': ' + result.error, 'error');
+        }
+    } catch (e) {
+        showAlert(T.error + ': ' + e.message, 'error');
+    }
+}
+
+async function deleteKey(callsign, publicKey, isOwn) {
+    const msg = isOwn
+        ? T.confirm_delete + ' ' + callsign + '?\n\n' + T.confirm_delete_own
+        : T.confirm_delete + ' ' + callsign + '?';
+
+    if (!confirm(msg)) return;
+
+    try {
+        const response = await fetch('/api/deletekey', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callsign: callsign, public_key: publicKey })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(T.key_deleted + ' ' + callsign, 'success');
+            loadKeys();
+        } else {
+            showAlert(T.error + ': ' + result.error, 'error');
+        }
+    } catch (e) {
+        showAlert(T.error + ': ' + e.message, 'error');
+    }
+}
+
+async function copyKey(publicKey) {
+    // Method 1: textarea + execCommand (most reliable in webview)
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.value = publicKey;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (ok) {
+            showAlert(T.copied, 'success');
+            return;
+        }
+    } catch (e) {}
+
+    // Method 2: navigator.clipboard API
+    try {
+        await navigator.clipboard.writeText(publicKey);
+        showAlert(T.copied, 'success');
+        return;
+    } catch (e) {}
+
+    // Method 3: server-side xclip
+    try {
+        const response = await fetch('/api/copy-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ public_key: publicKey })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(T.copied, 'success');
+            return;
+        }
+    } catch (e) {}
+
+    showAlert(T.error + ': clipboard not available', 'error');
+}
+
+// ============================================================================
+// Winlink send
+// ============================================================================
+function openSendModal(callsign, publicKey) {
+    document.getElementById('send-callsign').value = callsign;
+    document.getElementById('send-pubkey').value = publicKey;
+    document.getElementById('send-to-callsign').value = '';
+    document.getElementById('send-modal').style.display = 'flex';
+}
+
+function closeSendModal() {
+    document.getElementById('send-modal').style.display = 'none';
+}
+
+async function sendKey() {
+    const to = document.getElementById('send-to-callsign').value.trim().toUpperCase();
+    const callsign = document.getElementById('send-callsign').value;
+    const pubkey = document.getElementById('send-pubkey').value;
+
+    if (!to) {
+        showAlert(T.error_no_callsign, 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/send-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callsign: callsign, public_key: pubkey, to: to })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(T.key_sent + ' (' + result.to + ')', 'success');
+            closeSendModal();
+        } else {
+            showAlert(T.error + ': ' + result.error, 'error');
+        }
+    } catch (e) {
+        showAlert(T.error + ': ' + e.message, 'error');
+    }
+}
+
+// ============================================================================
+// Inbox scan
+// ============================================================================
+async function scanInbox() {
+    try {
+        const response = await fetch('/api/scan-inbox');
+        const data = await response.json();
+
+        const results = document.getElementById('inbox-results');
+
+        if (!data.keys || data.keys.length === 0) {
+            results.innerHTML = '<div class="key-empty">' + T.inbox_empty + '</div>';
+        } else {
+            let html = '';
+            data.keys.forEach(key => {
+                const imported = key.already_imported
+                    ? '<span class="key-badge imported">&#x2713;</span>'
+                    : '';
+                html += `
+                    <div class="key-card">
+                        <div class="key-header">
+                            <span class="key-callsign">${key.callsign}</span>
+                            ${imported}
+                            <span class="key-sender">${T.inbox_from} ${key.sender}</span>
+                        </div>
+                        <div class="key-value">${key.public}</div>
+                        <div class="key-actions">
+                            <button class="btn btn-sm btn-primary" onclick="importKey('${key.callsign}', '${key.public}')"
+                                    ${key.already_imported ? 'disabled' : ''}>
+                                ${T.inbox_import}
+                            </button>
+                        </div>
+                    </div>`;
+            });
+            results.innerHTML = html;
+        }
+
+        document.getElementById('inbox-modal').style.display = 'flex';
+    } catch (e) {
+        showAlert(T.error_pat_not_found, 'error');
+    }
+}
+
+function closeInboxModal() {
+    document.getElementById('inbox-modal').style.display = 'none';
+}
+
+async function importKey(callsign, publicKey) {
+    try {
+        const response = await fetch('/api/import-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callsign: callsign, public_key: publicKey })
+        });
+        const result = await response.json();
+        if (result.success) {
+            showAlert(T.key_imported + ' ' + result.callsign + '. ' + (result.reloaded ? T.restart_notice : T.restart_required), 'success');
+            closeInboxModal();
+            loadKeys();
+        } else {
+            showAlert(T.error + ': ' + result.error, 'error');
+        }
+    } catch (e) {
+        showAlert(T.error + ': ' + e.message, 'error');
+    }
+}
+
+// ============================================================================
+// Init
+// ============================================================================
+document.addEventListener('DOMContentLoaded', loadKeys);
+
+// Auto-uppercase callsign inputs
+document.getElementById('genkey-callsign').addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+});
+</script>
+{% endblock %}

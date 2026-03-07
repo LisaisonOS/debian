@@ -1,0 +1,14 @@
+[Unit]
+Description=EmComm-Tools First Boot Setup
+After=multi-user.target
+ConditionPathExists=!/var/lib/emcomm-tools/.firstboot-done
+
+[Service]
+Type=oneshot
+ExecStart=/opt/emcomm-tools/sbin/firstboot-setup.sh
+ExecStartPost=/bin/mkdir -p /var/lib/emcomm-tools
+ExecStartPost=/bin/touch /var/lib/emcomm-tools/.firstboot-done
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

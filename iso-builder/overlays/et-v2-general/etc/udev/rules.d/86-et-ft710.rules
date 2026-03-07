@@ -1,0 +1,48 @@
+# Author   : VA2OPS
+# Date     : 26 February 2026
+# Purpose  : udev rules for the Yaesu FT-710 via native USB
+#
+# Notes    : FT-710 uses Silicon Labs CP2105 (10c4:ea70), same chip as FT-991A.
+#            Two serial interfaces: bInterfaceNumber 00 = Enhanced (CAT control),
+#            bInterfaceNumber 01 = Standard (not used for CAT).
+#            Since FT-710 and FT-991A share the same USB vendor:product IDs,
+#            the PROGRAM check (udev-tester.sh) is required to distinguish them.
+#
+# CAUTION  : This is a BEST EFFORT rule — no FT-710 hardware was available for
+#            testing. If the symlink points to the wrong port, debug with:
+#              udevadm info -a -n /dev/ttyUSBx | grep -E 'serial|Interface|idVendor|idProduct'
+#              udevadm info --query=all --name=/dev/ttyUSBx
+#
+# Preconditions:
+# 1. Yaesu FT-710 is selected via et-radio
+# 2. Yaesu FT-710 is powered on and connected via USB cable
+#
+# Postconditions:
+# 1. /dev/et-cat created
+# 2. /dev/et-audio created
+# 3. rigctld is started
+
+# Tag the first serial interface (Enhanced = CAT control) as FT-710.
+# bInterfaceNumber 00 is the Enhanced COM port on CP2105.
+# PROGRAM check ensures this only matches when FT-710 is the active radio.
+KERNEL=="ttyUSB[0-9]*", SUBSYSTEM=="tty", PROGRAM="/opt/emcomm-tools/sbin/udev-tester.sh yaesu-ft710", \
+    ATTRS{bInterfaceNumber}=="00", \
+    ENV{ET_DEVICE}="FT-710"
+
+# CAT control device — only matches when ET_DEVICE was tagged above.
+SUBSYSTEM=="tty", ENV{ET_DEVICE}=="FT-710", \
+    ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea70",\
+    ACTION=="add", \
+    ENV{ET_SUBDEVICE}="CAT", GROUP="dialout", MODE="0660", SYMLINK+="et-cat", \
+    RUN+="/usr/bin/systemctl start rigctld"
+
+# Audio device — FT-710 has a built-in USB audio codec.
+# The USB audio IDs below are best-effort (08bb:29b3 = Texas Instruments PCM2900-series).
+# If audio does not work, identify the correct IDs with:
+#   udevadm info -a -n /dev/snd/pcmC*D*p | grep -E 'idVendor|idProduct'
+SUBSYSTEM=="sound", ATTRS{idVendor}=="08bb", ATTRS{idProduct}=="29b3", \
+    PROGRAM="/opt/emcomm-tools/sbin/udev-tester.sh yaesu-ft710", \
+    ACTION=="add", \
+    ENV{ET_DEVICE}="FT-710", \
+    ATTR{id}="ET_AUDIO", \
+    ENV{ET_SUBDEVICE}="AUDIO", GROUP="audio", MODE="0660", SYMLINK+="et-audio"

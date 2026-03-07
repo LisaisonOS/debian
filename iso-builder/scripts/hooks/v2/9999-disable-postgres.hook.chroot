@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+systemctl disable postgresql || true
+systemctl disable emcomm-postgres-init.service || true

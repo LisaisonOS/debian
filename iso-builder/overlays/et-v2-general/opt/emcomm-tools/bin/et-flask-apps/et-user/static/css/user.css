@@ -1,0 +1,215 @@
+/*
+ * et-user - User Configuration Stylesheet
+ * Author: Sylvain Deguire (VA2OPS)
+ * Date: January 2026
+ */
+
+/* Language selector */
+.language-selector {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.lang-btn {
+    padding: 6px 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lang-btn:hover {
+    border-color: var(--accent-primary);
+    background: rgba(255, 165, 0, 0.1);
+}
+
+.lang-btn.active {
+    border-color: var(--accent-primary);
+    background: rgba(255, 165, 0, 0.15);
+}
+
+/* Form styling */
+.form-section {
+    margin-bottom: 10px;
+}
+
+.form-section h3 {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group {
+    margin-bottom: 10px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 3px;
+    font-size: 0.85rem;
+}
+
+.form-group .hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.form-group input::placeholder {
+    color: var(--text-muted);
+}
+
+/* Input with button */
+.input-with-btn {
+    display: flex;
+    gap: 6px;
+}
+
+.input-with-btn input {
+    flex: 1;
+}
+
+.input-with-btn .btn {
+    white-space: nowrap;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+}
+
+/* Checkbox group */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.checkbox-group:hover {
+    border-color: var(--accent-primary);
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.checkbox-group .hint {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+/* Divider */
+.divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 10px 0;
+}
+
+/* Success state */
+.success-view {
+    text-align: center;
+}
+
+.success-icon {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-success), #16a34a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    animation: pop 0.4s ease;
+}
+
+@keyframes pop {
+    0% { transform: scale(0); }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.success-details {
+    background: var(--bg-input);
+    border-radius: 6px;
+    padding: 10px;
+    margin: 12px 0;
+    text-align: left;
+}
+
+.success-details .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+    font-size: 0.85rem;
+}
+
+.success-details .detail-row .label {
+    color: var(--text-secondary);
+}
+
+.success-details .detail-row .value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Compact adjustments */
+.card-header {
+    padding: 12px 16px !important;
+}
+
+.card-header h1 {
+    font-size: 1.2rem !important;
+    margin-bottom: 2px !important;
+}
+
+.card-header .subtitle {
+    font-size: 0.8rem !important;
+}
+
+.card-body {
+    padding: 12px 16px 2px 16px !important;
+}
+
+.btn-group {
+    margin-top: 6px !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}

@@ -1,0 +1,24 @@
+#!/bin/bash
+echo "Installing QtTermTCP..."
+
+VERSION="latest"
+BIN_FILE="QtTermTCP"
+INSTALL_DIR="/opt/qttermtcp-${VERSION}"
+INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
+LINK_PATH="/opt/qttermtcp"
+
+# QtTermTCP needs 32-bit Qt libs
+apt-get install -y libqt5core5t64 libqt5gui5t64 libqt5widgets5t64 libqt5network5t64 libqt5serialport5
+
+URL="https://www.cantab.net/users/john.wiseman/Downloads/${BIN_FILE}"
+
+mkdir -p ${INSTALL_BIN_DIR}
+curl -s -L -o ${INSTALL_BIN_DIR}/${BIN_FILE} --fail ${URL}
+chmod 755 ${INSTALL_BIN_DIR}/${BIN_FILE}
+
+[ -e ${LINK_PATH} ] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+stow -v -d /opt qttermtcp -t /usr/local
+
+echo "QtTermTCP installation complete"

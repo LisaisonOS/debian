@@ -1,0 +1,1557 @@
+#!/usr/bin/env python3
+"""
+et-dashboard v2 - EmComm-Tools Interactive Dashboard with Integrated Mode Selector
+Author: Sylvain Deguire (VA2OPS)
+Date: January 2026
+Updated: 26 February 2026 - Sylvain Deguire (VA2OPS)
+  CAT indicator shows neutral "N/A" for audio-only radios (DigiRig Lite) instead of red X
+
+Features:
+- Integrated mode selector (no separate et-mode window needed)
+- Recent/Favorite modes quick access
+- Touch-friendly AND mouse-friendly
+- Collapsible categories
+"""
+
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk, GLib, Gdk, Pango
+import subprocess
+import os
+import json
+import threading
+import time
+import signal
+import socket
+from pathlib import Path
+
+SUPERVISOR_SOCK = f"/run/user/{os.getuid()}/et-supervisor.sock"
+
+
+class SupervisorClient:
+    """IPC client for et-supervisor daemon."""
+
+    def send_command(self, cmd_dict, timeout=3):
+        """Send a command to supervisor, return response dict or None."""
+        if not os.path.exists(SUPERVISOR_SOCK):
+            return None
+        try:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
+            sock.connect(SUPERVISOR_SOCK)
+            sock.sendall(json.dumps(cmd_dict).encode() + b"\n")
+            data = sock.recv(8192)
+            sock.close()
+            return json.loads(data.decode("utf-8"))
+        except (ConnectionRefusedError, socket.timeout, OSError,
+                json.JSONDecodeError):
+            return None
+
+    def status(self):
+        return self.send_command({"cmd": "status"})
+
+    def start_mode(self, mode_id, params=None):
+        msg = {"cmd": "start-mode", "mode": mode_id}
+        if params:
+            msg["params"] = params
+        return self.send_command(msg, timeout=120)
+
+    def stop(self):
+        return self.send_command({"cmd": "stop"}, timeout=10)
+
+
+def get_wine_env():
+    """
+    Get environment dictionary with WINEPREFIX set for Wine apps.
+    
+    CRITICAL: .bash_profile sets WINEPREFIX in terminals, but subprocess.Popen
+    doesn't load profiles. Without this, Wine looks in ~/.wine instead of ~/.wine32,
+    causing VARA and other Wine apps to fail with "DLL not found" errors.
+    """
+    env = os.environ.copy()
+    env['WINEPREFIX'] = os.path.expanduser('~/.wine32')
+    env['WINEARCH'] = 'win32'
+    return env
+
+
+def wait_for_port(port, host='localhost', timeout=30):
+    """
+    Wait until a TCP port is accepting connections.
+    Returns True if port is ready, False if timeout.
+    """
+    print(f"Waiting for port {port} to be ready...")
+    elapsed = 0
+    while elapsed < timeout:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            sock.connect((host, port))
+            sock.close()
+            print(f"Port {port} is ready!")
+            return True
+        except (socket.error, socket.timeout):
+            time.sleep(0.5)
+            elapsed += 0.5
+    print(f"Timeout waiting for port {port}")
+    return False
+
+
+def check_radio_ready():
+    """
+    Check if radio is ready by testing if rigctld is listening on port 4532.
+    When radio is plugged in, udev automatically starts rigctld.
+    Returns (success, message)
+    """
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        sock.connect(('localhost', 4532))
+        sock.close()
+        return True, "ok"
+    except:
+        return False, "no_radio"
+
+
+def start_and_wait_for_service(service_name, timeout=30, interval=0.5, wait_port=None):
+    """
+    Start a systemd user service and wait until it's active.
+    Optionally wait for a TCP port to be ready.
+    Returns (success, message)
+    """
+    print(f"Starting {service_name}...")
+    
+    # Start the service
+    result = subprocess.run(
+        ["systemctl", "--user", "start", service_name],
+        capture_output=True, text=True
+    )
+    
+    if result.returncode != 0:
+        return False, f"Failed to start {service_name}: {result.stderr}"
+    
+    # Wait for it to become active
+    elapsed = 0
+    while elapsed < timeout:
+        check = subprocess.run(
+            ["systemctl", "--user", "is-active", "--quiet", service_name],
+            capture_output=True
+        )
+        if check.returncode == 0:
+            # Service is active
+            # Verify it didn't fail immediately after starting
+            check2 = subprocess.run(
+                ["systemctl", "--user", "is-failed", "--quiet", service_name],
+                capture_output=True
+            )
+            if check2.returncode == 0:
+                return False, f"{service_name} failed after starting"
+            
+            print(f"{service_name} is active")
+            
+            # If a port was specified, wait for it to be ready
+            if wait_port:
+                if not wait_for_port(wait_port, timeout=timeout):
+                    return False, f"{service_name} started but port {wait_port} not ready"
+            
+            return True, f"{service_name} started successfully"
+        
+        time.sleep(interval)
+        elapsed += interval
+    
+    return False, f"Timeout waiting for {service_name}"
+
+# Configuration paths
+ET_CONFIG_DIR = Path.home() / ".config" / "emcomm-tools"
+USER_CONFIG_FILE = ET_CONFIG_DIR / "user.json"
+MODE_STATUS_FILE = Path.home() / ".local/share/emcomm-tools/mode-status"
+
+# Flask app paths
+FLASK_APPS_DIR = "/opt/emcomm-tools/share"
+FLASK_APPS = {
+    'et-user': {'port': 5054, 'script': 'et-user.py'},
+    'et-radio': {'port': 5052, 'script': 'et-radio.py'},
+    'et-firstboot': {'port': 5051, 'script': 'et-firstboot.py'},
+    'et-chattervox-keys': {'port': 5055, 'script': 'et-chattervox-keys.py'},
+}
+
+# Mode definitions with categories
+MODE_CATEGORIES = {
+    'winlink': {
+        'icon': '📧',
+        'label': 'Winlink',
+        'label_fr': 'Winlink',
+        'modes': [
+            {'id': 'winlink-vara-hf', 'name': 'Winlink + VARA HF'},
+            {'id': 'winlink-vara-fm', 'name': 'Winlink + VARA FM'},
+            {'id': 'winlink-packet', 'name': 'Winlink + Packet'},
+            {'id': 'winlink-ardop', 'name': 'Winlink + ARDOP'},
+        ]
+    },
+    'digital': {
+        'icon': '💬',
+        'label': 'Digital Chat',
+        'label_fr': 'Chat Numérique',
+        'modes': [
+            {'id': 'js8call', 'name': 'JS8Call'},
+            {'id': 'varac', 'name': 'VarAC'},
+            {'id': 'fldigi', 'name': 'Fldigi'},
+            {'id': 'chat-chattervox', 'name': 'Chattervox'},
+            {'id': 'chat-chattervox-bt', 'name': 'Chattervox (BT)'},
+        ]
+    },
+    'packet': {
+        'icon': '📡',
+        'label': 'Packet/BBS',
+        'label_fr': 'Packet/BBS',
+        'modes': [
+            {'id': 'bbs-client-paracon', 'name': 'BBS Client (Paracon)'},
+            {'id': 'bbs-client-qttermtcp', 'name': 'BBS Client (QtTermTCP)'},
+            {'id': 'bbs-server', 'name': 'BBS Server (LinBPQ)'},
+            {'id': 'aprs-client', 'name': 'APRS (YAAC)'},
+            {'id': 'aprs-client-bt', 'name': 'APRS (YAAC BT)'},
+        ]
+    },
+    'others': {
+        'icon': '📻',
+        'label': 'Others',
+        'label_fr': 'Autres',
+        'modes': [
+            {'id': 'ft8', 'name': 'FT8/FT4 (WSJT-X)'},
+            {'id': 'direwolf-tnc', 'name': 'Direwolf KISS TNC'},
+        ]
+    },
+}
+
+# Maximum recent modes to track
+MAX_RECENT = 3
+
+
+class EmCommDashboard(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="EmComm Dashboard")
+        
+        # Load user config
+        self.user_config = self.load_user_config()
+        self.recent_modes = self.user_config.get('recent_modes', [])
+        self.language = self.user_config.get('language', 'en')
+        
+        # Supervisor IPC client
+        self.supervisor = SupervisorClient()
+        self._last_crash_notified = None
+        self._active_mode_id = None
+
+        # Track expanded categories
+        self.expanded_categories = {}
+
+        # Track running Flask apps (prevent double-launch)
+        self.running_apps = {}
+        
+        # Get screen for adaptive sizing using modern Display/Monitor API
+        self.display = Gdk.Display.get_default()
+        self.monitor = self.display.get_primary_monitor() or self.display.get_monitor(0)
+        workarea = self.monitor.get_workarea()
+        self.screen_width = workarea.width
+        self.screen_height = workarea.height
+        self.screen_x = workarea.x
+        self.screen_y = workarea.y
+
+        # Keep screen reference for visual/CSS (still needed)
+        self.screen = Gdk.Screen.get_default()
+
+        # Fractional scaling fix: Gdk.Screen.get_width() returns the actual
+        # X11 root window size (reflects xrandr transforms), while
+        # Monitor.get_workarea() returns the physical monitor size.
+        # When XFCE uses fractional scaling (e.g. 2.5x = GDK_SCALE=2 + xrandr),
+        # the root window is SMALLER. Use the smaller value to prevent overflow.
+        x_root_w = self.screen.get_width()
+        x_root_h = self.screen.get_height()
+        if x_root_w < self.screen_width:
+            print(f"Fractional scaling: monitor={self.screen_width}x{self.screen_height}, "
+                  f"visible={x_root_w}x{x_root_h}")
+            self.screen_width = x_root_w
+            self.screen_height = min(self.screen_height, x_root_h)
+
+        self.calculate_adaptive_sizes()
+        
+        # Window setup - desktop widget style
+        self.set_decorated(False)
+        self.set_skip_taskbar_hint(True)
+        self.set_skip_pager_hint(True)
+        self.set_keep_below(True)
+        self.set_type_hint(Gdk.WindowTypeHint.DOCK)
+        self.stick()
+        self.set_accept_focus(False)
+        
+        self.connect("delete-event", self.on_delete_event)
+        # Monitor changes via display signal
+        self.display.connect("monitor-added", self.on_monitor_changed)
+        self.display.connect("monitor-removed", self.on_monitor_changed)
+        
+        # Approach 3: Listen to geometry/scale changes on the monitor itself
+        if self.monitor:
+            self.monitor.connect("notify::geometry", self.on_geometry_notify)
+            self.monitor.connect("notify::scale-factor", self.on_geometry_notify)
+        
+        # Approach 1: Listen to window configure events (position/size changes)
+        self.connect("configure-event", self.on_configure_event)
+        
+        # Track last known position to detect drift
+        self._last_expected_x = None
+        
+        # Position top-right within workarea
+        self.set_default_size(self.panel_width, -1)
+        self.set_size_request(self.panel_width, -1)
+        self.move(self.screen_x + self.screen_width - self.panel_width - self.margin,
+                  self.screen_y + self.margin)
+
+        # Lock width: min = max = panel_width
+        hints = Gdk.Geometry()
+        hints.min_width = self.panel_width
+        hints.max_width = self.panel_width
+        hints.max_height = self.screen_height
+        self.set_geometry_hints(None, hints,
+                                Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE)
+        
+        # Transparent background
+        self.set_app_paintable(True)
+        visual = self.screen.get_rgba_visual()
+        if visual:
+            self.set_visual(visual)
+        
+        self.apply_css()
+        
+        # Main container with scrolling for mode selector
+        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.main_box.set_name("dashboard")
+        self.main_box.set_size_request(-1, -1)
+        self.add(self.main_box)
+        
+        self.build_ui()
+        
+        # Auto-resize to fit content (multiple passes for GTK layout timing)
+        self.show_all()
+        GLib.idle_add(self.auto_resize_height)
+        GLib.timeout_add(300, self.auto_resize_height)
+        GLib.timeout_add(1000, self.auto_resize_height)
+        
+        # UTC clock updates every second, system checks every 2 seconds
+        GLib.timeout_add_seconds(1, self.update_utc)
+        GLib.timeout_add_seconds(2, self.update_info)
+    
+    def load_user_config(self):
+        """Load user configuration."""
+        if USER_CONFIG_FILE.exists():
+            try:
+                with open(USER_CONFIG_FILE, 'r') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"Warning: Could not load user config: {e}")
+        return {}
+    
+    def save_user_config(self):
+        """Save only recent_modes to user configuration (preserve other fields)."""
+        ET_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Re-read the current config to preserve all fields
+        current_config = {}
+        if USER_CONFIG_FILE.exists():
+            try:
+                with open(USER_CONFIG_FILE, 'r') as f:
+                    current_config = json.load(f)
+            except Exception:
+                pass
+        
+        # Only update recent_modes, preserve everything else
+        current_config['recent_modes'] = self.recent_modes
+        
+        with open(USER_CONFIG_FILE, 'w') as f:
+            json.dump(current_config, f, indent=2)
+    
+    def add_to_recent(self, mode_id):
+        """Add mode to recent list."""
+        if mode_id in self.recent_modes:
+            self.recent_modes.remove(mode_id)
+        self.recent_modes.insert(0, mode_id)
+        self.recent_modes = self.recent_modes[:MAX_RECENT]
+        self.save_user_config()
+        self.rebuild_mode_section()
+    
+    def get_mode_by_id(self, mode_id):
+        """Find mode definition by ID."""
+        for cat_id, cat in MODE_CATEGORIES.items():
+            for mode in cat['modes']:
+                if mode['id'] == mode_id:
+                    return mode, cat
+        return None, None
+    
+    def calculate_adaptive_sizes(self):
+        """Calculate sizes based on screen resolution"""
+        if self.screen_width >= 1920:
+            self.panel_width = 380
+            self.margin = 10
+            self.font_header = 15
+            self.font_info = 14
+            self.font_callsign = 18
+            self.font_utc = 16
+            self.font_button = 13
+            self.font_mode = 14
+            self.font_version = 12
+            self.padding = 12
+            self.btn_padding = "8px 12px"
+            self.mode_btn_padding = "10px 14px"
+        elif self.screen_width >= 1680:
+            self.panel_width = 340
+            self.margin = 8
+            self.font_header = 14
+            self.font_info = 13
+            self.font_callsign = 16
+            self.font_utc = 14
+            self.font_button = 12
+            self.font_mode = 13
+            self.font_version = 11
+            self.padding = 10
+            self.btn_padding = "6px 10px"
+            self.mode_btn_padding = "8px 12px"
+        elif self.screen_width >= 1366:
+            self.panel_width = 300
+            self.margin = 6
+            self.font_header = 12
+            self.font_info = 11
+            self.font_callsign = 14
+            self.font_utc = 12
+            self.font_button = 10
+            self.font_mode = 12
+            self.font_version = 10
+            self.padding = 8
+            self.btn_padding = "5px 8px"
+            self.mode_btn_padding = "7px 10px"
+        else:
+            # Small screens (7" toughpad ~1024x600 or 1280x800)
+            # Make everything BIGGER for touch
+            self.panel_width = 300
+            self.margin = 5
+            self.font_header = 14
+            self.font_info = 13
+            self.font_callsign = 16
+            self.font_utc = 14
+            self.font_button = 12
+            self.font_mode = 14
+            self.font_version = 11
+            self.padding = 8
+            self.btn_padding = "10px 14px"
+            self.mode_btn_padding = "12px 16px"
+        
+        print(f"Screen: {self.screen_width}x{self.screen_height} -> Panel: {self.panel_width}px")
+
+    def on_monitor_changed(self, display, monitor=None):
+        """Handle monitor/resolution changes"""
+        self.monitor = display.get_primary_monitor() or display.get_monitor(0)
+        if self.monitor:
+            # Reconnect geometry signals to new monitor
+            self.monitor.connect("notify::geometry", self.on_geometry_notify)
+            self.monitor.connect("notify::scale-factor", self.on_geometry_notify)
+            self.handle_screen_change()
+    
+    def on_geometry_notify(self, monitor, pspec):
+        """Handle monitor geometry or scale factor changes (Approach 3)"""
+        print(f"Monitor property changed: {pspec.name}")
+        # Use idle_add to avoid processing during signal emission
+        GLib.idle_add(self.handle_screen_change)
+    
+    def on_configure_event(self, widget, event):
+        """Handle window configuration changes (Approach 1)"""
+        expected_x = self.screen_x + self.screen_width - self.panel_width - self.margin
+        current_x = event.x
+
+        # If significantly off position (more than 20px), something changed
+        if abs(current_x - expected_x) > 20:
+            print(f"Position drift detected: expected x={expected_x}, got x={current_x}")
+            GLib.timeout_add(100, self.handle_screen_change)
+
+        return False  # Allow event to propagate
+
+    def handle_screen_change(self):
+        """Central handler for any screen/geometry change"""
+        if not self.monitor:
+            self.monitor = self.display.get_primary_monitor() or self.display.get_monitor(0)
+
+        if not self.monitor:
+            return False
+
+        workarea = self.monitor.get_workarea()
+        new_width = workarea.width
+        new_height = workarea.height
+        new_x_off = workarea.x
+        new_y_off = workarea.y
+
+        # Apply fractional scaling correction (X root may be smaller)
+        x_root_w = self.screen.get_width()
+        x_root_h = self.screen.get_height()
+        if x_root_w < new_width:
+            new_width = x_root_w
+            new_height = min(new_height, x_root_h)
+
+        print(f"Screen check: {new_width}x{new_height} at ({new_x_off},{new_y_off})")
+
+        size_changed = (new_width != self.screen_width or new_height != self.screen_height)
+
+        if size_changed:
+            print(f"Screen size changed: {self.screen_width}x{self.screen_height} -> {new_width}x{new_height}")
+            self.screen_width = new_width
+            self.screen_height = new_height
+            self.screen_x = new_x_off
+            self.screen_y = new_y_off
+            self.calculate_adaptive_sizes()
+            self.apply_css()
+            self.set_size_request(self.panel_width, -1)
+            self.resize(self.panel_width, 1)
+            hints = Gdk.Geometry()
+            hints.min_width = self.panel_width
+            hints.max_width = self.panel_width
+            hints.max_height = self.screen_height
+            self.set_geometry_hints(None, hints,
+                                    Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE)
+            self.rebuild_ui()
+
+        # Always reposition to correct location
+        new_x = self.screen_x + self.screen_width - self.panel_width - self.margin
+        new_y = self.screen_y + self.margin
+        self.move(new_x, new_y)
+        self._last_expected_x = new_x
+
+        # Trigger height recalculation
+        GLib.idle_add(self.auto_resize_height)
+
+        return False  # Don't repeat if called from timeout
+    
+    def rebuild_ui(self):
+        """Rebuild entire UI"""
+        for child in self.main_box.get_children():
+            self.main_box.remove(child)
+        self.apply_css()
+        self.build_ui()
+        self.show_all()
+        # Auto-resize after a short delay to let GTK calculate sizes
+        GLib.idle_add(self.auto_resize_height)
+    
+    def rebuild_mode_section(self):
+        """Rebuild just the mode section"""
+        if hasattr(self, 'mode_container'):
+            for child in self.mode_container.get_children():
+                self.mode_container.remove(child)
+            self.build_mode_selector(self.mode_container)
+            self.mode_container.show_all()
+            # Auto-resize after rebuild
+            GLib.idle_add(self.auto_resize_height)
+    
+    def apply_css(self):
+        css_template = """
+        #dashboard {{
+            background-color: rgba(26, 26, 26, 0.95);
+            border-radius: 8px;
+            padding: {padding}px;
+        }}
+        .section-header {{
+            color: #E0E0E0;
+            font-weight: bold;
+            font-size: {font_header}px;
+        }}
+        .info-label {{
+            color: #9E9E9E;
+            font-family: monospace;
+            font-size: {font_info}px;
+        }}
+        .callsign {{
+            color: #FFA500;
+            font-family: monospace;
+            font-size: {font_callsign}px;
+            font-weight: bold;
+        }}
+        .utc-time {{
+            color: #9E9E9E;
+            font-family: monospace;
+            font-size: {font_utc}px;
+        }}
+        .config-button {{
+            padding: 4px 8px;
+            min-height: 0;
+            min-width: 0;
+            font-size: {font_button}px;
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            color: #9E9E9E;
+            border-radius: 4px;
+        }}
+        .config-button:hover {{
+            background: #3d3d3d;
+            border-color: #FFA500;
+            color: #E0E0E0;
+        }}
+        
+        /* Clickable section - entire area is clickable */
+        #clickable-section {{
+            padding: 8px;
+            border-radius: 6px;
+            background: transparent;
+        }}
+        #clickable-section:hover {{
+            background: rgba(255, 165, 0, 0.1);
+        }}
+        
+        /* Config icon (gear) */
+        .config-icon {{
+            color: #666666;
+            font-size: {font_button}px;
+        }}
+        #clickable-section:hover .config-icon {{
+            color: #FFA500;
+        }}
+        
+        .separator {{
+            background-color: #404040;
+            min-height: 1px;
+        }}
+        
+        /* Recent mode buttons - prominent, touch-friendly */
+        .recent-mode-btn {{
+            padding: {mode_btn_padding};
+            font-size: {font_mode}px;
+            background: #2d2d2d;
+            border: 1px solid #505050;
+            color: #E0E0E0;
+            border-radius: 6px;
+            font-weight: bold;
+        }}
+        .recent-mode-btn:hover {{
+            background: #3d3d3d;
+            border-color: #FFA500;
+            color: #FFFFFF;
+        }}
+        .recent-mode-btn:active {{
+            background: #252525;
+            border-color: #FFA500;
+        }}
+        
+        /* Category header buttons */
+        .category-btn {{
+            padding: 6px 10px;
+            font-size: {font_mode}px;
+            background: transparent;
+            border: none;
+            color: #B0B0B0;
+            border-radius: 4px;
+        }}
+        .category-btn:hover {{
+            background: #2d2d2d;
+            color: #FFFFFF;
+        }}
+        
+        /* Mode buttons inside categories */
+        .mode-btn {{
+            padding: 8px 12px;
+            font-size: {font_mode}px;
+            background: #252525;
+            border: 1px solid #353535;
+            color: #C0C0C0;
+            border-radius: 4px;
+            margin: 2px 0;
+        }}
+        .mode-btn:hover {{
+            background: #353535;
+            border-color: #FFA500;
+            color: #FFFFFF;
+        }}
+        .mode-btn:active {{
+            background: #202020;
+            border-color: #FFA500;
+        }}
+        
+        /* Current mode indicator */
+        .current-mode {{
+            color: #4ade80;
+            font-weight: bold;
+            font-size: {font_info}px;
+        }}
+        .stop-button {{
+            padding: 2px 8px;
+            min-height: 0;
+            min-width: 0;
+            font-size: {font_button}px;
+            font-weight: bold;
+            background: #CC0000;
+            border: 1px solid #990000;
+            color: #FFFFFF;
+            border-radius: 3px;
+        }}
+        .stop-button:hover {{
+            background: #FF0000;
+        }}
+        .key-button {{
+            padding: 1px 4px;
+            min-height: 0;
+            min-width: 0;
+            font-size: {font_info}px;
+            background: #2E7D32;
+            border: 1px solid #1B5E20;
+            color: #FFFFFF;
+            border-radius: 3px;
+        }}
+        .key-button:hover {{
+            background: #388E3C;
+        }}
+        .process-label {{
+            color: #888888;
+            font-family: monospace;
+            font-size: {font_info}px;
+        }}
+        .version-label {{
+            color: #555555;
+            font-family: monospace;
+            font-size: {font_version}px;
+        }}
+        """
+        
+        css = css_template.format(
+            padding=self.padding,
+            font_header=self.font_header,
+            font_info=self.font_info,
+            font_callsign=self.font_callsign,
+            font_utc=self.font_utc,
+            font_button=self.font_button,
+            font_mode=self.font_mode,
+            font_version=self.font_version,
+            btn_padding=self.btn_padding,
+            mode_btn_padding=self.mode_btn_padding
+        )
+        
+        style_provider = Gtk.CssProvider()
+        style_provider.load_from_data(css.encode())
+        Gtk.StyleContext.add_provider_for_screen(
+            self.screen,
+            style_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+    
+    def auto_resize_height(self):
+        """Auto-adjust window height to fit content, using available screen space"""
+        # Force GTK to recalculate layout before measuring
+        self.main_box.queue_resize()
+        self.main_box.check_resize()
+
+        # Get natural size of content
+        min_height, nat_height = self.main_box.get_preferred_height()
+
+        # Add padding for window chrome
+        target_height = nat_height + (self.padding * 2) + 10
+
+        # Max height: full screen minus top margin and taskbar
+        taskbar_height = 50 if self.screen_width >= 1920 else 45
+        max_height = self.screen_height - self.margin - taskbar_height
+
+        # Use as much height as content needs, up to max
+        final_height = min(target_height, max_height)
+
+        # Resize window and reposition to maintain right-margin alignment
+        self.resize(self.panel_width, final_height)
+        self.move(self.screen_x + self.screen_width - self.panel_width - self.margin,
+                  self.screen_y + self.margin)
+
+        return False  # Don't repeat
+    
+    def build_ui(self):
+        # === UTC / GPS Section ===
+        time_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        time_box.set_margin_bottom(5)
+        
+        self.utc_label = Gtk.Label()
+        self.utc_label.get_style_context().add_class("utc-time")
+        time_box.pack_start(self.utc_label, False, False, 0)
+        
+        self.gps_label = Gtk.Label()
+        self.gps_label.get_style_context().add_class("info-label")
+        time_box.pack_end(self.gps_label, False, False, 0)
+        
+        self.main_box.pack_start(time_box, False, False, 0)
+        self.main_box.pack_start(self.create_separator(), False, False, 5)
+        
+        # === OPERATOR Section (entire section clickable) ===
+        op_event_box = Gtk.EventBox()
+        op_event_box.connect("button-press-event", lambda w, e: self.on_user_clicked(w))
+        op_event_box.connect("realize", lambda w: w.get_window().set_cursor(
+            Gdk.Cursor.new_from_name(w.get_display(), "pointer")))
+        op_event_box.set_name("clickable-section")
+        
+        op_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        op_container.set_margin_bottom(5)
+        
+        op_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        op_label = Gtk.Label(label="OPÉRATEUR" if self.language == 'fr' else "OPERATOR")
+        op_label.get_style_context().add_class("section-header")
+        op_header.pack_start(op_label, False, False, 0)
+        
+        op_icon = Gtk.Label(label="⚙")
+        op_icon.get_style_context().add_class("config-icon")
+        op_header.pack_end(op_icon, False, False, 0)
+        
+        op_container.pack_start(op_header, False, False, 0)
+        
+        self.op_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.op_box.set_margin_start(5)
+        
+        self.callsign_label = Gtk.Label()
+        self.callsign_label.get_style_context().add_class("callsign")
+        self.op_box.pack_start(self.callsign_label, False, False, 0)
+        
+        self.grid_label = Gtk.Label()
+        self.grid_label.get_style_context().add_class("info-label")
+        self.op_box.pack_start(self.grid_label, False, False, 0)
+        
+        op_container.pack_start(self.op_box, False, False, 0)
+        
+        op_event_box.add(op_container)
+        self.main_box.pack_start(op_event_box, False, False, 0)
+        self.main_box.pack_start(self.create_separator(), False, False, 5)
+        
+        # === INTERFACES Section (entire section clickable) ===
+        iface_event_box = Gtk.EventBox()
+        iface_event_box.connect("button-press-event", lambda w, e: self.on_radio_clicked(w))
+        iface_event_box.connect("realize", lambda w: w.get_window().set_cursor(
+            Gdk.Cursor.new_from_name(w.get_display(), "pointer")))
+        iface_event_box.set_name("clickable-section")
+        
+        iface_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        iface_container.set_margin_bottom(5)
+        
+        iface_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        iface_label = Gtk.Label(label="INTERFACES")
+        iface_label.get_style_context().add_class("section-header")
+        iface_header.pack_start(iface_label, False, False, 0)
+        
+        iface_icon = Gtk.Label(label="⚙")
+        iface_icon.get_style_context().add_class("config-icon")
+        iface_header.pack_end(iface_icon, False, False, 0)
+        
+        iface_container.pack_start(iface_header, False, False, 0)
+        
+        self.iface_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self.iface_box.set_margin_start(5)
+
+        self.radio_label = self.create_info_row("Radio")
+
+        # CAT + Audio on same line to save vertical space
+        self.cat_audio_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        self.cat_label = Gtk.Label()
+        self.cat_label.get_style_context().add_class("info-label")
+        self.audio_label = Gtk.Label()
+        self.audio_label.get_style_context().add_class("info-label")
+        self.cat_audio_box.pack_start(self.cat_label, False, False, 0)
+        self.cat_audio_box.pack_start(self.audio_label, False, False, 0)
+
+        # BT TNC label (shown for Bluetooth modes instead of CAT/Audio)
+        self.bt_label = Gtk.Label()
+        self.bt_label.set_halign(Gtk.Align.START)
+        self.bt_label.get_style_context().add_class("info-label")
+
+        # TNC IP label (shown for direwolf-tnc mode)
+        self.tnc_ip_label = Gtk.Label()
+        self.tnc_ip_label.set_halign(Gtk.Align.START)
+        self.tnc_ip_label.get_style_context().add_class("info-label")
+
+        self.iface_box.pack_start(self.radio_label, False, False, 0)
+        self.iface_box.pack_start(self.cat_audio_box, False, False, 0)
+        self.iface_box.pack_start(self.bt_label, False, False, 0)
+        self.iface_box.pack_start(self.tnc_ip_label, False, False, 0)
+        
+        iface_container.pack_start(self.iface_box, False, False, 0)
+        
+        iface_event_box.add(iface_container)
+        self.main_box.pack_start(iface_event_box, False, False, 0)
+        self.main_box.pack_start(self.create_separator(), False, False, 5)
+        
+        # === MODE SELECTOR Section ===
+        mode_header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        
+        mode_label = Gtk.Label(label="MODE")  # Same in FR
+        mode_label.get_style_context().add_class("section-header")
+        mode_header_box.pack_start(mode_label, False, False, 0)
+        
+        # Current mode display
+        self.current_mode_label = Gtk.Label()
+        self.current_mode_label.get_style_context().add_class("current-mode")
+        self.current_mode_label.set_margin_start(10)
+        self.current_mode_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.current_mode_label.set_max_width_chars(20)
+        mode_header_box.pack_start(self.current_mode_label, True, True, 0)
+
+        # STOP button (visible when a mode is running)
+        self.stop_btn = Gtk.Button(label="ARRÊT" if self.language == 'fr' else "STOP")
+        self.stop_btn.get_style_context().add_class("stop-button")
+        self.stop_btn.connect("clicked", self.on_stop_clicked)
+        self.stop_btn.set_no_show_all(True)
+        self.stop_btn.hide()
+        mode_header_box.pack_end(self.stop_btn, False, False, 0)
+
+        # Add Key button (visible only in chattervox mode)
+        self.key_btn = Gtk.Button(label="\U0001F511")  # key emoji
+        self.key_btn.set_tooltip_text(
+            "Gestion des clés Chattervox" if self.language == 'fr'
+            else "Chattervox Key Management")
+        self.key_btn.get_style_context().add_class("key-button")
+        self.key_btn.connect("clicked", self.on_addkey_clicked)
+        self.key_btn.set_no_show_all(True)
+        self.key_btn.hide()
+        mode_header_box.pack_end(self.key_btn, False, False, 2)
+
+        self.main_box.pack_start(mode_header_box, False, False, 0)
+
+        # Process status (populated by update_info from supervisor)
+        self.process_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
+                                   spacing=1)
+        self.process_box.set_margin_start(10)
+        self.process_box.set_margin_bottom(4)
+        self.main_box.pack_start(self.process_box, False, False, 0)
+        
+        # Mode selector in scrollable container
+        self.mode_scroll = Gtk.ScrolledWindow()
+        self.mode_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.mode_scroll.set_min_content_height(100)
+        # Max height based on screen - use more available space
+        # Leave ~300px for header sections (UTC, operator, interfaces, recent)
+        max_mode_height = self.screen_height - 350
+        self.mode_scroll.set_max_content_height(max_mode_height)
+        self.mode_scroll.set_propagate_natural_height(True)
+        
+        self.mode_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        self.mode_container.set_margin_top(8)
+        self.build_mode_selector(self.mode_container)
+        
+        self.mode_scroll.add(self.mode_container)
+        self.main_box.pack_start(self.mode_scroll, True, True, 0)
+
+        # Version label at the bottom
+        version_str = self._read_version()
+        if version_str:
+            self.version_label = Gtk.Label()
+            self.version_label.set_text(f"EmComm-Tools v{version_str}")
+            self.version_label.set_halign(Gtk.Align.CENTER)
+            self.version_label.set_margin_top(4)
+            self.version_label.set_margin_bottom(4)
+            self.version_label.get_style_context().add_class("version-label")
+            self.main_box.pack_end(self.version_label, False, False, 0)
+
+        # Initial update
+        self.update_info()
+    
+    def build_mode_selector(self, container):
+        """Build the integrated mode selector"""
+        
+        # === RECENT/QUICK ACCESS ===
+        if self.recent_modes:
+            recent_label = Gtk.Label()
+            recent_label.set_markup("<span foreground='#888888' size='small'>⭐ " + 
+                                   ("RÉCENTS" if self.language == 'fr' else "RECENT") + "</span>")
+            recent_label.set_halign(Gtk.Align.START)
+            recent_label.set_margin_bottom(4)
+            container.pack_start(recent_label, False, False, 0)
+            
+            # Vertical layout for recent buttons (column, not row)
+            recent_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            recent_box.set_margin_bottom(8)
+            
+            for mode_id in self.recent_modes[:MAX_RECENT]:  # Limit to MAX_RECENT
+                mode, cat = self.get_mode_by_id(mode_id)
+                if mode:
+                    btn = Gtk.Button(label=f"{cat['icon']} {mode['name']}")
+                    btn.get_style_context().add_class("recent-mode-btn")
+                    btn.get_child().set_ellipsize(Pango.EllipsizeMode.END)
+                    btn.connect("clicked", self.on_mode_clicked, mode)
+                    btn.set_tooltip_text(f"Launch {mode['name']}")
+                    recent_box.pack_start(btn, False, False, 0)
+            
+            container.pack_start(recent_box, False, False, 0)
+            container.pack_start(self.create_separator(), False, False, 6)
+        
+        # === CATEGORIES ===
+        for cat_id, cat in MODE_CATEGORIES.items():
+            # Category header (clickable to expand/collapse)
+            cat_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            
+            # Header button
+            is_expanded = self.expanded_categories.get(cat_id, False)
+            arrow = "▼" if is_expanded else "▶"
+            label_text = cat.get(f'label_{self.language}', cat['label'])
+            
+            header_btn = Gtk.Button()
+            header_btn.set_relief(Gtk.ReliefStyle.NONE)
+            header_btn.get_style_context().add_class("category-btn")
+            
+            header_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            
+            arrow_label = Gtk.Label(label=arrow)
+            arrow_label.set_width_chars(2)
+            header_box.pack_start(arrow_label, False, False, 0)
+            
+            icon_label = Gtk.Label(label=cat['icon'])
+            header_box.pack_start(icon_label, False, False, 0)
+            
+            text_label = Gtk.Label(label=label_text)
+            text_label.set_halign(Gtk.Align.START)
+            header_box.pack_start(text_label, True, True, 0)
+            
+            # Mode count
+            count_label = Gtk.Label()
+            count_label.set_markup(f"<span foreground='#666666' size='small'>({len(cat['modes'])})</span>")
+            header_box.pack_end(count_label, False, False, 0)
+            
+            header_btn.add(header_box)
+            header_btn.connect("clicked", self.on_category_toggle, cat_id, cat_box)
+            
+            cat_box.pack_start(header_btn, False, False, 0)
+            
+            # Mode buttons (shown if expanded)
+            if is_expanded:
+                modes_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+                modes_box.set_margin_start(24)
+                modes_box.set_margin_top(4)
+                modes_box.set_margin_bottom(4)
+                
+                for mode in cat['modes']:
+                    mode_btn = Gtk.Button(label=mode['name'])
+                    mode_btn.get_style_context().add_class("mode-btn")
+                    mode_btn.get_child().set_ellipsize(Pango.EllipsizeMode.END)
+                    mode_btn.connect("clicked", self.on_mode_clicked, mode)
+                    modes_box.pack_start(mode_btn, False, False, 0)
+                
+                cat_box.pack_start(modes_box, False, False, 0)
+            
+            container.pack_start(cat_box, False, False, 0)
+    
+    def on_category_toggle(self, widget, cat_id, cat_box):
+        """Toggle category expansion (accordion - only one open at a time)"""
+        is_currently_expanded = self.expanded_categories.get(cat_id, False)
+        
+        # Close all categories first
+        for key in self.expanded_categories:
+            self.expanded_categories[key] = False
+        
+        # Toggle the clicked one (if it was closed, open it)
+        if not is_currently_expanded:
+            self.expanded_categories[cat_id] = True
+        
+        self.rebuild_mode_section()
+    
+    def on_mode_clicked(self, widget, mode):
+        """Launch selected mode via supervisor IPC."""
+        mode_id = mode['id']
+        mode_name = mode['name']
+        params = {}
+
+        # BBS clients need modem selection (restores v1 behavior)
+        if mode_id == 'bbs-client-qttermtcp':
+            modems = ['1200', '9600', '300']
+            vara_fm = os.path.expanduser(
+                "~/.wine32/drive_c/VARA FM/VARAFM.exe")
+            vara_hf = os.path.expanduser(
+                "~/.wine32/drive_c/VARA/VARA.exe")
+            if os.path.isfile(vara_fm):
+                modems.append('vara-fm')
+            if os.path.isfile(vara_hf):
+                modems.append('vara-hf')
+            modem = self.show_modem_dialog("QtTermTCP", modems)
+            if modem is None:
+                return
+            if modem == '9600':
+                self._show_9600_warning()
+            params["modem"] = modem
+
+        elif mode_id == 'bbs-client-paracon':
+            modem = self.show_modem_dialog("Paracon", ['1200', '9600', '300'])
+            if modem is None:
+                return
+            if modem == '9600':
+                self._show_9600_warning()
+            params["modem"] = modem
+
+        elif mode_id == 'bbs-server':
+            modems = ['300', '1200', '9600']
+            vara_fm = os.path.expanduser(
+                "~/.wine32/drive_c/VARA FM/VARAFM.exe")
+            vara_hf = os.path.expanduser(
+                "~/.wine32/drive_c/VARA/VARA.exe")
+            if os.path.isfile(vara_fm):
+                modems.append('vara-fm')
+            if os.path.isfile(vara_hf):
+                modems.append('vara-hf')
+            modem = self.show_modem_dialog("BBS Server", modems)
+            if modem is None:
+                return
+            if modem == '9600':
+                self._show_9600_warning()
+            params["modem"] = modem
+
+        print(f"Launching mode: {mode_name} ({mode_id})")
+
+        # Add to recent
+        self.add_to_recent(mode_id)
+
+        # Update UI to show starting state
+        starting = "Démarrage de" if self.language == 'fr' else "Starting"
+        self.current_mode_label.set_text(f"→ {starting} {mode_name}...")
+
+        # Start mode via supervisor in background thread
+        def _do_start():
+            resp = self.supervisor.start_mode(mode_id, params=params or None)
+            if resp is None:
+                err_title = "Erreur du superviseur" if self.language == 'fr' else "Supervisor Error"
+                err_msg = "et-supervisor n'est pas en cours." if self.language == 'fr' else "et-supervisor is not running."
+                GLib.idle_add(lambda: self.show_error_dialog(err_title, err_msg))
+                GLib.idle_add(
+                    lambda: self.current_mode_label.set_text(""))
+            elif resp.get("status") != "ok":
+                msg = resp.get("message", "Unknown error")
+                fail = "Échec du démarrage de" if self.language == 'fr' else "Failed to start"
+                GLib.idle_add(lambda: self.show_error_dialog(
+                    f"{fail} {mode_name}", msg))
+                GLib.idle_add(
+                    lambda: self.current_mode_label.set_text(""))
+            else:
+                GLib.idle_add(
+                    lambda: self.current_mode_label.set_text(
+                        f"● {mode_name}"))
+
+        threading.Thread(target=_do_start, daemon=True).start()
+
+    def on_stop_clicked(self, widget):
+        """Stop the current mode via supervisor IPC."""
+        stopping = "Arrêt en cours..." if self.language == 'fr' else "Stopping..."
+        self.current_mode_label.set_text(f"→ {stopping}")
+        self.stop_btn.hide()
+        self.key_btn.hide()
+
+        def _do_stop():
+            resp = self.supervisor.stop()
+            if resp and resp.get("status") == "ok":
+                GLib.idle_add(
+                    lambda: self.current_mode_label.set_text(""))
+            else:
+                msg = resp.get("message", "Unknown error") if resp else "Supervisor not running"
+                stop_fail = "Échec de l'arrêt" if self.language == 'fr' else "Stop failed"
+                GLib.idle_add(lambda: self.show_error_dialog(stop_fail, msg))
+
+        threading.Thread(target=_do_stop, daemon=True).start()
+
+    def on_addkey_clicked(self, widget):
+        """Open Chattervox Key Management app."""
+        self.launch_flask_app('et-chattervox-keys')
+
+    def _show_service_error(self, mode_name, error_msg):
+        """Show error dialog for service failure"""
+        self.current_mode_label.set_text("→ ERROR")
+        self.show_error_dialog(f"Failed to start {mode_name}", error_msg)
+    
+    def show_modem_dialog(self, title, modems):
+        """Show modem selection dialog - touch and mouse friendly"""
+        dialog = Gtk.Dialog(
+            title=f"Select Modem - {title}",
+            transient_for=None,  # Don't link to dashboard to avoid resize
+            flags=0
+        )
+        dialog.set_default_size(300, -1)
+        dialog.set_modal(True)
+        dialog.set_resizable(False)
+        
+        # Position dialog to the left of dashboard
+        dialog_x = self.screen_width - self.panel_width - self.margin - 320
+        dialog_y = 100
+        dialog.move(dialog_x, dialog_y)
+        
+        # Make it appear above the dashboard
+        dialog.set_keep_above(True)
+        dialog.set_type_hint(Gdk.WindowTypeHint.DIALOG)
+        
+        content = dialog.get_content_area()
+        content.set_spacing(10)
+        content.set_margin_top(15)
+        content.set_margin_bottom(15)
+        content.set_margin_start(15)
+        content.set_margin_end(15)
+        
+        # Modem labels
+        modem_labels = {
+            '1200': '📻 Packet 1200 baud',
+            '9600': '📻 Packet 9600 baud',
+            '300': '📻 Packet 300 baud (HF)',
+            'vara-hf': '📡 VARA HF',
+            'vara-fm': '📡 VARA FM',
+            'ardop': '📡 ARDOP',
+        }
+        
+        selected_modem = [None]
+        
+        for modem in modems:
+            label = modem_labels.get(modem, modem)
+            btn = Gtk.Button(label=label)
+            btn.set_size_request(-1, 50)  # Touch-friendly height
+            btn.connect("clicked", lambda w, m=modem: (selected_modem.__setitem__(0, m), dialog.response(Gtk.ResponseType.OK)))
+            content.pack_start(btn, False, False, 0)
+        
+        # Cancel button
+        cancel_btn = Gtk.Button(label="Cancel" if self.language == 'en' else "Annuler")
+        cancel_btn.connect("clicked", lambda w: dialog.response(Gtk.ResponseType.CANCEL))
+        content.pack_start(cancel_btn, False, False, 10)
+        
+        dialog.show_all()
+        response = dialog.run()
+        dialog.destroy()
+        
+        if response == Gtk.ResponseType.OK:
+            return selected_modem[0]
+        return None
+
+    def _show_9600_warning(self):
+        """Show 9600 baud warning dialog (matches v1 behavior)."""
+        if self.language == 'fr':
+            title = "Note sur 9600 Baud"
+            msg = ("9600 baud est support\u00e9 seulement sur certaines radios "
+                   "et n\u00e9cessite g\u00e9n\u00e9ralement un c\u00e2ble sp\u00e9cial.\n\n"
+                   "N'oubliez pas de configurer les param\u00e8tres packet "
+                   "\u00e0 9600 sur la radio.")
+        else:
+            title = "Note on 9600 Baud"
+            msg = ("9600 baud is only supported on limited radios and "
+                   "typically requires a special cable.\n\n"
+                   "Don't forget to set the packet settings to 9600 "
+                   "on the radio.")
+        dialog = Gtk.MessageDialog(
+            transient_for=None,
+            flags=0,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text=title,
+        )
+        dialog.format_secondary_text(msg)
+        dialog.set_keep_above(True)
+        dialog.run()
+        dialog.destroy()
+
+    def show_status_dialog(self, title, message):
+        """Show a brief status message"""
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.OK,
+            text=title
+        )
+        dialog.format_secondary_text(message)
+        dialog.set_keep_above(True)
+        
+        # Auto-close after 3 seconds
+        GLib.timeout_add(3000, lambda: dialog.response(Gtk.ResponseType.OK) or False)
+        
+        dialog.run()
+        dialog.destroy()
+    
+    def show_error_dialog(self, title, message):
+        """Show error dialog"""
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.OK,
+            text=title
+        )
+        dialog.format_secondary_text(message)
+        dialog.set_keep_above(True)
+        dialog.run()
+        dialog.destroy()
+    
+    def create_section_header(self, title, callback):
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        
+        label = Gtk.Label(label=title)
+        label.get_style_context().add_class("section-header")
+        box.pack_start(label, False, False, 0)
+        
+        btn = Gtk.Button(label="⚙")
+        btn.get_style_context().add_class("config-button")
+        btn.set_tooltip_text("Configure")
+        btn.connect("clicked", callback)
+        box.pack_end(btn, False, False, 0)
+        
+        return box
+    
+    def create_info_row(self, label_text):
+        label = Gtk.Label()
+        label.set_halign(Gtk.Align.START)
+        label.get_style_context().add_class("info-label")
+        label.set_markup(f"<span>{label_text}: --</span>")
+        return label
+    
+    def _read_version(self):
+        """Read EmComm-Tools version from manifest.json, fallback to version.txt."""
+        try:
+            import json
+            manifest = json.loads(Path("/opt/emcomm-tools/manifest.json").read_text())
+            return manifest.get("version", "")
+        except Exception:
+            try:
+                return Path("/opt/emcomm-tools/version.txt").read_text().strip()
+            except Exception:
+                return ""
+
+    def _reload_version(self):
+        """Reload version label from manifest.json (triggered by SIGUSR1)."""
+        version_str = self._read_version()
+        if version_str and hasattr(self, 'version_label'):
+            self.version_label.set_text(f"EmComm-Tools v{version_str}")
+        return False
+
+    def create_separator(self):
+        sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+        sep.get_style_context().add_class("separator")
+        return sep
+    
+    def run_command(self, cmd):
+        try:
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5)
+            return result.stdout.strip()
+        except Exception:
+            return ""
+    
+    def update_utc(self):
+        """Update UTC clock every second (lightweight — no shell commands)"""
+        from datetime import datetime, timezone
+        utc = datetime.now(timezone.utc).strftime('%H:%M:%S')
+        self.utc_label.set_text(f"UTC: {utc}")
+        return True  # Repeat
+
+    def update_info(self):
+        ACTIVE_RADIO = "/opt/emcomm-tools/conf/radios.d/active-radio.json"
+
+        # GPS Status
+        if os.path.exists("/tmp/et-gps-connected"):
+            self.gps_label.set_markup("<span foreground='#00CC00'>GPS: ✓</span>")
+        else:
+            self.gps_label.set_markup("<span foreground='#CC0000'>GPS: ✗</span>")
+
+        # Radio — read active-radio.json directly instead of shelling out to jq
+        not_cfg = "Non configuré" if self.language == 'fr' else "Not configured"
+        radio = not_cfg
+        rig_id = None
+        try:
+            if os.path.islink(ACTIVE_RADIO):
+                with open(ACTIVE_RADIO) as f:
+                    radio_json = json.load(f)
+                radio = radio_json.get("model", not_cfg)
+                rig_id = radio_json.get("rigctrl", {}).get("id")
+        except (OSError, json.JSONDecodeError):
+            pass
+        self.radio_label.set_markup(f"<span foreground='#888888'>Radio: {radio}</span>")
+
+        # Show CAT/Audio for USB modes, BT TNC for Bluetooth modes
+        is_bt_mode = self._active_mode_id and self._active_mode_id.endswith("-bt")
+
+        is_tnc_mode = self._active_mode_id == "direwolf-tnc"
+
+        if is_tnc_mode:
+            # Direwolf TNC mode — show IP + port 8001 status
+            self.cat_audio_box.show_all()
+            self.bt_label.hide()
+            local_ip = self.run_command("hostname -I 2>/dev/null")
+            ip_addr = local_ip.split()[0] if local_ip and local_ip.strip() else "?"
+            port_check = self.run_command("ss -tln sport = :8001 2>/dev/null")
+            if port_check and "8001" in port_check:
+                self.tnc_ip_label.set_markup(
+                    f"<span foreground='#888888'>TNC: </span>"
+                    f"<span foreground='#00CC00'>✓ {ip_addr}:8001</span>")
+            else:
+                self.tnc_ip_label.set_markup(
+                    f"<span foreground='#888888'>TNC: </span>"
+                    f"<span foreground='#CC0000'>✗ {ip_addr}:8001</span>")
+            self.tnc_ip_label.show()
+        elif is_bt_mode:
+            # Bluetooth mode — hide CAT/Audio, show BT TNC status
+            self.cat_audio_box.hide()
+            self.tnc_ip_label.hide()
+            if os.path.exists("/dev/rfcomm0"):
+                self.bt_label.set_markup("<span foreground='#888888'>BT TNC: </span><span foreground='#00CC00'>✓</span>")
+            else:
+                self.bt_label.set_markup("<span foreground='#888888'>BT TNC: </span><span foreground='#CC0000'>✗</span>")
+            self.bt_label.show()
+        else:
+            # USB mode — show CAT/Audio, hide BT TNC and TNC IP
+            self.bt_label.hide()
+            self.tnc_ip_label.hide()
+            if not os.path.islink(ACTIVE_RADIO):
+                self.cat_label.set_markup("<span foreground='#888888'>CAT: N/A</span>")
+            elif rig_id == "1":
+                # Audio-only radio (e.g. DigiRig Lite) — no CAT hardware
+                self.cat_label.set_markup("<span foreground='#888888'>CAT: N/A</span>")
+            elif os.path.exists("/dev/et-cat"):
+                self.cat_label.set_markup("<span foreground='#00CC00'>CAT: ✓</span>")
+            else:
+                self.cat_label.set_markup("<span foreground='#CC0000'>CAT: ✗</span>")
+            if os.path.exists("/dev/et-audio"):
+                self.audio_label.set_markup("<span foreground='#00CC00'>Audio: ✓</span>")
+            else:
+                self.audio_label.set_markup("<span foreground='#CC0000'>Audio: ✗</span>")
+            self.cat_audio_box.show_all()
+
+        # Operator info
+        try:
+            config = self.load_user_config()
+            callsign = config.get("callsign", "N0CALL")
+            grid = config.get("grid", "AA00aa")
+        except Exception:
+            callsign = "N0CALL"
+            grid = "AA00aa"
+        
+        self.callsign_label.set_text(callsign)
+        self.grid_label.set_text(f"· {grid}")
+        
+        # Current mode + process status from supervisor
+        self._update_supervisor_status()
+
+        return True
+
+    def _update_supervisor_status(self):
+        """Query supervisor for mode and process status."""
+        resp = self.supervisor.status()
+
+        # Clear old process labels
+        for child in self.process_box.get_children():
+            self.process_box.remove(child)
+
+        if resp is None:
+            self.stop_btn.hide()
+            self.key_btn.hide()
+            self._active_mode_id = None
+            return
+
+        mode_id = resp.get("mode")
+        mode_name = resp.get("mode_name")
+        processes = resp.get("processes", [])
+        self._active_mode_id = mode_id
+
+        if not mode_id:
+            # No mode running — hide stop/key buttons, clear label
+            self.stop_btn.hide()
+            self.key_btn.hide()
+            # Only clear if not mid-start
+            current = self.current_mode_label.get_text()
+            if current and not current.startswith("→"):
+                self.current_mode_label.set_text("")
+            self._last_crash_notified = None
+            return
+
+        # Show human-readable mode name and STOP button
+        self.current_mode_label.set_text(f"● {mode_name or mode_id}")
+        self.stop_btn.show()
+
+        # Show key button only for chattervox mode
+        if mode_id in ("chat-chattervox", "chat-chattervox-bt"):
+            self.key_btn.show()
+        else:
+            self.key_btn.hide()
+
+        # Show each process in the chain
+        for p in processes:
+            state = p["state"]
+            name = p["name"]
+            pid = p.get("pid", "")
+
+            if state == "RUNNING":
+                color = "#00CC00"
+                symbol = "\u25cf"
+            elif state in ("CRASHED", "FAILED"):
+                color = "#CC0000"
+                symbol = "\u2717"
+            elif state == "STOPPED":
+                color = "#888888"
+                symbol = "\u25cb"
+            else:
+                color = "#888888"
+                symbol = "\u25cb"
+
+            markup = f"<span foreground='{color}'>{symbol}</span> "
+            markup += f"<span foreground='#888888'>{name}</span>"
+            if pid and state == "RUNNING":
+                markup += f" <span foreground='#666666'>({pid})</span>"
+
+            lbl = Gtk.Label()
+            lbl.set_halign(Gtk.Align.START)
+            lbl.get_style_context().add_class("process-label")
+            lbl.set_markup(markup)
+            self.process_box.pack_start(lbl, False, False, 0)
+
+        self.process_box.show_all()
+
+        # Crash notification — only for actual crashes, not normal exits
+        crashed = [p for p in processes if p["state"] == "CRASHED"]
+        crash_key = f"{mode_id}:{','.join(p['name'] for p in crashed)}"
+        if crashed and crash_key != self._last_crash_notified:
+            self._last_crash_notified = crash_key
+            names = ", ".join(p["name"] for p in crashed)
+            crash_msg = f"Processus planté : {names}" if self.language == 'fr' else f"Process crashed: {names}"
+            subprocess.Popen(
+                ["notify-send", "-u", "critical", "-i", "dialog-error",
+                 "EmComm-Tools", crash_msg])
+    
+    def on_delete_event(self, widget, event):
+        return True  # Prevent closing
+    
+    # === Flask App Launcher ===
+    def launch_flask_app(self, app_name):
+        """Launch a Flask/PyWebView app (prevent double-launch)"""
+        # Check if already running
+        if app_name in self.running_apps:
+            proc = self.running_apps[app_name]
+            if proc.poll() is None:  # Still running
+                print(f"{app_name} is already running")
+                return
+            else:
+                # Process finished, remove from tracking
+                del self.running_apps[app_name]
+        
+        app_info = FLASK_APPS.get(app_name)
+        if not app_info:
+            return
+        
+        script = app_info['script']
+        dashboard_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        locations = [
+            f"{dashboard_dir}/{app_name}/{script}",
+            f"{FLASK_APPS_DIR}/{app_name}/{script}",
+            f"/opt/emcomm-tools/share/{app_name}/{script}",
+            os.path.expanduser(f"~/{app_name}/{script}"),
+        ]
+        
+        for path in locations:
+            if os.path.exists(path):
+                proc = subprocess.Popen(["python3", path],
+                               cwd=os.path.dirname(path),
+                               start_new_session=True)
+                self.running_apps[app_name] = proc
+                return
+        
+        print(f"Could not find {app_name}")
+    
+    def on_radio_clicked(self, widget):
+        self.launch_flask_app('et-radio')
+    
+    def on_user_clicked(self, widget):
+        self.launch_flask_app('et-user')
+
+
+def main():
+    win = EmCommDashboard()
+    win.show_all()
+    signal.signal(signal.SIGUSR1,
+                  lambda *_: GLib.idle_add(win._reload_version))
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

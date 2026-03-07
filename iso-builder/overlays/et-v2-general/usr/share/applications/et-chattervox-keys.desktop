@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Chattervox Key Management
+Name[fr]=Gestion des clés Chattervox
+Comment=Manage Chattervox digital signature keys
+Comment[fr]=Gérer les clés de signature numérique Chattervox
+Exec=/opt/emcomm-tools/bin/et-flask-apps/et-chattervox-keys/et-chattervox-keys.py
+Icon=/usr/share/pixmaps/emcomm-icon.png
+Terminal=false
+Categories=HamRadio;
+Keywords=chattervox;keys;signature;packet;

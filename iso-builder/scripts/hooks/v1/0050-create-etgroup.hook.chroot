@@ -1,0 +1,30 @@
+#!/bin/bash
+groupadd -g 1981 et-data || true
+
+# Fix permissions for et-tools config
+chown -R root:et-data /opt/emcomm-tools/conf
+chmod -R 775 /opt/emcomm-tools/conf
+
+# Fix permissions for et-tools bin scripts
+chmod +x /opt/emcomm-tools/bin/*
+
+# Make sure et-maps-setup is executable and in PATH
+chmod 755 /opt/emcomm-tools/bin/et-maps-setup 2>/dev/null || true
+chmod 755 /opt/emcomm-tools/bin/et-data-symlinks 2>/dev/null || true
+chmod 755 /opt/emcomm-tools/bin/et-first-boot 2>/dev/null || true
+ln -sf /opt/emcomm-tools/bin/et-maps-setup /usr/local/bin/et-maps-setup
+ln -sf /opt/emcomm-tools/bin/et-first-boot /usr/local/bin/et-first-boot
+
+# Copy WSJT-X icon to pixmaps (installed by wsjtx package)
+WSJTX_ICON=$(find /usr/share -name "*wsjtx*.png" -o -name "*wsjt*.png" 2>/dev/null | head -1)
+if [ -n "$WSJTX_ICON" ]; then
+    cp "$WSJTX_ICON" /usr/share/pixmaps/wsjtx_icon.png
+    echo "WSJT-X icon copied to pixmaps"
+fi
+
+# Copy JS8Call icon if not already in pixmaps
+JS8_ICON=$(find /usr/share -name "*js8call*.png" 2>/dev/null | grep -v pixmaps | head -1)
+if [ -n "$JS8_ICON" ] && [ ! -f /usr/share/pixmaps/js8call_icon.png ]; then
+    cp "$JS8_ICON" /usr/share/pixmaps/js8call_icon.png
+    echo "JS8Call icon copied to pixmaps"
+fi

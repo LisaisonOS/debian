@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=HF Propagation Prediction
+Name[fr]=Prédiction de propagation HF
+Comment=Offline HF propagation prediction with maps
+Comment[fr]=Prédiction de propagation HF hors-ligne avec cartes
+Exec=/opt/emcomm-tools/bin/et-predict
+Icon=et-predict-app
+Terminal=false
+Type=Application
+Categories=HamRadio;Network;

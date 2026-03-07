@@ -1,0 +1,32 @@
+#!/bin/bash
+echo "Installing ET-API (callsign lookup)..."
+
+APP="et-api"
+VERSION="1.1.1"
+ET_API_JAR="emcomm-tools-api-${VERSION}.jar"
+BASE_URL="https://github.com/thetechprepper/et-api-java/releases/download/${VERSION}"
+
+INSTALL_DIR="/opt/emcomm-tools-api"
+BIN_DIR="${INSTALL_DIR}/bin"
+DATA_DIR="${INSTALL_DIR}/data"
+INDEX_DIR="${INSTALL_DIR}/index"
+
+mkdir -p "${BIN_DIR}" "${DATA_DIR}" "${INDEX_DIR}"
+
+# Download et-api JAR
+echo "Downloading ET-API JAR..."
+curl -s -L -o "${BIN_DIR}/${APP}" "${BASE_URL}/${ET_API_JAR}"
+chmod 755 "${BIN_DIR}/${APP}"
+
+# Download data files
+for file in faa.csv license.csv zip2geo.csv zip2geo-elevation.csv; do
+    echo "Downloading ${file}..."
+    curl -s -L -o "${DATA_DIR}/${file}" "${BASE_URL}/${file}"
+done
+
+# Fix permissions
+chgrp -R et-data ${DATA_DIR} ${INDEX_DIR}
+chmod 775 ${DATA_DIR} ${INDEX_DIR}
+chmod 664 ${DATA_DIR}/*.csv
+
+echo "ET-API installation complete"

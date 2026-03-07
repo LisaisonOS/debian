@@ -1,0 +1,31 @@
+{
+    "$schema": "et-mode-v2",
+    "id": "chat-chattervox-bt",
+    "name": {
+        "en": "Chattervox (BT)",
+        "fr": "Chattervox (BT)"
+    },
+    "category": "packet",
+    "requires": {
+        "devices": ["rfcomm0"]
+    },
+    "prechecks": [
+        {"type": "callsign-set"}
+    ],
+    "config": [],
+    "pre_start": [
+        {"action": "rfcomm-bind"},
+        {"action": "kill-all"},
+        {"action": "chattervox-config", "bluetooth": true}
+    ],
+    "chain": [
+        {
+            "name": "chattervox",
+            "command": ["xfce4-terminal", "--disable-server", "--title=Chattervox Chat", "-e", "chattervox chat"],
+            "health": {},
+            "restart": "never"
+        }
+    ],
+    "post_start": [],
+    "kill_all_first": true
+}

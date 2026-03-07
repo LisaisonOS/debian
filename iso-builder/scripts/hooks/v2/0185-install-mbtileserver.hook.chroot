@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
+echo "Installing mbtileserver..."
+
+APP="mbtileserver"
+VERSION="0.11.0"
+ZIPFILE="mbtileserver_v${VERSION}_linux_amd64.zip"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
+LINK_PATH="/opt/${APP}"
+LOCAL_FALLBACK="${REPO_ROOT}/downloads/${ZIPFILE}"
+
+URL="https://github.com/consbio/mbtileserver/releases/download/v${VERSION}/${ZIPFILE}"
+
+rm -rf ${INSTALL_DIR}
+mkdir -p ${INSTALL_BIN_DIR}
+
+echo "Downloading mbtileserver from ${URL}..."
+if curl -s -L -o "/tmp/${ZIPFILE}" --fail --retry 3 --retry-delay 5 "${URL}"; then
+    echo "Download successful."
+elif [ -f "${LOCAL_FALLBACK}" ]; then
+    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
+    cp "${LOCAL_FALLBACK}" "/tmp/${ZIPFILE}"
+else
+    echo "ERROR: mbtileserver download failed and no local fallback at ${LOCAL_FALLBACK}"
+    exit 1
+fi
+
+unzip -o "/tmp/${ZIPFILE}" -d ${INSTALL_BIN_DIR}/
+cp -rf ${INSTALL_BIN_DIR}/mbtileserver_v${VERSION}_linux_amd64 ${INSTALL_BIN_DIR}/mbtileserver
+rm -rf ${INSTALL_BIN_DIR}/mbtileserver_v${VERSION}_linux_amd64
+chmod 755 ${INSTALL_BIN_DIR}/mbtileserver
+rm -f "/tmp/${ZIPFILE}"
+[ -f ${INSTALL_BIN_DIR}/mbtileserver ] || { echo "ERROR: mbtileserver binary not found after extraction"; exit 1; }
+
+rm -rf ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+stow -D -d /opt ${APP} -t /usr/local 2>/dev/null || true
+stow -v -d /opt ${APP} -t /usr/local
+
+echo "mbtileserver installation complete"

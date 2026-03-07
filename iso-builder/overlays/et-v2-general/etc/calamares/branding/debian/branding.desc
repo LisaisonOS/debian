@@ -1,0 +1,39 @@
+---
+componentName:   debian
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 800px,580px
+windowPlacement: center
+
+strings:
+    productName:         EmComm-Tools OS - Debian Edition
+    shortProductName:    EmComm-Tools
+    version:             1.0
+    shortVersion:        1.0
+    versionedName:       EmComm-Tools 1.0
+    shortVersionedName:  EmComm-Tools 1.0
+    bootloaderEntryName: EmComm-Tools
+    productUrl:          https://github.com/emcomm-tools/debian
+    supportUrl:          https://github.com/emcomm-tools/debian
+    knownIssuesUrl:      https://github.com/emcomm-tools/debian
+    releaseNotesUrl:     https://github.com/emcomm-tools/debian
+    donateUrl:           https://buymeacoffee.com/emcommtools
+
+sidebar: widget
+navigation: widget
+
+images:
+    productLogo:         "emcomm-logo.png"
+    productIcon:         "emcomm-logo.png"
+    productWelcome:      "welcome.png"
+
+slideshow:               "show.qml"
+
+style:
+   SidebarBackground:    "#2b2b2b"
+   SidebarText:          "#FFFFFF"
+   SidebarTextCurrent:   "#00ff88"
+   SidebarBackgroundCurrent: "#2b2b2b"
+
+slideshowAPI: 2

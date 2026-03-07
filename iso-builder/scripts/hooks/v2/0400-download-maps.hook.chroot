@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+echo "Downloading offline maps (this will take a while)..."
+
+MAP_DIR="/etc/skel/.local/share/emcomm-tools/mbtileserver/tilesets"
+mkdir -p ${MAP_DIR}
+
+ET_BASE_URL="https://sourceforge.net/projects/emcomm-tools/files/MAPS"
+
+cd ${MAP_DIR}
+
+echo "Downloading World map tiles (~505MB)..."
+curl -L -f --progress-bar -o osm-world-zoom0to7.mbtiles \
+    "${ET_BASE_URL}/osm-world-zoom0to7.mbtiles/download"
+[ -f osm-world-zoom0to7.mbtiles ] || { echo "ERROR: World map tiles download failed"; exit 1; }
+
+echo "Downloading US map tiles (~662MB)..."
+curl -L -f --progress-bar -o osm-us-zoom0to11.mbtiles \
+    "${ET_BASE_URL}/osm-us-zoom0to11.mbtiles/download"
+[ -f osm-us-zoom0to11.mbtiles ] || { echo "ERROR: US map tiles download failed"; exit 1; }
+
+echo "Downloading Canada map tiles (~496MB)..."
+curl -L -f --progress-bar -o osm-ca-zoom0to10.mbtiles \
+    "${ET_BASE_URL}/osm-ca-zoom0to10.mbtiles/download"
+[ -f osm-ca-zoom0to10.mbtiles ] || { echo "ERROR: Canada map tiles download failed"; exit 1; }
+
+echo "Map download complete!"

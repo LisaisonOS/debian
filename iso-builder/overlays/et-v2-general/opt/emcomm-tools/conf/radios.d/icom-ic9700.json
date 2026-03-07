@@ -1,0 +1,42 @@
+{
+  "id": "icom-ic9700",
+  "vendor": "Icom",
+  "model": "IC-9700",
+  "rigctrl": {
+    "id": "3081",
+    "baud": "57600",
+    "ptt": "RIG",
+    "conf": "rts_state=OFF,dtr_state=OFF"
+  },
+  "varafm": {
+    "pttPort": "COM5",
+    "pttVia": "2",
+    "rts": "1",
+    "dtr": "0"
+  },
+  "notes": [
+    "=== USB Cable Configuration ===",
+    "IC-9700 uses Silicon Labs CP210x (ttyUSB, not ttyACM)",
+    "Two serial ports created: serial 'A' = CI-V (CAT), serial 'B' = data",
+    "Menu > Set > Connectors > CI-V > CI-V Baud Rate: Auto",
+    "Menu > Set > Connectors > CI-V > CI-V Address: A2 (default)",
+    "Menu > Set > Connectors > CI-V > CI-V Transceive: OFF",
+    "Menu > Set > Connectors > CI-V > CI-V USB Baud Rate: 57600",
+    "Menu > Set > Connectors > CI-V > CI-V USB Echo Back: OFF",
+    "Menu > Set > Connectors > CI-V > CI-V DATA Baud Rate: 9600",
+    "Menu > Set > Connectors > CI-V > CI-V DATE Echo Back: ON",
+    "Menu > Set > Connectors > USB (B) Function: DV Data",
+    "Menu > Set > Connectors > DATA Function: CI-V",
+    "",
+    "=== Digirig Configuration ===",
+    "Digirig connects to CI-V jack (3.5mm) for CAT/PTT and DATA jack for audio",
+    "Menu > Set > Connectors > DATA MOD: ACC (for audio from DATA jack)",
+    "Menu > Set > Connectors > ACC Send Output: 144 ON, 430 ON",
+    "PTT is controlled via RTS on the Digirig serial port",
+    "",
+    "=== VARA FM Notes ===",
+    "PTT Via COM port using RTS (not CAT commands)",
+    "Wine COM5 must be symlinked to /dev/ttyUSB0 (Digirig)",
+    "If using USB cable directly, PTT can use CAT instead of RTS"
+  ]
+}

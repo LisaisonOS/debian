@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t('download_wiki') }} - EmComm-Tools{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>{{ t('download_wiki') }}</h1>
+        <div class="step-indicator">{{ t('step') }} 7 {{ t('of') }} 8</div>
+    </div>
+    
+    <div class="dest-info">
+        <span class="label">Destination:</span>
+        <span class="path">{{ dest_path }}</span>
+    </div>
+    
+    <form method="POST" id="wiki-form">
+        <div class="card">
+            <h2>{{ t('wiki_desc') }}</h2>
+            
+            <div class="tabs">
+                <div class="tab active" data-lang="en" onclick="filterWiki('en')">{{ t('english') }}</div>
+                <div class="tab" data-lang="fr" onclick="filterWiki('fr')">{{ t('french') }}</div>
+            </div>
+            
+            <!-- Hidden container for all checkboxes (both languages) -->
+            <div id="all-selections" style="display:none;"></div>
+            
+            <div class="wiki-list" id="wiki-list">
+                <p style="color: #888; text-align: center;"><span class="spinner"></span> Loading...</p>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <a href="{{ url_for('download_osm') }}" class="btn btn-secondary">{{ t('back') }}</a>
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('complete') }}'">{{ t('skip') }}</button>
+            <button type="submit" class="btn btn-primary" id="download-btn">{{ t('next') }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let wikiFiles = {en: [], fr: []};
+    let currentLang = 'en';
+    // Store user selections separately from existing files
+    let userSelections = {en: new Set(), fr: new Set()};
+    
+    async function loadWikiFiles() {
+        try {
+            const response = await fetch('/api/wiki/files');
+            const data = await response.json();
+            wikiFiles = data.files || {en: [], fr: []};
+            renderWikiFiles('en');
+        } catch (e) {
+            document.getElementById('wiki-list').innerHTML = '<p style="color: #ff6b6b;">Error loading files</p>';
+        }
+    }
+    
+    function saveCurrentSelections() {
+        // Save current tab's selections before switching
+        const checkboxes = document.querySelectorAll('#wiki-list input[type="checkbox"]:not(:disabled)');
+        userSelections[currentLang].clear();
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                userSelections[currentLang].add(cb.value);
+            }
+        });
+    }
+    
+    function renderWikiFiles(lang) {
+        const listEl = document.getElementById('wiki-list');
+        const allSelectionsEl = document.getElementById('all-selections');
+        listEl.innerHTML = '';
+        
+        wikiFiles[lang].forEach(file => {
+            const label = document.createElement('label');
+            label.className = 'wiki-item' + (file.exists ? ' exists' : '');
+            const existsTag = file.exists ? '<span style="color:#FFA500;font-size:0.8rem;margin-left:8px;">✓ Downloaded</span>' : '';
+            
+            // Check if user previously selected this file
+            const isSelected = userSelections[lang].has(file.name);
+            
+            label.innerHTML = `
+                <input type="checkbox" name="wiki_files" value="${file.name}" 
+                       ${file.exists ? 'checked disabled' : (isSelected ? 'checked' : '')}>
+                <span>${file.display} (${file.size})${existsTag}</span>
+            `;
+            listEl.appendChild(label);
+        });
+        
+        if (wikiFiles[lang].length === 0) {
+            listEl.innerHTML = '<p style="color: #888; text-align: center;">No files found</p>';
+        }
+        
+        // Also update hidden selections from other language so form submits all
+        updateHiddenSelections();
+    }
+    
+    function updateHiddenSelections() {
+        // Create hidden inputs for selections from the OTHER language tab
+        const allSelectionsEl = document.getElementById('all-selections');
+        allSelectionsEl.innerHTML = '';
+        
+        // Add hidden inputs for selections not currently visible
+        Object.keys(userSelections).forEach(lang => {
+            if (lang !== currentLang) {
+                userSelections[lang].forEach(filename => {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'wiki_files';
+                    hidden.value = filename;
+                    allSelectionsEl.appendChild(hidden);
+                });
+            }
+        });
+    }
+    
+    function filterWiki(lang) {
+        // Save selections from current tab before switching
+        saveCurrentSelections();
+        
+        // Switch to new tab
+        currentLang = lang;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector(`.tab[data-lang="${lang}"]`).classList.add('active');
+        renderWikiFiles(lang);
+    }
+    
+    // Save selections before form submit
+    document.getElementById('wiki-form').addEventListener('submit', function(e) {
+        saveCurrentSelections();
+        updateHiddenSelections();
+    });
+    
+    loadWikiFiles();
+</script>
+{% endblock %}

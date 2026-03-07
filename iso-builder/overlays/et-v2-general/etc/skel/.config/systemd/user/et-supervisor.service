@@ -1,0 +1,12 @@
+[Unit]
+Description=EmComm Tools Process Supervisor
+Documentation=https://emcomm-tools.ca
+
+[Service]
+Type=simple
+ExecStart=/opt/emcomm-tools/bin/et-supervisor
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

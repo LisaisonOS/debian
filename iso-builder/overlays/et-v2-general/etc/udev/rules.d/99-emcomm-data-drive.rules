@@ -1,0 +1,15 @@
+# EmComm-Tools Data Drive Auto-Detection
+# Author: Sylvain Deguire (VA2OPS)
+# Date: December 2025
+#
+# This rule detects when a drive labeled "EMCOMM-DATA" is inserted
+# and triggers the symlink setup service.
+#
+# Install to: /etc/udev/rules.d/99-emcomm-data-drive.rules
+
+# When drive with label EMCOMM-DATA is added, tag it and trigger service
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="EMCOMM-DATA", TAG+="systemd", ENV{SYSTEMD_WANTS}+="emcomm-data-symlinks@%k.service"
+
+# Log when drive is detected (optional, for debugging)
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="EMCOMM-DATA", RUN+="/usr/bin/logger -t emcomm-data 'EmComm data drive detected: %k'"
+ACTION=="remove", SUBSYSTEM=="block", ENV{ID_FS_LABEL}=="EMCOMM-DATA", RUN+="/usr/bin/logger -t emcomm-data 'EmComm data drive removed: %k'"

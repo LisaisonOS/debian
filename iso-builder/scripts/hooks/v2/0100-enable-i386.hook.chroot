@@ -1,0 +1,103 @@
+#!/bin/bash
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
+# Configure apt to retry on failure (network hiccups, rate-limits)
+cat > /etc/apt/apt.conf.d/99-retry <<'APTCONF'
+Acquire::Retries "5";
+Acquire::http::Timeout "60";
+APTCONF
+
+dpkg --add-architecture i386
+
+# Retry apt-get update until i386 packages are available
+# apt-get update returns 0 even when some indices fail (e.g., network
+# hiccup or rate-limit). If i386 indices aren't fetched, packages show
+# as "not installable" even though the mirror has them.
+MAX_RETRIES=3
+for attempt in $(seq 1 $MAX_RETRIES); do
+    echo "=== apt-get update attempt ${attempt}/${MAX_RETRIES} ==="
+    apt-get update 2>&1 || true
+
+    # Verify i386 packages are available
+    if apt-cache policy wine32 2>/dev/null | grep -q "Candidate:"; then
+        echo "i386 packages available."
+        break
+    fi
+
+    if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+        echo "ERROR: i386 packages not available after ${MAX_RETRIES} attempts"
+        echo ""
+        echo "=== Diagnostics ==="
+        echo "--- /etc/apt/sources.list ---"
+        cat /etc/apt/sources.list 2>/dev/null || echo "(missing)"
+        echo ""
+        echo "--- /etc/apt/sources.list.d/ ---"
+        for f in /etc/apt/sources.list.d/*.list; do
+            if [ -f "$f" ]; then
+                echo "--- $f ---"
+                cat "$f"
+            fi
+        done
+        echo ""
+        echo "--- dpkg --print-architecture ---"
+        dpkg --print-architecture
+        echo "--- dpkg --print-foreign-architectures ---"
+        dpkg --print-foreign-architectures
+        echo ""
+        echo "--- apt-cache policy wine32 ---"
+        apt-cache policy wine32 2>/dev/null || echo "(not found)"
+        echo "--- apt-cache policy libx11-6:i386 ---"
+        apt-cache policy libx11-6:i386 2>/dev/null || echo "(not found)"
+        echo "--- apt-cache policy libdbus-1-3:i386 ---"
+        apt-cache policy libdbus-1-3:i386 2>/dev/null || echo "(not found)"
+        exit 1
+    fi
+
+    echo "i386 packages not yet available, waiting 15s before retry..."
+    sleep 15
+done
+
+echo "=== Installing wine32 ==="
+if ! apt-get install -y wine32 2>&1; then
+    echo ""
+    echo "=== wine32 install failed — dependency diagnostics ==="
+    echo "--- apt-cache policy wine32 ---"
+    apt-cache policy wine32
+    echo "--- Simulating install to show conflicts ---"
+    apt-get install -s wine32 2>&1 || true
+    exit 1
+fi
+
+# QtTermTCP is a 32-bit binary — needs i386 Qt5 libs
+echo "=== Installing QtTermTCP i386 Qt5 dependencies ==="
+apt-get install -y \
+  libqt5core5t64:i386 \
+  libqt5gui5t64:i386 \
+  libqt5widgets5t64:i386 \
+  libqt5network5t64:i386 \
+  libqt5multimedia5:i386 \
+  libqt5serialport5:i386
+
+# LinBPQ 32-bit dependencies
+echo "=== Installing LinBPQ i386 dependencies ==="
+apt-get install -y \
+  libpcap0.8-dev:i386 \
+  libasound2-dev:i386 \
+  zlib1g:i386
+
+WINETRICKS_URL="https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
+WINETRICKS_FALLBACK="${REPO_ROOT}/downloads/winetricks"
+
+echo "Downloading winetricks..."
+if curl -s -L -o /usr/local/bin/winetricks --fail --retry 3 --retry-delay 5 "${WINETRICKS_URL}"; then
+    echo "Download successful."
+elif [ -f "${WINETRICKS_FALLBACK}" ]; then
+    echo "Download failed. Using local fallback: ${WINETRICKS_FALLBACK}"
+    cp "${WINETRICKS_FALLBACK}" /usr/local/bin/winetricks
+else
+    echo "ERROR: winetricks download failed and no local fallback at ${WINETRICKS_FALLBACK}"
+    exit 1
+fi
+chmod +x /usr/local/bin/winetricks

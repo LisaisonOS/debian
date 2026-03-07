@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Set default timezone to Eastern Time (America/Toronto)
+#
+
+set -e
+
+echo "[9050-set-timezone] Setting timezone to America/Toronto..."
+
+echo "America/Toronto" > /etc/timezone
+ln -sf /usr/share/zoneinfo/America/Toronto /etc/localtime
+dpkg-reconfigure -f noninteractive tzdata
+
+echo "[9050-set-timezone] Timezone set successfully"

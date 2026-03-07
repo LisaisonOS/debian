@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Save & Suspend
+Name[fr]=Sauvegarder & Suspendre
+Comment=Save your configuration to USB then suspend
+Comment[fr]=Sauvegarder votre configuration sur USB puis suspendre
+Exec=/opt/emcomm-tools/bin/et-persistence/et-save-and-suspend
+Icon=system-suspend
+Terminal=false
+Categories=X-XFCE;X-Xfce-Toplevel;

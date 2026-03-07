@@ -1,0 +1,4 @@
+#!/bin/bash
+# Pat Winlink is installed from Debian repos via package list
+# No hook needed - Debian's pat 0.16.0-1+b9 is same as GitHub 0.16.0
+echo "Pat Winlink: using Debian package (same version as GitHub)"

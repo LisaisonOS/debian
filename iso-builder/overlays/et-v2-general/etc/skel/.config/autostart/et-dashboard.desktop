@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=EmComm Dashboard
+Comment=EmComm-Tools Interactive Dashboard
+
+## optimized version
+Exec=/opt/emcomm-tools/bin/et-flask-apps/et-dashboard
+
+## normal et-dashboard
+##Exec=/opt/emcomm-tools/bin/et-dashboard
+
+Icon=emcomm-tools
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-XFCE-Autostart-enabled=true
+StartupNotify=false
+NoDisplay=true

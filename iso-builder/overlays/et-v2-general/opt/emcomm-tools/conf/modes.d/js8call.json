@@ -1,0 +1,57 @@
+{
+    "$schema": "et-mode-v2",
+    "id": "js8call",
+    "name": {
+        "en": "JS8Call",
+        "fr": "JS8Call"
+    },
+    "category": "digital",
+    "requires": {
+        "devices": ["et-audio", "et-cat"],
+        "services": ["rigctld"]
+    },
+    "prechecks": [
+        {"type": "device-exists", "path": "/dev/et-audio"},
+        {"type": "audio-tagged", "tag": "ET_AUDIO"},
+        {"type": "service-active", "name": "rigctld"},
+        {"type": "callsign-set"}
+    ],
+    "config": [
+        {
+            "type": "ini-update",
+            "target": "~/.config/JS8Call.ini",
+            "updates": [
+                {"key": "MyCall", "source": "user.json", "field": "callsign"},
+                {"key": "MyGrid", "source": "detect-grid"},
+                {"key": "MyInfo", "source": "radio-model-safe", "mode": "replace-first-word"},
+                {"key": "SoundInName", "value": "\"sysdefault:CARD=ET_AUDIO\""},
+                {"key": "SoundOutName", "value": "\"sysdefault:CARD=ET_AUDIO\""},
+                {"key": "NotificationSoundOutName", "value": "\"sysdefault:CARD=PCH\""}
+            ]
+        }
+    ],
+    "pre_start": [
+        {"action": "kill-all"},
+        {"action": "audio-config"},
+        {"action": "prime-rigctld"},
+        {"action": "js8spotter-setup"}
+    ],
+    "chain": [
+        {
+            "name": "js8call",
+            "command": ["/usr/bin/js8call"],
+            "health": {"type": "tcp-port", "port": 2442, "timeout": 60},
+            "restart": "never"
+        },
+        {
+            "name": "js8spotter",
+            "command": ["python3", "js8spotter.py"],
+            "cwd": "~/.local/share/emcomm-tools/js8spotter",
+            "health": {},
+            "restart": "never",
+            "depends_on": "js8call"
+        }
+    ],
+    "post_start": [],
+    "kill_all_first": true
+}

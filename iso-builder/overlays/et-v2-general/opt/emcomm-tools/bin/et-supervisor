@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""
+et-supervisor: EmComm-Tools Process Supervisor Daemon
+
+Single daemon that replaces 12 systemd user services. Manages process chains
+via declarative JSON mode configurations, provides PID tracking, health
+monitoring, and clean mode switching.
+
+IPC via Unix domain socket at /run/user/$UID/et-supervisor.sock
+
+Usage:
+    et-supervisor              Start the daemon (foreground)
+    et-supervisor --version    Print version
+"""
+
+import logging
+import os
+import signal
+import sys
+import time
+
+# Add library path
+sys.path.insert(0, "/opt/emcomm-tools/lib")
+
+from et_supervisor import __version__
+from et_supervisor.process_manager import ProcessManager
+from et_supervisor.mode_engine import ModeEngine
+from et_supervisor.health_monitor import HealthMonitor
+from et_supervisor.ipc_server import IPCServer
+
+LOG_FORMAT = "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+LOG_DIR = os.path.expanduser("~/.local/share/emcomm-tools")
+
+
+def setup_logging():
+    os.makedirs(LOG_DIR, exist_ok=True)
+    log_file = os.path.join(LOG_DIR, "et-supervisor.log")
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format=LOG_FORMAT,
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--version":
+        print(f"et-supervisor {__version__}")
+        sys.exit(0)
+
+    setup_logging()
+    log = logging.getLogger("et-supervisor")
+    log.info("et-supervisor %s starting (PID %d)", __version__, os.getpid())
+
+    # Initialize components
+    pm = ProcessManager()
+    engine = ModeEngine(pm)
+    health = HealthMonitor(pm)
+    ipc = IPCServer(engine, health)
+
+    # Signal handlers for clean shutdown
+    shutdown_requested = False
+
+    def handle_signal(signum, frame):
+        nonlocal shutdown_requested
+        sig_name = signal.Signals(signum).name
+        log.info("Received %s, shutting down...", sig_name)
+        shutdown_requested = True
+
+    signal.signal(signal.SIGTERM, handle_signal)
+    signal.signal(signal.SIGINT, handle_signal)
+
+    # Wire death callback: health monitor -> mode engine (crash or normal exit)
+    health.set_crash_callback(engine.handle_process_death)
+
+    # Start services
+    ipc.start()
+    health.start()
+
+    log.info("et-supervisor ready (socket: %s)", ipc.socket_path)
+
+    # Main loop — just keep alive, IPC and health run in threads
+    try:
+        while not shutdown_requested:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        pass
+
+    # Clean shutdown
+    log.info("Shutting down...")
+    health.stop()
+    engine.stop()
+    ipc.stop()
+    log.info("et-supervisor stopped")
+
+
+if __name__ == "__main__":
+    main()

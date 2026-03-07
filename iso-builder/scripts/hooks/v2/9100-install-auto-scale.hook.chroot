@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Install auto-scale detection for XFCE
+#           - Live session: runs every boot
+#           - Installed system: runs once on first login
+#
+
+set -e
+
+echo "[9100-install-auto-scale] Installing et-auto-scale..."
+
+# Ensure scripts are executable by all users (not just root)
+chmod 755 /opt/emcomm-tools/bin/et-auto-scale
+chmod 755 /opt/emcomm-tools/bin/et-auto-scale-once
+
+chmod 644 /etc/skel/.config/autostart/et-auto-scale.desktop
+chmod 644 /etc/xdg/autostart/et-auto-scale.desktop
+
+echo "[9100-install-auto-scale] Installation complete"

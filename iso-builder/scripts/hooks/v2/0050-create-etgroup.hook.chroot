@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+echo "=== Hook 0050: Creating et-data group and fixing permissions ==="
+
+groupadd -g 1981 et-data || true
+
+# Fix permissions for et-tools config
+if [ -d /opt/emcomm-tools/conf ]; then
+    chown -R root:et-data /opt/emcomm-tools/conf
+    chmod -R 775 /opt/emcomm-tools/conf
+fi
+
+# Fix permissions for et-tools bin scripts
+if [ -d /opt/emcomm-tools/bin ]; then
+    find /opt/emcomm-tools/bin -maxdepth 1 -type f -exec chmod +x {} +
+fi
+
+# Symlinks for scripts that need to be in PATH
+if [ -f /opt/emcomm-tools/bin/et-maps-setup ]; then
+    ln -sf /opt/emcomm-tools/bin/et-maps-setup /usr/local/bin/et-maps-setup
+fi
+if [ -f /opt/emcomm-tools/bin/et-data-symlinks ]; then
+    chmod 755 /opt/emcomm-tools/bin/et-data-symlinks
+fi
+
+echo "=== Hook 0050: Complete ==="

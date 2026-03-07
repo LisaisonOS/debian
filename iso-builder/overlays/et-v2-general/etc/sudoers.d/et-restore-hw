@@ -1,0 +1,1 @@
+%bluetooth ALL=(ALL) NOPASSWD: /opt/emcomm-tools/bin/et-persistence/et-restore-hw

@@ -1,0 +1,58 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : Detect EmComm-Tools persistence data on USB/external drives
+#
+# Returns : Path to et-config directory if found, empty string if not
+# Exit    : 0 if found, 1 if not found
+#
+
+# Simple direct search - same logic as et-firstboot.py
+find_persistence() {
+    # Check /media/username paths
+    if [[ -d "/media" ]]; then
+        for user_dir in /media/*/; do
+            if [[ -d "$user_dir" ]]; then
+                for drive in "$user_dir"*/; do
+                    if [[ -d "$drive" ]]; then
+                        local et_config="${drive}et-config"
+                        if [[ -f "${et_config}/user.json" ]] || [[ -f "${et_config}/manifest.json" ]]; then
+                            echo "$et_config"
+                            return 0
+                        fi
+                    fi
+                done
+            fi
+        done
+    fi
+    
+    # Check /run/media paths
+    if [[ -d "/run/media" ]]; then
+        for user_dir in /run/media/*/; do
+            if [[ -d "$user_dir" ]]; then
+                for drive in "$user_dir"*/; do
+                    if [[ -d "$drive" ]]; then
+                        local et_config="${drive}et-config"
+                        if [[ -f "${et_config}/user.json" ]] || [[ -f "${et_config}/manifest.json" ]]; then
+                            echo "$et_config"
+                            return 0
+                        fi
+                    fi
+                done
+            fi
+        done
+    fi
+    
+    return 1
+}
+
+# Main
+RESULT=$(find_persistence)
+
+if [[ -n "$RESULT" ]]; then
+    echo "$RESULT"
+    exit 0
+else
+    exit 1
+fi

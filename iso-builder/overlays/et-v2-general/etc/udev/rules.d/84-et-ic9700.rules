@@ -1,0 +1,29 @@
+# Author   : VA2OPS
+# Date     : 25 February 2026
+# Purpose  : udev rules for the Icom IC-9700
+#
+# Notes    : IC-9700 uses Silicon Labs CP210x (10c4:ea60), same as IC-7300.
+#            Two serial ports are created: serial ending in "A" = CI-V (CAT),
+#            serial ending in "B" = data. We only match port A for CAT.
+#
+# Preconditions:
+# 1. IC-9700 turned on
+# 2. IC-9700 connected via USB cable
+#
+# Postconditions:
+# 1. /dev/et-cat created
+# 2. /dev/et-audio created (via generic Icom audio rule)
+# 3. rigctld is started
+
+# Tag ALL IC-9700 ports so the Digirig catch-all rule (90) won't grab port B
+KERNEL=="ttyUSB[0-9]*", SUBSYSTEM=="tty", ENV{ID_SERIAL_SHORT}=="IC-9700*", \
+    ENV{ET_DEVICE}="IC-9700"
+
+# Create et-cat symlink only for port A (CI-V / CAT control)
+KERNEL=="ttyUSB[0-9]*", SUBSYSTEM=="tty", ENV{ID_SERIAL_SHORT}=="IC-9700*_A", \
+    ACTION=="add", \
+    ENV{SYSTEMD_WANTS}="", \
+    ENV{ET_SUBDEVICE}="CAT", GROUP="dialout", MODE="0660", SYMLINK+="et-cat", \
+    RUN+="/usr/bin/systemctl start rigctld"
+
+# Audio is handled by the generic Icom audio rule (08bb:2901) in other rule files

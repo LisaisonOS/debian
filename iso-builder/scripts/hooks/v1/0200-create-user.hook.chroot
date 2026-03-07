@@ -1,0 +1,21 @@
+#!/bin/bash
+echo "Creating live user account..."
+
+# Create user with all necessary groups
+useradd -m -s /bin/bash -G sudo,cdrom,floppy,audio,video,plugdev,users,dialout,netdev,bluetooth,et-data user
+
+# Set password to "live"
+echo "user:live" | chpasswd
+
+# Allow sudo without password for live session
+echo "user ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/user-nopasswd
+chmod 440 /etc/sudoers.d/user-nopasswd
+
+# Enable lingering for the user so systemd user services work in both
+# Live Run (USB) and HDD install modes. This starts the user's systemd
+# instance at boot, before login — required for systemctl --user services.
+mkdir -p /var/lib/systemd/linger
+touch /var/lib/systemd/linger/user
+echo "Enabled systemd linger for 'user'"
+
+echo "User 'user' created with password 'live'"

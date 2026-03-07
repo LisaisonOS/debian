@@ -44,13 +44,8 @@ python3-flask
 python3-werkzeug
 python3-webview
 
-# Dev libraries
-libfltk1.3-dev
+# Runtime audio libraries (dev packages installed by hooks when compiling)
 libportaudio2
-libsamplerate0-dev
-libsndfile1-dev
-libudev-dev
-portaudio19-dev
 
 # GPS and time sync
 gpsd
@@ -107,11 +102,7 @@ zenity
 unzip
 p7zip-full
 
-# Qt5 i386 libraries for QtTermTCP (32-bit)
-libqt5widgets5t64:i386
-libqt5multimedia5:i386
-libqt5network5:i386
-libqt5serialport5:i386
+# Qt5 libraries: amd64 installed by hook 0186, i386 by hook 0100 (QtTermTCP is 32-bit)
 
 # Ham Radio
 js8call
@@ -125,6 +116,7 @@ conky-std
 # Bluetooth (Kenwood TH-D74/D75, BT serial, GPS, audio)
 bluez
 bluez-tools
+blueman
 
 # LinBPQ dependencies
 ucspi-tcp
@@ -135,7 +127,7 @@ navit
 navit-gui-gtk
 navit-graphics-gtk-drawing-area
 navit-gui-internal
-libcanberra-gtk3-dev
+libcanberra-gtk3-0
 maptool
 espeak
 osmium-tool

@@ -1,0 +1,40 @@
+{
+    "$schema": "et-mode-v2",
+    "id": "varac",
+    "name": {
+        "en": "VarAC (VARA Chat)",
+        "fr": "VarAC (clavardage VARA)"
+    },
+    "category": "vara",
+    "requires": {
+        "devices": ["et-audio"],
+        "services": []
+    },
+    "prechecks": [
+        {"type": "device-exists", "path": "/dev/et-audio"},
+        {"type": "audio-tagged", "tag": "ET_AUDIO"},
+        {"type": "callsign-set"}
+    ],
+    "config": [],
+    "pre_start": [
+        {"action": "license-check"},
+        {"action": "kill-all"},
+        {"action": "audio-config"},
+        {"action": "varac-config"}
+    ],
+    "chain": [
+        {
+            "name": "varac",
+            "command": ["wine", "C:\\VarAC\\VarAC.exe"],
+            "env": {
+                "WINEPREFIX": "~/.wine32",
+                "WINEARCH": "win32"
+            },
+            "cwd": "~/.wine32/drive_c/VarAC",
+            "health": {},
+            "restart": "never"
+        }
+    ],
+    "post_start": [],
+    "kill_all_first": true
+}

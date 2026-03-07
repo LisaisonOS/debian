@@ -1,0 +1,31 @@
+{
+  "id": "bg2fx-fx4cr",
+  "vendor": "BG2FX",
+  "model": "FX-4CR",
+  "rigctrl": {
+    "id": "2031",
+    "baud": "115200",
+    "ptt": "RIG",
+    "conf": "data_bits=8,serial_handshake=None,stop_bits=1,rts_state=OFF",
+    "pttOnly": "false"
+  },
+  "audio": {
+    "script": "/opt/emcomm-tools/conf/radios.d/audio/bg2fx-fx4cr.sh"
+  },
+  "notes": [
+    "Short press [PWR], then rotate AF knob until POW = 5.0",
+    "Toggle [SSB] button until both USB and DIG appear",
+    "Short press [M. V] until VFOA is displayed",
+    "Long press [MENU], rotate AF to BLUETOOTH, rotate TUNE and set to 0",
+    "Set radio volume to 50",
+    "Set mic gain to 50",
+    "Set alsamixer PCM to 21",
+    "Set alsamixer Mic to 55",
+    "Set alsamixer AGC to mm"
+  ],
+  "fieldNotes": [
+    "Tested with FX-4CR firmware version: 1.7.3 (2025/09/01)",
+    "You must force the RTS control line to low for audio output to work with the PTT",
+    "This is handled with rts_state=OFF using the --set-conf argument of rigctld"
+  ]
+}

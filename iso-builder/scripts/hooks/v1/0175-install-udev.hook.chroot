@@ -1,0 +1,11 @@
+#!/bin/bash
+echo "Installing udev rules..."
+
+# Reload udev rules (overlay files already copied)
+udevadm control --reload || true
+
+echo "Disabling brltty (interferes with serial ports)..."
+systemctl mask brltty-udev.service || true
+systemctl mask brltty.service || true
+
+echo "udev configuration complete"

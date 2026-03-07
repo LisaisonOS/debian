@@ -1,0 +1,23 @@
+{
+  "id": "lab599-tx500mp",
+  "vendor": "Lab599",
+  "model": "TX-500MP (DigiRig Mobile)",
+  "rigctrl": {
+    "id": "2014",
+    "baud": "9600",
+    "ptt": "RTS",
+    "pttOnly": "false"
+  },
+  "audio": {
+    "script": "/opt/emcomm-tools/conf/radios.d/audio/lab599-tx500mp.sh"
+  },
+  "notes": [
+    "1. Set MENU 36 CAT PROTOCOL = TS2000",
+    "2. Set MODE = DIGI",
+    "",
+    "Do not enable VOX on radio"
+
+  ],
+  "fieldNotes": [
+  ]
+}

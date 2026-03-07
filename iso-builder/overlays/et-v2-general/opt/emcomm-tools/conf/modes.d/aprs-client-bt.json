@@ -1,0 +1,36 @@
+{
+    "$schema": "et-mode-v2",
+    "id": "aprs-client-bt",
+    "name": {
+        "en": "APRS (YAAC BT)",
+        "fr": "APRS (YAAC BT)"
+    },
+    "category": "packet",
+    "requires": {
+        "devices": ["rfcomm0"]
+    },
+    "prechecks": [
+        {"type": "callsign-set"}
+    ],
+    "config": [
+        {
+            "type": "station-position",
+            "target": "~/.java/.userPrefs/org/ka2ddo/yaac/prefs.xml"
+        }
+    ],
+    "pre_start": [
+        {"action": "rfcomm-bind"},
+        {"action": "kill-all"},
+        {"action": "yaac-config", "bluetooth": true}
+    ],
+    "chain": [
+        {
+            "name": "yaac",
+            "command": ["java", "-Xms2g", "-Xmx6g", "-XX:+UseG1GC", "-jar", "/opt/yaac/YAAC.jar"],
+            "health": {},
+            "restart": "never"
+        }
+    ],
+    "post_start": [],
+    "kill_all_first": true
+}

@@ -1,0 +1,16 @@
+{
+  "id": "kenwood-thd74",
+  "vendor": "Kenwood",
+  "model": "TH-D74 (BT)",
+  "bluetooth": {
+    "deviceName" : "TH-D74",
+    "channel": "2",
+    "mac": ""
+  },
+  "notes": [
+    "Menu > Configuration > Bluetooth > On",
+    "Menu > Configuration > Interface > KISS > Bluetooth"
+  ],
+  "fieldNotes": [
+  ]
+}

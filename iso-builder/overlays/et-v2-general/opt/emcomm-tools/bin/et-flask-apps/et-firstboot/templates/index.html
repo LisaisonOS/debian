@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}EmComm-Tools First Boot{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>🛰️ EmComm-Tools</h1>
+        <p style="color: #888; margin-top: 10px;">Emergency Communications System</p>
+    </div>
+    
+    <div class="card" style="text-align: center;">
+        <h2>Choisir la langue / Select Language</h2>
+        <div class="lang-select">
+            <a href="{{ url_for('set_language', lang='fr') }}" class="lang-btn">Français</a>
+            <a href="{{ url_for('set_language', lang='en') }}" class="lang-btn">English</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

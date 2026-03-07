@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ET-Crypto
+GenericName=Text Encryption
+Comment=Symmetric text encryption with shared passphrase
+Exec=/opt/emcomm-tools/bin/et-crypto
+Icon=dialog-password
+Terminal=false
+Type=Application
+Categories=HamRadio;Utility;
+Keywords=ham;radio;encryption;cipher;crypto;emcomm;

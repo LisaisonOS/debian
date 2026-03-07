@@ -1,0 +1,162 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : March 2026
+# Purpose : Restore WiFi and Bluetooth configs from USB persistence on HDD install
+#
+# Usage   : sudo et-restore-hw
+# Note    : Requires root for writing to system dirs + restarting services
+#
+
+set -e
+
+# --- Colors ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log() { echo -e "${GREEN}[et-restore-hw]${NC} $1"; }
+warn() { echo -e "${YELLOW}[et-restore-hw]${NC} $1"; }
+err() { echo -e "${RED}[et-restore-hw]${NC} $1"; }
+
+# --- Must run as root ---
+if [[ $EUID -ne 0 ]]; then
+    err "This script must be run as root (sudo et-restore-hw)"
+    exit 1
+fi
+
+# --- Detect USB persistence ---
+DETECT_SCRIPT="/opt/emcomm-tools/bin/et-persistence/et-persistence-detect"
+if [[ ! -x "$DETECT_SCRIPT" ]]; then
+    err "Persistence detect script not found: $DETECT_SCRIPT"
+    exit 1
+fi
+
+# Run detect as the calling user (not root) so /media/<user>/ paths work
+CALLING_USER="${SUDO_USER:-$(logname 2>/dev/null || echo '')}"
+if [[ -n "$CALLING_USER" ]]; then
+    PERSISTENCE_PATH=$(su - "$CALLING_USER" -c "$DETECT_SCRIPT" 2>/dev/null) || true
+else
+    PERSISTENCE_PATH=$($DETECT_SCRIPT 2>/dev/null) || true
+fi
+
+if [[ -z "$PERSISTENCE_PATH" ]]; then
+    err "No USB persistence data found."
+    err "Insert a USB drive with EmComm-Tools config and try again."
+    exit 1
+fi
+
+log "Found persistence data: $PERSISTENCE_PATH"
+
+# --- Check what's available ---
+WIFI_SRC="${PERSISTENCE_PATH}/configs/wifi"
+BT_TAR="${PERSISTENCE_PATH}/configs/bluetooth/bt-pairings.tar"
+
+HAS_WIFI=false
+HAS_BT=false
+WIFI_COUNT=0
+BT_COUNT=0
+
+if [[ -d "$WIFI_SRC" ]] && [[ -n "$(ls -A "$WIFI_SRC" 2>/dev/null)" ]]; then
+    HAS_WIFI=true
+    WIFI_COUNT=$(ls -1 "$WIFI_SRC"/*.nmconnection 2>/dev/null | wc -l)
+fi
+
+if [[ -f "$BT_TAR" ]]; then
+    HAS_BT=true
+    BT_COUNT=$(tar tf "$BT_TAR" 2>/dev/null | grep -c '^./[^/]*/[^/]*/$' || true)
+fi
+
+if ! $HAS_WIFI && ! $HAS_BT; then
+    warn "No WiFi or Bluetooth configs found on USB."
+    exit 0
+fi
+
+# --- Summary ---
+echo ""
+echo -e "${BLUE}=== Hardware Config Restore ===${NC}"
+if $HAS_WIFI; then
+    log "WiFi networks found: $WIFI_COUNT"
+fi
+if $HAS_BT; then
+    log "Bluetooth devices found: $BT_COUNT"
+fi
+echo ""
+
+# --- Restore WiFi ---
+WIFI_RESTORED=0
+if $HAS_WIFI; then
+    log "Restoring WiFi networks..."
+    WIFI_DEST="/etc/NetworkManager/system-connections"
+    mkdir -p "$WIFI_DEST"
+
+    for wifi_file in "$WIFI_SRC"/*.nmconnection; do
+        if [[ -f "$wifi_file" ]]; then
+            filename=$(basename "$wifi_file")
+            conn_id=$(grep "^id=" "$wifi_file" | cut -d= -f2)
+
+            # Delete any existing connections with same base name (avoid duplicates)
+            if [[ -n "$conn_id" ]]; then
+                rm -f "$WIFI_DEST/${conn_id}"*.nmconnection 2>/dev/null
+            fi
+
+            # Copy without interface-name line (hardware-specific)
+            grep -v "^interface-name=" "$wifi_file" > "$WIFI_DEST/$filename"
+            ((WIFI_RESTORED++)) || true
+            log "  + $conn_id"
+        fi
+    done
+
+    # Fix permissions (NetworkManager requires 600)
+    chmod 600 "$WIFI_DEST"/*.nmconnection 2>/dev/null
+    chown root:root "$WIFI_DEST"/*.nmconnection 2>/dev/null
+
+    # Restart NetworkManager to pick up new files
+    systemctl restart NetworkManager 2>/dev/null
+    sleep 2
+
+    # Load and try to connect each restored network
+    for wifi_file in "$WIFI_DEST"/*.nmconnection; do
+        nmcli connection load "$wifi_file" 2>/dev/null || true
+        conn_id=$(grep "^id=" "$wifi_file" 2>/dev/null | cut -d= -f2)
+        if [[ -n "$conn_id" ]]; then
+            nmcli connection up "$conn_id" 2>/dev/null || true
+        fi
+    done
+
+    log "WiFi restore complete: $WIFI_RESTORED networks"
+fi
+
+# --- Restore Bluetooth ---
+BT_RESTORED=0
+if $HAS_BT; then
+    log "Restoring Bluetooth pairings..."
+    BT_DEST="/var/lib/bluetooth"
+    # Recreate dir — on live systems, overlay lower layer dir is read-only
+    rm -rf "$BT_DEST"
+    mkdir -p "$BT_DEST"
+
+    tar xf "$BT_TAR" -C "$BT_DEST" 2>/dev/null
+    chown -R root:bluetooth "$BT_DEST/" 2>/dev/null
+    chmod -R 700 "$BT_DEST/" 2>/dev/null
+
+    # Restart bluetooth service to load restored pairings
+    systemctl restart bluetooth 2>/dev/null
+    sleep 2
+
+    BT_RESTORED=$(find "$BT_DEST" -mindepth 2 -maxdepth 2 -type d 2>/dev/null | wc -l)
+    log "Bluetooth restore complete: $BT_RESTORED devices"
+fi
+
+# --- Summary ---
+echo ""
+echo -e "${GREEN}=== Restore Complete ===${NC}"
+if [[ $WIFI_RESTORED -gt 0 ]]; then
+    log "Restored $WIFI_RESTORED WiFi networks"
+fi
+if [[ $BT_RESTORED -gt 0 ]]; then
+    log "Restored $BT_RESTORED Bluetooth devices"
+fi
+echo ""

@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
+echo "Installing QGIS PlaceMarker plugin..."
+
+PLUGIN_URL="https://plugins.qgis.org/plugins/PlaceMarker/version/1.3.0/download/"
+PLUGIN_FILE="PlaceMarker.zip"
+PLUGIN_DIR="/etc/skel/.local/share/QGIS/QGIS3/profiles/default/python/plugins"
+LOCAL_FALLBACK="${REPO_ROOT}/downloads/${PLUGIN_FILE}"
+
+mkdir -p "$PLUGIN_DIR"
+
+echo "Downloading QGIS PlaceMarker plugin..."
+if curl -s -L -o "/tmp/${PLUGIN_FILE}" --fail --retry 3 --retry-delay 5 "$PLUGIN_URL"; then
+    echo "Download successful."
+elif [ -f "${LOCAL_FALLBACK}" ]; then
+    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
+    cp "${LOCAL_FALLBACK}" "/tmp/${PLUGIN_FILE}"
+else
+    echo "ERROR: QGIS plugin download failed and no local fallback at ${LOCAL_FALLBACK}"
+    exit 1
+fi
+
+unzip -o "/tmp/${PLUGIN_FILE}" -d "$PLUGIN_DIR"
+rm -f "/tmp/${PLUGIN_FILE}"
+
+echo "Installing npm serve for qgis-web-app..."
+npm install -g serve || true
+
+echo "QGIS plugin installation complete"

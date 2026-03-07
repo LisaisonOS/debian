@@ -1,0 +1,10 @@
+[Unit]
+Description=Rig Control Service
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/opt/emcomm-tools/sbin/wrapper-rigctld.sh start
+
+[Install]
+WantedBy=multi-user.target

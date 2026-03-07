@@ -1,0 +1,16 @@
+{
+  "id": "elecraft-kx2",
+  "vendor": "Elecraft",
+  "model": "KX-2 (DigiRig)",
+  "rigctrl": {
+    "id": "2044",
+    "baud": "38400",
+    "ptt": "RTS"
+  },
+  "notes": [
+    "In Menu set RS232 to 38400 b",
+    "Note current Mic Gain setting then set to 5 (ALC meter should read 3-5 bars during TX)",
+    "Set AF Gain to 15 (ensure input level is green in JS8CALL)",
+    "For voice operation, return Mic Gain to setting noted above (25 typical)"
+  ]
+}

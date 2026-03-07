@@ -1,0 +1,24 @@
+#!/bin/bash
+echo "Downloading offline maps (this will take a while)..."
+
+MAP_DIR="/etc/skel/.local/share/emcomm-tools/mbtileserver/tilesets"
+mkdir -p ${MAP_DIR}
+
+ET_RELEASE_URL="https://github.com/thetechprepper/emcomm-tools-os-community/releases/download"
+ET_RELEASE_TAG="emcomm-tools-os-community-20251128-r5-final-5.0.0"
+
+cd ${MAP_DIR}
+
+echo "Downloading US map tiles (~2GB)..."
+curl -L -f --progress-bar -o osm-us-zoom0to11-20251120.mbtiles \
+    "${ET_RELEASE_URL}/${ET_RELEASE_TAG}/osm-us-zoom0to11-20251120.mbtiles"
+
+echo "Downloading Canada map tiles (~500MB)..."
+curl -L -f --progress-bar -o osm-ca-zoom0to10-20251120.mbtiles \
+    "${ET_RELEASE_URL}/${ET_RELEASE_TAG}/osm-ca-zoom0to10-20251120.mbtiles"
+
+echo "Downloading World map tiles (~200MB)..."
+curl -L -f --progress-bar -o osm-world-zoom0to7-20251121.mbtiles \
+    "${ET_RELEASE_URL}/${ET_RELEASE_TAG}/osm-world-zoom0to7-20251121.mbtiles"
+
+echo "Map download complete!"

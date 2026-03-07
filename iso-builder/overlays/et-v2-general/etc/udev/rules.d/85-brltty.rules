@@ -1,0 +1,7 @@
+# Author   : Gaston Gonzalez
+# Date     : 31 May 2025
+# Updated  : 4 June 2025
+# Purpose  : Empty udev rule to prevent the BRLTTY subsystem from
+#            invoking /lib/udev/rules.d/85-brltty.rules. These rules
+#            hijack some USB devices used by ETC operators. The Bionics 
+#            MicroFox-50 was one of these hijacked devices.

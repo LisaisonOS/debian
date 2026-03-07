@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+
+# Pat Winlink — custom EmComm-Tools build with URL parameter support
+# Binary is provided via overlay at /usr/local/bin/pat (not from Debian repos)
+
+echo "=== Pat Winlink Version Check ==="
+
+OUR_VERSION=""
+LATEST_VERSION=""
+
+# Get our custom binary version
+if [ -f /usr/local/bin/pat ]; then
+    OUR_VERSION=$(/usr/local/bin/pat version 2>/dev/null | grep -oP 'v[\d.]+' | head -1 || true)
+    echo "Custom Pat binary: ${OUR_VERSION:-unknown}"
+else
+    echo "WARNING: Custom Pat binary not found at /usr/local/bin/pat"
+    echo "         Check that the overlay includes usr/local/bin/pat"
+    exit 0
+fi
+
+# Check latest release on GitHub
+LATEST_VERSION=$(curl -s --max-time 10 "https://api.github.com/repos/la5nta/pat/releases/latest" 2>/dev/null \
+    | grep -oP '"tag_name"\s*:\s*"v\K[^"]+' || true)
+
+if [ -n "$LATEST_VERSION" ] && [ -n "$OUR_VERSION" ]; then
+    OUR_CLEAN=$(echo "$OUR_VERSION" | sed 's/^v//')
+    if [ "$OUR_CLEAN" != "$LATEST_VERSION" ]; then
+        echo ""
+        echo "========================================================"
+        echo "  WARNING: Pat may need updating!"
+        echo "  Our custom build: ${OUR_VERSION}"
+        echo "  Latest release:   v${LATEST_VERSION}"
+        echo "  Rebuild from source if new version is needed."
+        echo "========================================================"
+        echo ""
+    else
+        echo "Pat is up to date (${OUR_VERSION})"
+    fi
+else
+    echo "Could not check latest version (no internet?) — skipping check"
+fi
+
+echo "=== Pat Winlink check complete ==="

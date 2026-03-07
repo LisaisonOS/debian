@@ -1,0 +1,64 @@
+#!/bin/bash
+# =============================================================================
+# EmComm-Tools Debian Edition
+# Hook: Install flwrap (pre-built binary)
+# 
+# Author: Sylvain Deguire (VA2OPS)
+# Date: January 2026
+# Version: 20260106.02
+#
+# Uses pre-compiled binary to avoid pthread compile issues on Debian 13
+# =============================================================================
+set -e
+
+APP="flwrap"
+VERSION="1.3.6"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
+LINK_PATH="/opt/${APP}"
+
+# Pre-built binary location (copied via includes.chroot)
+PREBUILT_BIN="/usr/share/emcomm-tools/prebuilt/flwrap"
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "Installing ${APP} ${VERSION} (pre-built binary)"
+echo "═══════════════════════════════════════════════════════════════"
+
+if [[ ! -f ${PREBUILT_BIN} ]]; then
+    echo "ERROR: Pre-built binary not found at ${PREBUILT_BIN}"
+    exit 1
+fi
+
+# Create install directory
+mkdir -p ${INSTALL_BIN_DIR}
+
+# Copy pre-built binary
+cp ${PREBUILT_BIN} ${INSTALL_BIN_DIR}/
+chmod 755 ${INSTALL_BIN_DIR}/flwrap
+
+# Create symlink
+rm -rf ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+# Install to /usr/local using stow
+stow -D -d /opt flwrap -t /usr/local 2>/dev/null || true
+stow -v -d /opt flwrap -t /usr/local
+
+# Create .desktop file
+DESKTOP_FILE="/usr/share/applications/${APP}.desktop"
+cat > ${DESKTOP_FILE} << 'DESKTOP'
+[Desktop Entry]
+Name=flwrap
+GenericName=NBEMS File Wrapper
+Comment=Wrap/unwrap files for amateur radio transmission
+Exec=/usr/local/bin/flwrap
+Icon=flwrap
+Terminal=false
+Type=Application
+Categories=HamRadio;Network;
+Keywords=amateur;radio;ham;nbems;wrap;file;
+DESKTOP
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "${APP} ${VERSION} installation complete!"
+echo "═══════════════════════════════════════════════════════════════"

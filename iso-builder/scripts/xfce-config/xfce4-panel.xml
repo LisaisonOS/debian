@@ -16,11 +16,9 @@
         <value type="int" value="3"/>
         <value type="int" value="4"/>
         <value type="int" value="5"/>
-        <value type="int" value="20"/>
-        <value type="int" value="21"/>
-        <value type="int" value="23"/>
-        <value type="int" value="22"/>
         <value type="int" value="24"/>
+        <value type="int" value="25"/>
+        <value type="int" value="26"/>
         <value type="int" value="6"/>
         <value type="int" value="7"/>
         <value type="int" value="8"/>
@@ -47,29 +45,19 @@
         <value type="string" value="xfce4-terminal.desktop"/>
       </property>
     </property>
-    <property name="plugin-20" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="varac.desktop"/>
-      </property>
-    </property>
-    <property name="plugin-21" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="js8call.desktop"/>
-      </property>
-    </property>
-    <property name="plugin-23" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="wsjtx.desktop"/>
-      </property>
-    </property>
-    <property name="plugin-22" type="string" value="launcher">
-      <property name="items" type="array">
-        <value type="string" value="fldigi.desktop"/>
-      </property>
-    </property>
     <property name="plugin-24" type="string" value="launcher">
       <property name="items" type="array">
         <value type="string" value="navit.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-25" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="et-predict.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-26" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="et-crypto.desktop"/>
       </property>
     </property>
     <property name="plugin-6" type="string" value="separator"/>

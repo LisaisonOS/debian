@@ -1,0 +1,120 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : January 2026
+# Purpose : GUI wrapper for et-persistence with notifications
+#
+# Usage   : et-persistence-gui save|restore|status
+#
+
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+ACTION="${1:-status}"
+
+# Translations
+declare -A MSG_EN MSG_FR
+
+MSG_EN["saving"]="Saving configuration to USB..."
+MSG_FR["saving"]="Sauvegarde de la configuration sur USB..."
+
+MSG_EN["saved"]="Configuration saved successfully!"
+MSG_FR["saved"]="Configuration sauvegardée avec succès!"
+
+MSG_EN["save_failed"]="Failed to save configuration"
+MSG_FR["save_failed"]="Échec de la sauvegarde"
+
+MSG_EN["restoring"]="Restoring configuration from USB..."
+MSG_FR["restoring"]="Restauration de la configuration depuis USB..."
+
+MSG_EN["restored"]="Configuration restored successfully!"
+MSG_FR["restored"]="Configuration restaurée avec succès!"
+
+MSG_EN["restore_failed"]="Failed to restore configuration"
+MSG_FR["restore_failed"]="Échec de la restauration"
+
+MSG_EN["no_usb"]="No EmComm-Tools USB drive found"
+MSG_FR["no_usb"]="Aucune clé USB EmComm-Tools trouvée"
+
+MSG_EN["status_title"]="EmComm-Tools Persistence"
+MSG_FR["status_title"]="Persistance EmComm-Tools"
+
+# Detect language
+LANG_CODE="en"
+[[ "$LANG" == fr* ]] || [[ "$LANGUAGE" == fr* ]] && LANG_CODE="fr"
+
+msg() {
+    local key="$1"
+    if [[ "$LANG_CODE" == "fr" ]]; then
+        echo "${MSG_FR[$key]:-${MSG_EN[$key]}}"
+    else
+        echo "${MSG_EN[$key]}"
+    fi
+}
+
+# Notification function
+notify() {
+    local title="$1"
+    local message="$2"
+    local icon="${3:-dialog-information}"
+    
+    if command -v notify-send &>/dev/null; then
+        notify-send -i "$icon" "$title" "$message"
+    elif command -v zenity &>/dev/null; then
+        zenity --notification --text="$title: $message" &
+    fi
+}
+
+# Progress dialog
+show_progress() {
+    local message="$1"
+    
+    if command -v zenity &>/dev/null && [[ -n "$DISPLAY" ]]; then
+        zenity --info --title="EmComm-Tools" --text="$message" --no-wrap --timeout=2 &
+    else
+        echo "$message"
+    fi
+}
+
+# Check for USB
+check_usb() {
+    if ! "${SCRIPT_DIR}/et-persistence-detect" &>/dev/null; then
+        notify "EmComm-Tools" "$(msg 'no_usb')" "dialog-warning"
+        
+        if command -v zenity &>/dev/null && [[ -n "$DISPLAY" ]]; then
+            zenity --warning --title="EmComm-Tools" --text="$(msg 'no_usb')"
+        fi
+        exit 1
+    fi
+}
+
+case "$ACTION" in
+    save)
+        check_usb
+        show_progress "$(msg 'saving')"
+        
+        if "${SCRIPT_DIR}/et-persistence-save" --all --quiet; then
+            notify "EmComm-Tools" "$(msg 'saved')" "dialog-ok"
+        else
+            notify "EmComm-Tools" "$(msg 'save_failed')" "dialog-error"
+        fi
+        ;;
+    
+    restore)
+        check_usb
+        show_progress "$(msg 'restoring')"
+        
+        if "${SCRIPT_DIR}/et-persistence-restore" --all --quiet; then
+            notify "EmComm-Tools" "$(msg 'restored')" "dialog-ok"
+        else
+            notify "EmComm-Tools" "$(msg 'restore_failed')" "dialog-error"
+        fi
+        ;;
+    
+    status)
+        "${SCRIPT_DIR}/et-persistence" status
+        ;;
+    
+    *)
+        echo "Usage: et-persistence-gui save|restore|status"
+        exit 1
+        ;;
+esac

@@ -1,0 +1,14 @@
+#!/bin/bash
+echo "Configuring LightDM autologin..."
+
+mkdir -p /etc/lightdm/lightdm.conf.d
+
+cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf << 'LIGHTDM'
+[Seat:*]
+autologin-user=user
+autologin-user-timeout=0
+user-session=xfce
+autologin-session=xfce
+LIGHTDM
+
+echo "LightDM autologin configured for user 'user'"

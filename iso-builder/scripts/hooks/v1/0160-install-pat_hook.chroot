@@ -1,0 +1,4 @@
+#!/bin/bash
+# Pat Winlink - EmComm-Tools custom build with URL parameter support
+# Binary is in overlay at /usr/local/bin/pat
+echo "Pat installed: $(/usr/local/bin/pat version)"

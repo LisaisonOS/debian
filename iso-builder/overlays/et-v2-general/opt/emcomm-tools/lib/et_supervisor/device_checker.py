@@ -1,0 +1,119 @@
+"""
+DeviceChecker: Verify hardware preconditions before starting a mode.
+
+Checks:
+- device-exists: udev symlink exists (e.g., /dev/et-audio, /dev/et-cat)
+- audio-tagged: arecord -l shows ET_AUDIO tag
+- service-active: systemctl check (e.g., rigctld)
+- callsign-set: user.json callsign is not N0CALL
+"""
+
+import json
+import logging
+import os
+import subprocess
+
+log = logging.getLogger("et-supervisor.device")
+
+USER_CONFIG_PATH = os.path.expanduser("~/.config/emcomm-tools/user.json")
+
+
+def run_precheck(check):
+    """Run a single precheck from mode config.
+
+    Args:
+        check: dict with "type" and type-specific fields.
+
+    Returns:
+        (success: bool, message: str)
+    """
+    check_type = check.get("type", "")
+
+    if check_type == "device-exists":
+        return _check_device_exists(check.get("path", ""))
+
+    if check_type == "audio-tagged":
+        return _check_audio_tagged(check.get("tag", "ET_AUDIO"))
+
+    if check_type == "service-active":
+        return _check_service_active(check.get("name", ""))
+
+    if check_type == "callsign-set":
+        return _check_callsign_set()
+
+    if check_type == "file-exists":
+        return _check_file_exists(check.get("path", ""))
+
+    return False, f"Unknown precheck type: {check_type}"
+
+
+def run_prechecks(checks):
+    """Run all prechecks for a mode.
+
+    Returns:
+        (all_passed: bool, failures: list of (type, message) tuples)
+    """
+    failures = []
+    for check in checks:
+        ok, msg = run_precheck(check)
+        if not ok:
+            failures.append((check.get("type", "unknown"), msg))
+            log.warning("Precheck failed: %s — %s", check.get("type"), msg)
+    return len(failures) == 0, failures
+
+
+def _check_device_exists(path):
+    if not path:
+        return False, "No device path specified"
+    if os.path.exists(path):
+        return True, f"{path} found"
+    return False, f"{path} not found. Is the device connected?"
+
+
+def _check_audio_tagged(tag):
+    try:
+        result = subprocess.run(
+            ["arecord", "-l"],
+            capture_output=True, text=True, timeout=5
+        )
+        if tag in result.stdout:
+            return True, f"Audio device with {tag} tag found"
+        return False, f"No audio device with {tag} tag detected"
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False, "arecord command failed"
+
+
+def _check_service_active(name):
+    if not name:
+        return False, "No service name specified"
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", "--quiet", name],
+            timeout=5
+        )
+        if result.returncode == 0:
+            return True, f"{name} is active"
+        return False, f"{name} is not running. Ensure radio is selected."
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False, f"Failed to check {name} status"
+
+
+def _check_callsign_set():
+    try:
+        with open(USER_CONFIG_PATH) as f:
+            config = json.load(f)
+        callsign = config.get("callsign", "N0CALL")
+        if callsign and callsign != "N0CALL":
+            return True, f"Callsign: {callsign}"
+        return False, "Callsign not set. Run et-user first."
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False, "User config not found. Run et-firstboot first."
+
+
+def _check_file_exists(path):
+    if not path:
+        return False, "No file path specified"
+    expanded = os.path.expanduser(path)
+    if os.path.isfile(expanded):
+        return True, f"{path} found"
+    return False, f"{path} not found"

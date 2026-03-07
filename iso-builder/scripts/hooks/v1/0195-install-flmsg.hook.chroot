@@ -1,0 +1,114 @@
+#!/bin/bash
+# =============================================================================
+# EmComm-Tools Debian Edition
+# Hook: Install flmsg (NBEMS Forms Manager)
+# 
+# Author: Sylvain Deguire (VA2OPS)
+# Date: January 2026
+# Version: 20260106.01
+#
+# flmsg is a forms management editor for amateur radio standard message formats
+# including ICS-213, Radiogram, MARS forms, and custom HTML forms.
+# Part of the W1HKJ fldigi suite.
+#
+# Note: v4.0.24 has pthread compile bug, using v4.0.23
+# =============================================================================
+set -e
+
+APP="flmsg"
+VERSION="4.0.23"
+GIT_TAG="v${VERSION}"
+GIT_URL="https://git.code.sf.net/p/fldigi/flmsg"
+SRC_DIR="/opt/src"
+INSTALL_DIR="/opt/${APP}-${VERSION}"
+LINK_PATH="/opt/${APP}"
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "Installing ${APP} ${VERSION} (NBEMS Forms Manager)"
+echo "═══════════════════════════════════════════════════════════════"
+
+# Build dependencies (most already installed for fldigi)
+apt-get install -y --no-install-recommends \
+    build-essential \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    git \
+    libfltk1.3-dev \
+    libxft-dev \
+    libxinerama-dev \
+    libxcursor-dev \
+    libsamplerate0-dev \
+    libpng-dev \
+    libsndfile1-dev \
+    portaudio19-dev
+
+# Create source directory
+mkdir -p ${SRC_DIR}
+cd ${SRC_DIR}
+
+# Clone if not already present
+if [[ ! -d ${APP} ]]; then
+    echo "Cloning ${APP} repository..."
+    git clone ${GIT_URL} ${APP}
+fi
+
+cd ${APP}
+
+# Checkout the specific version
+echo "Checking out ${GIT_TAG}..."
+git fetch --all --tags
+git checkout ${GIT_TAG}
+
+# Build
+echo "Running autoreconf..."
+autoreconf -i
+
+echo "Configuring with prefix=${INSTALL_DIR}..."
+./configure --prefix=${INSTALL_DIR}
+
+echo "Compiling ${APP}..."
+make -j$(nproc)
+
+echo "Installing ${APP}..."
+make install
+
+# Create symlink
+[[ -L ${LINK_PATH} ]] && rm ${LINK_PATH}
+ln -s ${INSTALL_DIR} ${LINK_PATH}
+
+# Install to /usr/local using stow
+echo "Installing to /usr/local via stow..."
+stow -v -d /opt ${APP} -t /usr/local
+
+# Create .desktop file if not present
+DESKTOP_FILE="/usr/share/applications/${APP}.desktop"
+if [[ ! -f ${DESKTOP_FILE} ]]; then
+    echo "Creating desktop entry..."
+    cat > ${DESKTOP_FILE} << 'EOF'
+[Desktop Entry]
+Name=flmsg
+GenericName=NBEMS Forms Manager
+Comment=Amateur radio forms management for ICS, Radiogram, MARS
+Exec=/usr/local/bin/flmsg
+Icon=flmsg
+Terminal=false
+Type=Application
+Categories=HamRadio;Network;
+Keywords=amateur;radio;ham;forms;ICS;radiogram;emcomm;
+EOF
+fi
+
+# Copy icon if available
+if [[ -f ${INSTALL_DIR}/share/pixmaps/flmsg.xpm ]]; then
+    cp ${INSTALL_DIR}/share/pixmaps/flmsg.xpm /usr/share/pixmaps/
+fi
+
+# Create NBEMS directory structure for user
+NBEMS_DIR="/etc/skel/.nbems"
+mkdir -p ${NBEMS_DIR}/{ICS/messages,ICS/templates,CUSTOM,WRAP/auto,temp_files}
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "${APP} ${VERSION} installation complete!"
+echo "═══════════════════════════════════════════════════════════════"

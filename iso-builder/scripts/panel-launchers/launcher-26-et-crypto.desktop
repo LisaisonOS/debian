@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ET-Crypto
+Name[fr]=ET-Crypto
+Comment=Symmetric text encryption with shared passphrase
+Comment[fr]=Chiffrement de texte symétrique avec phrase secrète partagée
+Exec=/opt/emcomm-tools/bin/et-crypto
+Icon=dialog-password
+Terminal=false
+Type=Application
+Categories=HamRadio;Utility;

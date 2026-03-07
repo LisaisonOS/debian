@@ -1,0 +1,45 @@
+{
+  "id": "yaesu-ft710",
+  "vendor": "Yaesu",
+  "model": "FT-710",
+  "rigctrl": {
+    "id": "1049",
+    "baud": "38400",
+    "ptt": "RIG",
+    "conf": "rts_state=OFF,dtr_state=OFF"
+  },
+  "notes": [
+    "--- OPERATION SETTING > GENERAL ---",
+    "CAT-1 RATE = 38400bps (default)",
+    "CAT-1 TIME OUT TIMER = 10msec (default)",
+    "CAT-1 CAT-3 STOP BIT = 1bit (default)",
+    "",
+    "--- RADIO SETTING > MODE PSK/DATA (for HF digital) ---",
+    "MOD SOURCE = USB (default AUTO, set USB for PC audio input)",
+    "RPTT SELECT = RTS (default OFF, set RTS for USB PTT control)",
+    "LCUT FREQ = OFF (default 100Hz, set OFF for digital modes)",
+    "HCUT FREQ = OFF (default 3200Hz, set OFF for digital modes)",
+    "USB OUT LEVEL = 50 (default, receive audio to PC)",
+    "USB MOD GAIN = 50 (default, transmit audio from PC)",
+    "TX BPF SEL = 50-3050Hz (default, widest passband)",
+    "DATA SHIFT (SSB) = 1500Hz (default)",
+    "PSK TONE = 1000Hz (default)",
+    "NAR WIDTH = 300Hz (default)",
+    "",
+    "--- RADIO SETTING > MODE FM (for FM packet) ---",
+    "MOD SOURCE = USB (default AUTO, set USB for PC audio input)",
+    "RPTT SELECT = RTS (default OFF, set RTS for USB PTT control)",
+    "USB MOD GAIN = 50 (default)",
+    "LCUT FREQ = OFF (default 300Hz, set OFF for packet)",
+    "HCUT FREQ = OFF (default 3000Hz, set OFF for packet)",
+    "",
+    "--- OPERATIONAL NOTES ---",
+    "For HF digital operation always set Mode = DATA-U (DATA-USB)",
+    "For FM packet operation always set Mode = DATA-FM",
+    "FT8 PRESET button (MODE screen) auto-configures 17 settings for FT8",
+    "FT-710 has touchscreen menu: FUNC > category > per-mode settings",
+    "No numbered menus like FT-991A — use named menu paths above"
+  ],
+  "fieldNotes": [
+  ]
+}
