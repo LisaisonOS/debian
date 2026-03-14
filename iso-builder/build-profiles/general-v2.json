@@ -1,0 +1,27 @@
+{
+    "language": "en",
+    "arch_version": "v2",
+    "overlay": "et-v2-general",
+    "maps": {
+        "include": false,
+        "osm_regions": []
+    },
+    "wallpaper": {
+        "mode": "generate",
+        "callsign": "emcomm-tools",
+        "tagline": "Explore. Connect. Respond. (Explorer. Connecter. Répondre.)",
+        "color": 2,
+        "center_size": 72,
+        "tag_size": 50,
+        "tag_offset": 170
+    },
+    "boot_logo": "callsign",
+    "update": {
+        "enabled": true,
+        "url": "https://raw.githubusercontent.com/emcomm-tools/updates/main",
+        "channel": "stable"
+    },
+    "motd": "emcomm-motd",
+    "iso_type": "complete",
+    "wine_prefix": "General"
+}

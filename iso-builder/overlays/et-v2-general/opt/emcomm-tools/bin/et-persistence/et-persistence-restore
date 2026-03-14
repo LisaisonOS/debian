@@ -606,7 +606,7 @@ if restore_firefox_profile; then
     ((RESTORED++)) || true
 fi
 
-# --- WiFi Networks (NetworkManager) - LIVE MODE ONLY ---
+# --- WiFi Networks (NetworkManager) ---
 log "Starting WiFi restore..."
 WIFI_SRC="${PERSISTENCE_PATH}/configs/wifi"
 WIFI_DEST="/etc/NetworkManager/system-connections"
@@ -650,7 +650,7 @@ else
     log "⏭ Skip: WiFi (no saved networks)"
 fi
 
-# --- Bluetooth Pairings - LIVE MODE ONLY ---
+# --- Bluetooth Pairings ---
 log "Starting Bluetooth restore..."
 BT_TAR="${PERSISTENCE_PATH}/configs/bluetooth/bt-pairings.tar"
 BT_DEST="/var/lib/bluetooth"

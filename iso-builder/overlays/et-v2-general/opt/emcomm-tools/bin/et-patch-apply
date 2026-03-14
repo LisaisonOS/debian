@@ -197,6 +197,16 @@ rollback() {
                     cp -p "$backup_path" "${ET_HOME}/${path}"
                 fi
                 ;;
+            EXTRA_ADD|EXTRA_UPDATE)
+                # path is the absolute target for extra files
+                if [ -n "$backup_path" ] && [ -f "$backup_path" ]; then
+                    log INFO "  Restoring extra: $path"
+                    cp -p "$backup_path" "$path"
+                elif [ "$action" = "EXTRA_ADD" ]; then
+                    log INFO "  Removing added extra file: $path"
+                    rm -f "$path"
+                fi
+                ;;
         esac
     done < "$applied_file"
 
@@ -277,6 +287,10 @@ apply_patch() {
     deleted_count=$(jq '[.files[] | select(.action == "delete")] | length' "$manifest_file")
     total_count=$(jq '.files | length' "$manifest_file")
 
+    # --- Count extra files ---
+    local extra_file_count
+    extra_file_count=$(jq '.extra_files // [] | length' "$manifest_file")
+
     # --- Show summary ---
     echo ""
     echo "────────────────────────────────────────────────────"
@@ -288,6 +302,9 @@ apply_patch() {
     echo "  Added:      $added_count file(s)"
     echo "  Modified:   $modified_count file(s)"
     echo "  Deleted:    $deleted_count file(s)"
+    if [ "$extra_file_count" -gt 0 ]; then
+        echo "  System:     $extra_file_count file(s)"
+    fi
     echo "────────────────────────────────────────────────────"
 
     # List files
@@ -420,6 +437,52 @@ apply_patch() {
         esac
 
     done < <(jq -c '.files[]' "$manifest_file")
+
+    # --- Process extra system files (desktop entries, udev rules, sudoers) ---
+    local extra_count
+    extra_count=$(jq '.extra_files // [] | length' "$manifest_file")
+    if [ "$extra_count" -gt 0 ]; then
+        log STEP "Applying extra system files..."
+
+        while IFS= read -r entry; do
+            local target action sha256 permissions rel_path
+            target=$(echo "$entry" | jq -r '.target')
+            action=$(echo "$entry" | jq -r '.action')
+            sha256=$(echo "$entry" | jq -r '.sha256 // empty')
+            permissions=$(echo "$entry" | jq -r '.permissions // "644"')
+            rel_path=$(echo "$entry" | jq -r '.rel_path')
+
+            local src="${patch_dir}/extra/${rel_path}"
+
+            # Verify patch file
+            if [ ! -f "$src" ]; then
+                log ERROR "Extra file missing: extra/$rel_path"
+                failed=true
+                break
+            fi
+            if [ -n "$sha256" ]; then
+                if ! verify_sha256 "$src" "$sha256"; then
+                    log ERROR "Extra file corrupted: $rel_path"
+                    failed=true
+                    break
+                fi
+            fi
+
+            # Backup existing file
+            if [ -f "$target" ]; then
+                mkdir -p "$(dirname "${backup_dir}/extra/${rel_path}")"
+                cp -p "$target" "${backup_dir}/extra/${rel_path}"
+            fi
+
+            # Install the file
+            mkdir -p "$(dirname "$target")"
+            cp -p "$src" "$target"
+            chmod "$permissions" "$target"
+            echo "EXTRA_${action^^}|${target}|${backup_dir}/extra/${rel_path}" >> "$apply_log"
+            log INFO "  ${action^^}: $target"
+
+        done < <(jq -c '.extra_files[]' "$manifest_file")
+    fi
 
     # --- Handle failure ---
     if [ "$failed" = "true" ]; then
