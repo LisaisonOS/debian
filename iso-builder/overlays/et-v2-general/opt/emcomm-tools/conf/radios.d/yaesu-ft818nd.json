@@ -2,10 +2,22 @@
   "id": "yaesu-ft818nd",
   "vendor": "Yaesu",
   "model": "FT-818ND (DigiRig)",
+  "bands": [
+    "HF",
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "1041",
     "baud": "38400",
     "ptt": "RTS"
+  },
+  "varafm": {
+    "pttPort": "COM10",
+    "pttVia": "1",
+    "baud": "38400",
+    "dtr": "1",
+    "rts": "0"
   },
   "notes": [
     "Menu 007 ANTENNA = REAR",

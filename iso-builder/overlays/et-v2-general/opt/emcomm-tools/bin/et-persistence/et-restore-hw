@@ -37,7 +37,7 @@ fi
 # Run detect as the calling user (not root) so /media/<user>/ paths work
 CALLING_USER="${SUDO_USER:-$(logname 2>/dev/null || echo '')}"
 if [[ -n "$CALLING_USER" ]]; then
-    PERSISTENCE_PATH=$(su - "$CALLING_USER" -c "$DETECT_SCRIPT" 2>/dev/null) || true
+    PERSISTENCE_PATH=$(su - "$CALLING_USER" -c "$DETECT_SCRIPT" 2>/dev/null | tail -1) || true
 else
     PERSISTENCE_PATH=$($DETECT_SCRIPT 2>/dev/null) || true
 fi

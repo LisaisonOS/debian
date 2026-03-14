@@ -2,6 +2,9 @@
   "id": "elecraft-kx2",
   "vendor": "Elecraft",
   "model": "KX-2 (DigiRig)",
+  "bands": [
+    "HF"
+  ],
   "rigctrl": {
     "id": "2044",
     "baud": "38400",

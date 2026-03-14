@@ -82,14 +82,37 @@ ET_DATA_GROUP = "et-data"
 print(f"ET_BASE resolved to: {ET_BASE}")
 print(f"RADIOS_DIR: {RADIOS_DIR} (exists: {RADIOS_DIR.exists()})")
 
-TILE_BASE_URL = "https://sourceforge.net/projects/emcomm-tools/files/MAPS"
-TILE_FILES = {
-    "osm-world-zoom0to7.mbtiles":        {"label": "World (zoom 0-7)",           "mandatory": True,  "size": "505 MB"},
-    "osm-us-zoom0to11.mbtiles":           {"label": "United States (zoom 0-11)",  "mandatory": False, "size": "662 MB"},
-    "osm-ca-zoom0to10.mbtiles":           {"label": "Canada (zoom 0-10)",         "mandatory": False, "size": "496 MB"},
-    "osm-west-eu-zoom0to10.mbtiles":      {"label": "Western Europe (zoom 0-10)", "mandatory": False, "size": "1.4 GB"},
-    "osm-east-eu-zoom0to10.mbtiles":      {"label": "Eastern Europe (zoom 0-10)", "mandatory": False, "size": "1.7 GB"},
-}
+def load_tile_config():
+    """Load tile catalog from shared conf/tiles.json."""
+    tiles_json = ET_BASE / "conf" / "tiles.json"
+    with open(tiles_json) as f:
+        config = json.load(f)
+    return config["base_url"], config["files"]
+
+TILE_BASE_URL, TILE_FILES = load_tile_config()
+
+
+def migrate_osm_to_tt(directory):
+    """Rename old osm-* tileset files to tt-* naming convention.
+
+    Previous versions used osm- prefix (e.g. osm-us-zoom0to10.mbtiles).
+    Current versions use tt- prefix. Rename so users don't end up with
+    duplicate files taking up disk space.
+    """
+    directory = Path(directory)
+    if not directory.exists():
+        return
+    for old_file in directory.glob("osm-*.mbtiles"):
+        new_name = "tt-" + old_file.name[4:]  # strip "osm-" prefix
+        new_file = directory / new_name
+        if not new_file.exists():
+            old_file.rename(new_file)
+            print(f"[TILES] Renamed {old_file.name} → {new_name}")
+        else:
+            # tt- version already exists, remove the old osm- duplicate
+            old_file.unlink()
+            print(f"[TILES] Removed duplicate {old_file.name} (tt- version exists)")
+
 
 OSM_CANADA_URL = "http://download.geofabrik.de/north-america/canada.html"
 OSM_USA_URL = "http://download.geofabrik.de/north-america/us.html"
@@ -1082,6 +1105,21 @@ def save_to_persistence():
                 except:
                     pass  # USB file unreadable, OK to overwrite
             
+            # Preserve Winlink password from USB if local doesn't have one
+            if not local_config.get('winlinkPasswd') and usb_user_json.exists():
+                try:
+                    with open(usb_user_json) as f:
+                        usb_config = json.load(f)
+                    usb_passwd = usb_config.get('winlinkPasswd', '')
+                    if usb_passwd:
+                        local_config['winlinkPasswd'] = usb_passwd
+                        # Write merged config back to local before copying
+                        with open(local_user_json, 'w') as f:
+                            json.dump(local_config, f, indent=2)
+                        print(f"[PERSISTENCE] Preserved Winlink password from USB")
+                except Exception:
+                    pass
+
             # Safe to copy
             shutil.copy2(local_user_json, usb_user_json)
             print(f"[PERSISTENCE] Copied {local_user_json} to {usb_user_json}")
@@ -1373,6 +1411,9 @@ def download_tiles():
             fix_usb_ownership(session.get('usb_path', ''))
         return redirect(url_for('download_osm'))
     dest = Path(session.get('usb_path', '')) / "tilesets" if session.get('drive_type') == 'usb' else TILESET_DIR
+    # Migrate old osm-* files to tt-* naming convention
+    migrate_osm_to_tt(dest)
+    migrate_osm_to_tt(SKEL_TILESET_DIR)
     # Check which files already exist at destination, on USB, or in skel
     existing_files = []
     for fname in TILE_FILES:

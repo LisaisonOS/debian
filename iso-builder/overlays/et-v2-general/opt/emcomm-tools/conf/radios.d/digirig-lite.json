@@ -2,10 +2,14 @@
   "id": "digirig-lite",
   "vendor": "DigiRig",
   "model": "Lite",
+  "bands": [
+    "HF",
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "1",
     "ptt": "NONE"
   },
-  "notes": [
-  ]
+  "notes": []
 }

@@ -52,7 +52,7 @@ start_mbtileserver() {
         
         if [ -d "${ACTUAL_TILES}" ] && ls "${ACTUAL_TILES}"/*.mbtiles &>/dev/null; then
             echo "Starting mbtileserver on port ${MBTILES_PORT}..."
-            mbtileserver --port ${MBTILES_PORT} -d "${ACTUAL_TILES}" &
+            mbtileserver --port ${MBTILES_PORT} -d "${ACTUAL_TILES}" --enable-fs-watch &
             sleep 2
             echo "mbtileserver started."
         else
@@ -71,6 +71,13 @@ echo "════════════════════════�
 
 start_et_api
 start_mbtileserver
+
+# Start tile downloader (idle until user opens it from et-predict-app)
+TILE_DOWNLOADER_PORT=5056
+if ! is_port_open ${TILE_DOWNLOADER_PORT}; then
+    echo "Starting et-tile-downloader on port ${TILE_DOWNLOADER_PORT}..."
+    python3 /opt/emcomm-tools/bin/et-flask-apps/et-tile-downloader/et-tile-downloader.py --no-browser &
+fi
 
 echo "Launching ${APP_NAME}..."
 exec /usr/bin/et-predict-app "$@"

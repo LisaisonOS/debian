@@ -2,6 +2,10 @@
   "id": "icom-ic9700",
   "vendor": "Icom",
   "model": "IC-9700",
+  "bands": [
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "3081",
     "baud": "57600",

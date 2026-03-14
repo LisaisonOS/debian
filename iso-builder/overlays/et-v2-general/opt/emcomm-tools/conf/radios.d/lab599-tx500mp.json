@@ -2,6 +2,9 @@
   "id": "lab599-tx500mp",
   "vendor": "Lab599",
   "model": "TX-500MP (DigiRig Mobile)",
+  "bands": [
+    "HF"
+  ],
   "rigctrl": {
     "id": "2014",
     "baud": "9600",
@@ -16,8 +19,6 @@
     "2. Set MODE = DIGI",
     "",
     "Do not enable VOX on radio"
-
   ],
-  "fieldNotes": [
-  ]
+  "fieldNotes": []
 }

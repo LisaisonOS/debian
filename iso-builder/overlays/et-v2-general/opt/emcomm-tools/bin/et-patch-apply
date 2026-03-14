@@ -249,9 +249,16 @@ apply_patch() {
     release_date=$(jq -r '.release_date' "$manifest_file")
 
     # --- Verify current version ---
+    # Read from manifest.json first (authoritative for patch system),
+    # fall back to version.txt if manifest doesn't exist yet.
     local current_version="unknown"
-    if [ -f "$ET_VERSION_FILE" ]; then
-        current_version=$(cat "$ET_VERSION_FILE" | tr -d '[:space:]')
+    if [ -f "$ET_MANIFEST" ]; then
+        current_version=$(jq -r '.version // empty' "$ET_MANIFEST" 2>/dev/null | tr -d '[:space:]')
+    fi
+    if [ -z "$current_version" ] || [ "$current_version" = "unknown" ]; then
+        if [ -f "$ET_VERSION_FILE" ]; then
+            current_version=$(cat "$ET_VERSION_FILE" | tr -d '[:space:]')
+        fi
     fi
 
     if [ "$current_version" != "$from_version" ]; then

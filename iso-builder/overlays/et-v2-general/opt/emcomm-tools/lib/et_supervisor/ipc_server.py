@@ -174,10 +174,14 @@ class IPCServer:
 
     def _cmd_list_modes(self):
         modes = self._engine.list_modes()
+        radio_bands = self._engine.get_active_radio_bands()
         details = []
         for mode_id in modes:
             config = self._engine.load_mode(mode_id)
             if config:
+                required = config.get("requires_bands", [])
+                if required and radio_bands and not set(required) & set(radio_bands):
+                    continue  # Radio doesn't support required bands
                 details.append({
                     "id": mode_id,
                     "name": config.get("name", {}),

@@ -1,0 +1,7 @@
+# Allow users to manage rigctld system service.
+# Needed by et-supervisor mode engine: VARA FM takes the serial port
+# directly, so rigctld must be killed and restarted between modes.
+ALL ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop rigctld
+ALL ALL=(ALL) NOPASSWD: /usr/bin/systemctl start rigctld
+ALL ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart rigctld
+ALL ALL=(ALL) NOPASSWD: /usr/bin/killall rigctld

@@ -2,8 +2,12 @@
   "id": "kenwood-thd74",
   "vendor": "Kenwood",
   "model": "TH-D74 (BT)",
+  "bands": [
+    "VHF",
+    "UHF"
+  ],
   "bluetooth": {
-    "deviceName" : "TH-D74",
+    "deviceName": "TH-D74",
     "channel": "2",
     "mac": ""
   },
@@ -11,6 +15,5 @@
     "Menu > Configuration > Bluetooth > On",
     "Menu > Configuration > Interface > KISS > Bluetooth"
   ],
-  "fieldNotes": [
-  ]
+  "fieldNotes": []
 }

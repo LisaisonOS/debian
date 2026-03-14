@@ -5,6 +5,9 @@ After=multi-user.target
 [Service]
 Type=simple
 ExecStart=/opt/emcomm-tools/sbin/wrapper-rigctld.sh start
+ExecStop=/opt/emcomm-tools/sbin/wrapper-rigctld.sh stop
+TimeoutStopSec=5
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target

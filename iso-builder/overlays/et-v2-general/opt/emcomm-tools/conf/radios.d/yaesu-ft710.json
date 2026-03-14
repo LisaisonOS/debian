@@ -2,6 +2,9 @@
   "id": "yaesu-ft710",
   "vendor": "Yaesu",
   "model": "FT-710",
+  "bands": [
+    "HF"
+  ],
   "rigctrl": {
     "id": "1049",
     "baud": "38400",
@@ -40,6 +43,5 @@
     "FT-710 has touchscreen menu: FUNC > category > per-mode settings",
     "No numbered menus like FT-991A — use named menu paths above"
   ],
-  "fieldNotes": [
-  ]
+  "fieldNotes": []
 }

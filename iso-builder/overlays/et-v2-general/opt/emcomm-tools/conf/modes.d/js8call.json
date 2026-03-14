@@ -42,16 +42,10 @@
             "command": ["/usr/bin/js8call"],
             "health": {"type": "tcp-port", "port": 2442, "timeout": 60},
             "restart": "never"
-        },
-        {
-            "name": "js8spotter",
-            "command": ["python3", "js8spotter.py"],
-            "cwd": "~/.local/share/emcomm-tools/js8spotter",
-            "health": {},
-            "restart": "never",
-            "depends_on": "js8call"
         }
     ],
-    "post_start": [],
+    "post_start": [
+        {"action": "launch-js8spotter"}
+    ],
     "kill_all_first": true
 }

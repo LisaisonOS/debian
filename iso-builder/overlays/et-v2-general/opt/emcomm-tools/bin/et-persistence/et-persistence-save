@@ -118,6 +118,7 @@ mkdir -p "${PERSISTENCE_PATH}/configs/firefox"
 mkdir -p "${PERSISTENCE_PATH}/configs/thunderbird"
 mkdir -p "${PERSISTENCE_PATH}/configs/wifi"
 mkdir -p "${PERSISTENCE_PATH}/configs/bluetooth"
+mkdir -p "${PERSISTENCE_PATH}/configs/radios"
 mkdir -p "${PERSISTENCE_PATH}/user-data/documents"
 mkdir -p "${PERSISTENCE_PATH}/user-data/downloads"
 mkdir -p "${PERSISTENCE_PATH}/varac"
@@ -483,6 +484,14 @@ if [[ -L "$ACTIVE_RADIO" ]]; then
     log "✓ Saved: Active radio ($RADIO_TARGET)"
 fi
 
+# --- Custom Radio Configs ---
+USER_RADIOS="${HOME}/.config/emcomm-tools/radios.d"
+if [[ -d "$USER_RADIOS" ]] && [[ -n "$(ls -A "$USER_RADIOS" 2>/dev/null)" ]]; then
+    cp -f "$USER_RADIOS"/*.json "${PERSISTENCE_PATH}/configs/radios/" 2>/dev/null || true
+    RADIO_COUNT=$(ls -1 "${PERSISTENCE_PATH}/configs/radios/"*.json 2>/dev/null | wc -l)
+    log "✓ Saved: Custom radio configs ($RADIO_COUNT files)"
+fi
+
 # --- VarAC License (IMPORTANT!) ---
 save_file "${HOME}/.config/emcomm-tools/varac/license.flag" "${PERSISTENCE_PATH}/varac/license.flag" "VarAC license"
 save_file "${HOME}/.config/emcomm-tools/varac/license-audit.log" "${PERSISTENCE_PATH}/varac/license-audit.log" "VarAC audit log"
@@ -491,7 +500,15 @@ save_file "${HOME}/.config/emcomm-tools/varac/license-audit.log" "${PERSISTENCE_
 plymouth_msg "EmComm-Tools: Saving Pat/Winlink..."
 save_file "${HOME}/.config/pat/config.json" "${PERSISTENCE_PATH}/configs/pat/config.json" "Pat config"
 if [[ -d "${HOME}/.local/share/pat/mailbox" ]]; then
-    save_dir "${HOME}/.local/share/pat/mailbox" "${PERSISTENCE_PATH}/mailbox" "Pat mailbox"
+    # Use rsync --delete so emails deleted locally (e.g. failed outbox messages)
+    # are also deleted from USB. Plain cp only adds/overwrites, never removes.
+    if command -v rsync &>/dev/null; then
+        rsync -r --times --delete --modify-window=2 \
+            "${HOME}/.local/share/pat/mailbox/" "${PERSISTENCE_PATH}/mailbox/" 2>/dev/null
+    else
+        cp -ru "${HOME}/.local/share/pat/mailbox/"* "${PERSISTENCE_PATH}/mailbox/" 2>/dev/null || true
+    fi
+    log "✓ Saved: Pat mailbox"
 fi
 
 # --- JS8Call ---

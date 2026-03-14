@@ -2,6 +2,10 @@
   "id": "btech-uvpro",
   "vendor": "BTECH",
   "model": "UV PRO (BT)",
+  "bands": [
+    "VHF",
+    "UHF"
+  ],
   "bluetooth": {
     "deviceName": "UV-PRO",
     "channel": "1",
@@ -10,6 +14,5 @@
   "notes": [
     "Menu > General Settings > KISS TNC > Enable KISS TNC = checked"
   ],
-  "fieldNotes": [
-  ]
+  "fieldNotes": []
 }

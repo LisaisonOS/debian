@@ -2,6 +2,9 @@
   "id": "icom-ic7200",
   "vendor": "Icom",
   "model": "IC-7200",
+  "bands": [
+    "HF"
+  ],
   "rigctrl": {
     "id": "3061",
     "baud": "19200",

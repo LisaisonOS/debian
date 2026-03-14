@@ -2,6 +2,11 @@
   "id": "yaesu-ftx1",
   "vendor": "Yaesu",
   "model": "FTX-1 (No CAT)",
+  "bands": [
+    "HF",
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "1",
     "baud": "38400",
@@ -20,6 +25,5 @@
     "- Then, long press 'PRESET' and select 'FT8'.",
     "- The 'PRESET' button should be highlighted in blue."
   ],
-  "fieldNotes": [
-  ]
+  "fieldNotes": []
 }

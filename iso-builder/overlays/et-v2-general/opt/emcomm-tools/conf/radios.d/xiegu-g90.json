@@ -2,6 +2,9 @@
   "id": "xiegu-g90",
   "vendor": "Xiegu",
   "model": "G90 (DigiRig)",
+  "bands": [
+    "HF"
+  ],
   "rigctrl": {
     "id": "3088",
     "baud": "19200",

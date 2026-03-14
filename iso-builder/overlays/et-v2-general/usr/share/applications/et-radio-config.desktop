@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Radio Configuration Editor
+Name[fr]=Editeur de configuration radio
+Comment=View, edit, and create radio profiles
+Comment[fr]=Voir, modifier et creer des profils radio
+Exec=/opt/emcomm-tools/bin/et-flask-apps/et-radio-config/et-radio-config.py
+Icon=/usr/share/pixmaps/emcomm-icon.png
+Terminal=false
+Categories=HamRadio;
+Keywords=radio;configuration;editor;hamlib;rigctrl;

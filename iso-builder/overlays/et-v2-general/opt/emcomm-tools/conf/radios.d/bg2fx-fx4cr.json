@@ -2,6 +2,9 @@
   "id": "bg2fx-fx4cr",
   "vendor": "BG2FX",
   "model": "FX-4CR",
+  "bands": [
+    "HF"
+  ],
   "rigctrl": {
     "id": "2031",
     "baud": "115200",

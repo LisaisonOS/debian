@@ -2,6 +2,9 @@
   "id": "xiegu-x6100",
   "vendor": "Xiegu",
   "model": "X6100",
+  "bands": [
+    "HF"
+  ],
   "rigctrl": {
     "id": "3087",
     "baud": "19200",

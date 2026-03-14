@@ -59,6 +59,9 @@ class SupervisorClient:
     def stop(self):
         return self.send_command({"cmd": "stop"}, timeout=10)
 
+    def list_modes(self):
+        return self.send_command({"cmd": "list-modes"})
+
 
 def get_wine_env():
     """
@@ -240,6 +243,9 @@ class EmCommDashboard(Gtk.Window):
         self._last_crash_notified = None
         self._active_mode_id = None
 
+        # Filtered mode categories (from IPC, falls back to hardcoded)
+        self._filtered_categories = self._fetch_filtered_categories()
+
         # Track expanded categories
         self.expanded_categories = {}
 
@@ -378,11 +384,29 @@ class EmCommDashboard(Gtk.Window):
     
     def get_mode_by_id(self, mode_id):
         """Find mode definition by ID."""
-        for cat_id, cat in MODE_CATEGORIES.items():
+        for cat_id, cat in self._filtered_categories.items():
             for mode in cat['modes']:
                 if mode['id'] == mode_id:
                     return mode, cat
         return None, None
+
+    def _fetch_filtered_categories(self):
+        """Fetch available modes from supervisor and filter MODE_CATEGORIES.
+
+        Returns MODE_CATEGORIES filtered to only modes the active radio
+        supports. Falls back to full MODE_CATEGORIES if supervisor is offline.
+        """
+        resp = self.supervisor.list_modes()
+        if not resp or resp.get("status") != "ok":
+            return MODE_CATEGORIES
+
+        available_ids = {m["id"] for m in resp.get("modes", [])}
+        filtered = {}
+        for cat_id, cat in MODE_CATEGORIES.items():
+            modes = [m for m in cat['modes'] if m['id'] in available_ids]
+            if modes:
+                filtered[cat_id] = {**cat, 'modes': modes}
+        return filtered
     
     def calculate_adaptive_sizes(self):
         """Calculate sizes based on screen resolution"""
@@ -537,6 +561,7 @@ class EmCommDashboard(Gtk.Window):
     def rebuild_mode_section(self):
         """Rebuild just the mode section"""
         if hasattr(self, 'mode_container'):
+            self._filtered_categories = self._fetch_filtered_categories()
             for child in self.mode_container.get_children():
                 self.mode_container.remove(child)
             self.build_mode_selector(self.mode_container)
@@ -972,7 +997,7 @@ class EmCommDashboard(Gtk.Window):
             container.pack_start(self.create_separator(), False, False, 6)
         
         # === CATEGORIES ===
-        for cat_id, cat in MODE_CATEGORIES.items():
+        for cat_id, cat in self._filtered_categories.items():
             # Category header (clickable to expand/collapse)
             cat_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
             

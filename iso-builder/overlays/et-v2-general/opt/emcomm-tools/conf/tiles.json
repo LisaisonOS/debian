@@ -1,0 +1,21 @@
+{
+    "base_url": "https://sourceforge.net/projects/emcomm-tools/files/MAPS",
+    "files": {
+        "tt-world-zoom0to7.mbtiles":                      {"label": "World (zoom 0-7)",                       "mandatory": true,  "size": "505 MB"},
+        "tt-us-zoom0to10.mbtiles":                        {"label": "United States (zoom 0-10)",              "mandatory": false, "size": "1.9 GB"},
+        "tt-ca-zoom0to10.mbtiles":                        {"label": "Canada (zoom 0-10)",                     "mandatory": false, "size": "2.3 GB"},
+        "tt-west-eu-zoom0to10.mbtiles":                   {"label": "Western Europe (zoom 0-10)",             "mandatory": false, "size": "1.4 GB"},
+        "tt-east-eu-zoom0to10.mbtiles":                   {"label": "Eastern Europe (zoom 0-10)",             "mandatory": false, "size": "1.7 GB"},
+        "tt-japan-zoom0to10.mbtiles":                     {"label": "Japan (zoom 0-10)",                      "mandatory": false, "size": "250 MB"},
+        "tt-south-america-zoom0to10.mbtiles":             {"label": "South America (zoom 0-10)",              "mandatory": false, "size": "1.8 GB"},
+        "tt-central-america-caribbean-zoom0to10.mbtiles": {"label": "Central America & Caribbean (zoom 0-10)", "mandatory": false, "size": "256 MB"},
+        "tt-australia-nz-zoom0to10.mbtiles":              {"label": "Australia & New Zealand (zoom 0-10)",    "mandatory": false, "size": "846 MB"},
+        "tt-southeast-asia-zoom0to10.mbtiles":            {"label": "Southeast Asia (zoom 0-10)",             "mandatory": false, "size": "858 MB"},
+        "tt-south-korea-zoom0to10.mbtiles":               {"label": "South Korea (zoom 0-10)",                "mandatory": false, "size": "47 MB"},
+        "tt-india-zoom0to10.mbtiles":                     {"label": "India (zoom 0-10)",                      "mandatory": false, "size": "979 MB"},
+        "tt-south-africa-zoom0to10.mbtiles":              {"label": "South Africa (zoom 0-10)",               "mandatory": false, "size": "238 MB"},
+        "tt-middle-east-zoom0to10.mbtiles":               {"label": "Middle East (zoom 0-10)",                "mandatory": false, "size": "596 MB"},
+        "tt-russia-west-zoom0to10.mbtiles":               {"label": "Russia West (zoom 0-10)",                "mandatory": false, "size": "3.0 GB"},
+        "tt-russia-east-zoom0to10.mbtiles":               {"label": "Russia East (zoom 0-10)",                "mandatory": false, "size": "2.1 GB"}
+    }
+}

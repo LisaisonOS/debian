@@ -2,6 +2,11 @@
   "id": "digirig-mobile-no-cat",
   "vendor": "DigiRig",
   "model": "Mobile (No CAT)",
+  "bands": [
+    "HF",
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "6",
     "ptt": "RTS"

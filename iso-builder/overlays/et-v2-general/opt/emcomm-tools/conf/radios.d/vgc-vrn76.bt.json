@@ -2,6 +2,10 @@
   "id": "vgc-vrn76",
   "vendor": "VGC",
   "model": "VR-N76 (BT)",
+  "bands": [
+    "VHF",
+    "UHF"
+  ],
   "bluetooth": {
     "deviceName": "VR-N76",
     "channel": "1",

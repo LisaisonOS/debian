@@ -2,10 +2,22 @@
   "id": "icom-ic7100",
   "vendor": "Icom",
   "model": "IC-7100",
+  "bands": [
+    "HF",
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "3070",
     "baud": "9600",
     "ptt": "RIG"
+  },
+  "varafm": {
+    "pttPort": "COM5",
+    "pttVia": "1",
+    "baud": "19200",
+    "dtr": "0",
+    "rts": "1"
   },
   "notes": [
     "TODO: Add notes"

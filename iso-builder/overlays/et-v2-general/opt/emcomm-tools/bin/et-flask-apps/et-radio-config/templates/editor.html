@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} - {{ t.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1>{{ page_title }}</h1>
+            </div>
+            <div class="card-body">
+                <div id="alert" class="alert"></div>
+
+                <!-- Core Settings (always visible) -->
+                <div class="section">
+                    <div class="section-header">
+                        <h3>{{ t.core_section }}</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t.vendor }} *</label>
+                                <input type="text" id="vendor" value="{{ radio.get('vendor', '') }}" placeholder="Icom, Yaesu, Kenwood...">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ t.model }} *</label>
+                                <input type="text" id="model" value="{{ radio.get('model', '') }}" placeholder="IC-705, FT-891...">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>ID</label>
+                            <div class="id-preview" id="idPreview">{{ radio.get('id', '') }}</div>
+                        </div>
+                        <div class="form-group">
+                            <label>{{ t.bands }}</label>
+                            <div class="checkbox-group">
+                                <label>
+                                    <input type="checkbox" id="band_hf" {% if 'HF' in radio.get('bands', []) %}checked{% endif %}>
+                                    HF
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="band_vhf" {% if 'VHF' in radio.get('bands', []) %}checked{% endif %}>
+                                    VHF
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="band_uhf" {% if 'UHF' in radio.get('bands', []) %}checked{% endif %}>
+                                    UHF
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- rigctrl Section -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection('rigctrl')">
+                        <h3>{{ t.rigctrl_section }}</h3>
+                        <div class="toggle-label">
+                            <span>{{ t.enable_section }}</span>
+                            <label class="toggle" onclick="event.stopPropagation()">
+                                <input type="checkbox" id="enable_rigctrl" onchange="toggleSection('rigctrl')"
+                                    {% if radio.get('rigctrl') %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="section-body {% if not radio.get('rigctrl') %}hidden{% endif %}" id="section_rigctrl">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t.hamlib_id }} *</label>
+                                <input type="text" id="rigctrl_id" value="{{ radio.get('rigctrl', {}).get('id', '') }}" placeholder="3085">
+                                <div class="input-hint">rigctld -m ID</div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ t.baud_rate }}</label>
+                                <div class="custom-select" id="cs_rigctrl_baud" data-value="{{ radio.get('rigctrl', {}).get('baud', '') }}">
+                                    <div class="custom-select-trigger" onclick="toggleDropdown('cs_rigctrl_baud')">
+                                        <span class="cs-label">{{ radio.get('rigctrl', {}).get('baud', '--') or '--' }}</span>
+                                    </div>
+                                    <div class="custom-select-options">
+                                        <div class="custom-select-option{% if not radio.get('rigctrl', {}).get('baud') %} selected{% endif %}" data-val="" onclick="selectOption('cs_rigctrl_baud','','--')">--</div>
+                                        {% for baud in ['4800', '9600', '19200', '38400', '57600', '115200'] %}
+                                        <div class="custom-select-option{% if radio.get('rigctrl', {}).get('baud') == baud %} selected{% endif %}" data-val="{{ baud }}" onclick="selectOption('cs_rigctrl_baud','{{ baud }}','{{ baud }}')">{{ baud }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t.ptt_method }}</label>
+                                <div class="custom-select" id="cs_rigctrl_ptt" data-value="{{ radio.get('rigctrl', {}).get('ptt', 'RIG') }}">
+                                    <div class="custom-select-trigger" onclick="toggleDropdown('cs_rigctrl_ptt')">
+                                        <span class="cs-label">{{ radio.get('rigctrl', {}).get('ptt', 'RIG') }}</span>
+                                    </div>
+                                    <div class="custom-select-options">
+                                        {% for ptt in ['RIG', 'RTS', 'DTR', 'NONE'] %}
+                                        <div class="custom-select-option{% if radio.get('rigctrl', {}).get('ptt', 'RIG') == ptt %} selected{% endif %}" data-val="{{ ptt }}" onclick="selectOption('cs_rigctrl_ptt','{{ ptt }}','{{ ptt }}')">{{ ptt }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ t.conf }}</label>
+                                <input type="text" id="rigctrl_conf" value="{{ radio.get('rigctrl', {}).get('conf', '') }}" placeholder="dcd_type=NONE">
+                            </div>
+                        </div>
+                        <div class="checkbox-group" style="margin-top: 4px;">
+                            <label>
+                                <input type="checkbox" id="rigctrl_pttOnly" {% if radio.get('rigctrl', {}).get('pttOnly') %}checked{% endif %}>
+                                {{ t.ptt_only }}
+                            </label>
+                            <label>
+                                <input type="checkbox" id="rigctrl_primeRig" {% if radio.get('rigctrl', {}).get('primeRig') %}checked{% endif %}>
+                                {{ t.prime_rig }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VARA FM Section -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection('varafm')">
+                        <h3>{{ t.varafm_section }}</h3>
+                        <div class="toggle-label">
+                            <span>{{ t.enable_section }}</span>
+                            <label class="toggle" onclick="event.stopPropagation()">
+                                <input type="checkbox" id="enable_varafm" onchange="toggleSection('varafm')"
+                                    {% if radio.get('varafm') %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="section-body {% if not radio.get('varafm') %}hidden{% endif %}" id="section_varafm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t.ptt_port }}</label>
+                                <input type="text" id="varafm_pttPort" value="{{ radio.get('varafm', {}).get('pttPort', '') }}" placeholder="COM5">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ t.ptt_via }}</label>
+                                <div class="custom-select" id="cs_varafm_pttVia" data-value="{{ radio.get('varafm', {}).get('pttVia', '1') }}">
+                                    <div class="custom-select-trigger" onclick="toggleDropdown('cs_varafm_pttVia')">
+                                        <span class="cs-label">{{ radio.get('varafm', {}).get('pttVia', '1') }} ({{ 'RTS' if radio.get('varafm', {}).get('pttVia', '1') == '1' else 'DTR' }})</span>
+                                    </div>
+                                    <div class="custom-select-options">
+                                        <div class="custom-select-option{% if radio.get('varafm', {}).get('pttVia', '1') == '1' %} selected{% endif %}" data-val="1" onclick="selectOption('cs_varafm_pttVia','1','1 (RTS)')">1 (RTS)</div>
+                                        <div class="custom-select-option{% if radio.get('varafm', {}).get('pttVia') == '2' %} selected{% endif %}" data-val="2" onclick="selectOption('cs_varafm_pttVia','2','2 (DTR)')">2 (DTR)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t.baud_rate }}</label>
+                                <input type="text" id="varafm_baud" value="{{ radio.get('varafm', {}).get('baud', '') }}" placeholder="19200">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t.dtr }}</label>
+                                <div class="custom-select" id="cs_varafm_dtr" data-value="{{ radio.get('varafm', {}).get('dtr', '0') }}">
+                                    <div class="custom-select-trigger" onclick="toggleDropdown('cs_varafm_dtr')">
+                                        <span class="cs-label">{{ radio.get('varafm', {}).get('dtr', '0') }}</span>
+                                    </div>
+                                    <div class="custom-select-options">
+                                        <div class="custom-select-option{% if radio.get('varafm', {}).get('dtr', '0') == '0' %} selected{% endif %}" data-val="0" onclick="selectOption('cs_varafm_dtr','0','0')">0</div>
+                                        <div class="custom-select-option{% if radio.get('varafm', {}).get('dtr') == '1' %} selected{% endif %}" data-val="1" onclick="selectOption('cs_varafm_dtr','1','1')">1</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>{{ t.rts }}</label>
+                                <div class="custom-select" id="cs_varafm_rts" data-value="{{ radio.get('varafm', {}).get('rts', '0') }}">
+                                    <div class="custom-select-trigger" onclick="toggleDropdown('cs_varafm_rts')">
+                                        <span class="cs-label">{{ radio.get('varafm', {}).get('rts', '0') }}</span>
+                                    </div>
+                                    <div class="custom-select-options">
+                                        <div class="custom-select-option{% if radio.get('varafm', {}).get('rts', '0') == '0' %} selected{% endif %}" data-val="0" onclick="selectOption('cs_varafm_rts','0','0')">0</div>
+                                        <div class="custom-select-option{% if radio.get('varafm', {}).get('rts') == '1' %} selected{% endif %}" data-val="1" onclick="selectOption('cs_varafm_rts','1','1')">1</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bluetooth Section -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection('bluetooth')">
+                        <h3>{{ t.bluetooth_section }}</h3>
+                        <div class="toggle-label">
+                            <span>{{ t.enable_section }}</span>
+                            <label class="toggle" onclick="event.stopPropagation()">
+                                <input type="checkbox" id="enable_bluetooth" onchange="toggleSection('bluetooth')"
+                                    {% if radio.get('bluetooth') %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="section-body {% if not radio.get('bluetooth') %}hidden{% endif %}" id="section_bluetooth">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ t.bt_device }}</label>
+                                <input type="text" id="bt_deviceName" value="{{ radio.get('bluetooth', {}).get('deviceName', '') }}" placeholder="TH-D74">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ t.bt_channel }}</label>
+                                <div class="custom-select" id="cs_bt_channel" data-value="{{ radio.get('bluetooth', {}).get('channel', '1') }}">
+                                    <div class="custom-select-trigger" onclick="toggleDropdown('cs_bt_channel')">
+                                        <span class="cs-label">{{ radio.get('bluetooth', {}).get('channel', '1') }}</span>
+                                    </div>
+                                    <div class="custom-select-options">
+                                        <div class="custom-select-option{% if radio.get('bluetooth', {}).get('channel', '1') == '1' %} selected{% endif %}" data-val="1" onclick="selectOption('cs_bt_channel','1','1')">1</div>
+                                        <div class="custom-select-option{% if radio.get('bluetooth', {}).get('channel') == '2' %} selected{% endif %}" data-val="2" onclick="selectOption('cs_bt_channel','2','2')">2</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>{{ t.bt_mac }}</label>
+                            <input type="text" id="bt_mac" value="{{ radio.get('bluetooth', {}).get('mac', '') }}" placeholder="AA:BB:CC:DD:EE:FF">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio Section -->
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection('audio')">
+                        <h3>{{ t.audio_section }}</h3>
+                        <div class="toggle-label">
+                            <span>{{ t.enable_section }}</span>
+                            <label class="toggle" onclick="event.stopPropagation()">
+                                <input type="checkbox" id="enable_audio" onchange="toggleSection('audio')"
+                                    {% if radio.get('audio') %}checked{% endif %}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="section-body {% if not radio.get('audio') %}hidden{% endif %}" id="section_audio">
+                        <div class="form-group">
+                            <label>{{ t.audio_script }}</label>
+                            <input type="text" id="audio_script" value="{{ radio.get('audio', {}).get('script', '') }}" placeholder="/opt/emcomm-tools/conf/radios.d/audio/my-radio.sh">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes Section (always visible) -->
+                <div class="section">
+                    <div class="section-header">
+                        <h3>{{ t.notes_section }}</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="form-group">
+                            <textarea id="notes" placeholder="{{ t.notes_hint }}">{% for note in radio.get('notes', []) %}{{ note }}{% if not loop.last %}
+{% endif %}{% endfor %}</textarea>
+                            <div class="input-hint">{{ t.notes_hint }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Field Notes Section (always visible) -->
+                <div class="section">
+                    <div class="section-header">
+                        <h3>{{ t.fieldnotes_section }}</h3>
+                    </div>
+                    <div class="section-body">
+                        <div class="form-group">
+                            <textarea id="fieldNotes" placeholder="{{ t.fieldnotes_hint }}">{% for note in radio.get('fieldNotes', []) %}{{ note }}{% if not loop.last %}
+{% endif %}{% endfor %}</textarea>
+                            <div class="input-hint">{{ t.fieldnotes_hint }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer">
+                <a href="/" class="btn btn-secondary">{{ t.cancel }}</a>
+                <button class="btn btn-primary" onclick="saveRadio()">{{ t.save }}</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const MODE = '{{ mode }}';
+    const ORIGINAL_FILENAME = '{{ filename }}';
+
+    /* ---- Custom dropdown logic ---- */
+    function toggleDropdown(id) {
+        var el = document.getElementById(id);
+        var wasOpen = el.classList.contains('open');
+        // Close all dropdowns first
+        document.querySelectorAll('.custom-select.open').forEach(function(s) {
+            s.classList.remove('open');
+        });
+        if (!wasOpen) {
+            el.classList.add('open');
+        }
+    }
+
+    function selectOption(selectId, value, label) {
+        var el = document.getElementById(selectId);
+        el.setAttribute('data-value', value);
+        el.querySelector('.cs-label').textContent = label;
+        // Update selected class
+        el.querySelectorAll('.custom-select-option').forEach(function(opt) {
+            opt.classList.toggle('selected', opt.getAttribute('data-val') === value);
+        });
+        el.classList.remove('open');
+    }
+
+    // Close dropdowns on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.custom-select')) {
+            document.querySelectorAll('.custom-select.open').forEach(function(s) {
+                s.classList.remove('open');
+            });
+        }
+    });
+
+    /* ---- Helper to read custom select value ---- */
+    function getSelectValue(id) {
+        return document.getElementById(id).getAttribute('data-value') || '';
+    }
+
+    /* ---- Core logic ---- */
+    function slugify(text) {
+        return text.toLowerCase().trim()
+            .replace(/[()]+/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .replace(/-+/g, '-');
+    }
+
+    function updateIdPreview() {
+        var vendor = document.getElementById('vendor').value.trim();
+        var model = document.getElementById('model').value.trim();
+        var id = slugify(vendor + '-' + model);
+        document.getElementById('idPreview').textContent = id || '--';
+    }
+
+    document.getElementById('vendor').addEventListener('input', updateIdPreview);
+    document.getElementById('model').addEventListener('input', updateIdPreview);
+
+    function toggleSection(name) {
+        var checkbox = document.getElementById('enable_' + name);
+        var body = document.getElementById('section_' + name);
+        if (checkbox.checked) {
+            body.classList.remove('hidden');
+        } else {
+            body.classList.add('hidden');
+        }
+    }
+
+    function showAlert(message, type) {
+        var alert = document.getElementById('alert');
+        alert.textContent = message;
+        alert.className = 'alert alert-' + type + ' show';
+        alert.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    }
+
+    function getBands() {
+        var bands = [];
+        if (document.getElementById('band_hf').checked) bands.push('HF');
+        if (document.getElementById('band_vhf').checked) bands.push('VHF');
+        if (document.getElementById('band_uhf').checked) bands.push('UHF');
+        return bands;
+    }
+
+    function saveRadio() {
+        var data = {
+            vendor: document.getElementById('vendor').value.trim(),
+            model: document.getElementById('model').value.trim(),
+            bands: getBands(),
+        };
+
+        if (MODE === 'edit' && ORIGINAL_FILENAME) {
+            data._original_filename = ORIGINAL_FILENAME;
+        }
+
+        // rigctrl
+        if (document.getElementById('enable_rigctrl').checked) {
+            data.rigctrl = {
+                id: document.getElementById('rigctrl_id').value.trim(),
+                ptt: getSelectValue('cs_rigctrl_ptt'),
+            };
+            var baud = getSelectValue('cs_rigctrl_baud');
+            if (baud) data.rigctrl.baud = baud;
+            var conf = document.getElementById('rigctrl_conf').value.trim();
+            if (conf) data.rigctrl.conf = conf;
+            if (document.getElementById('rigctrl_pttOnly').checked) data.rigctrl.pttOnly = 'true';
+            if (document.getElementById('rigctrl_primeRig').checked) data.rigctrl.primeRig = true;
+        }
+
+        // varafm
+        if (document.getElementById('enable_varafm').checked) {
+            data.varafm = {
+                pttPort: document.getElementById('varafm_pttPort').value.trim(),
+                pttVia: getSelectValue('cs_varafm_pttVia'),
+                baud: document.getElementById('varafm_baud').value.trim(),
+                dtr: getSelectValue('cs_varafm_dtr'),
+                rts: getSelectValue('cs_varafm_rts'),
+            };
+        }
+
+        // bluetooth
+        if (document.getElementById('enable_bluetooth').checked) {
+            data.bluetooth = {
+                deviceName: document.getElementById('bt_deviceName').value.trim(),
+                channel: getSelectValue('cs_bt_channel'),
+                mac: document.getElementById('bt_mac').value.trim(),
+            };
+        }
+
+        // audio
+        if (document.getElementById('enable_audio').checked) {
+            var script = document.getElementById('audio_script').value.trim();
+            if (script) {
+                data.audio = {script: script};
+            }
+        }
+
+        // notes
+        data.notes = document.getElementById('notes').value;
+        data.fieldNotes = document.getElementById('fieldNotes').value;
+
+        fetch('/api/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(result) {
+            if (result.success) {
+                window.location.href = '/';
+            } else {
+                showAlert(result.error, 'error');
+            }
+        })
+        .catch(function() {
+            showAlert('Error communicating with server', 'error');
+        });
+    }
+    </script>
+</body>
+</html>

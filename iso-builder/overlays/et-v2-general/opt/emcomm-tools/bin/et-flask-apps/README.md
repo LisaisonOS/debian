@@ -11,6 +11,9 @@ Date: January 2026
 | **et-radio** | 5052 | Radio selection |
 | **et-mode** | 5053 | Mode selection & service control |
 | **et-user** | 5054 | User configuration (callsign, grid, Winlink) |
+| **et-chattervox-keys** | 5055 | Chattervox key management |
+| **et-tile-downloader** | 5056 | Map tile downloader |
+| **et-radio-config** | 5057 | Radio configuration editor |
 
 ## Requirements
 
@@ -41,6 +44,7 @@ python3 et-firstboot.py --force  # Re-run even if completed
 | et-radio | 500x700 | 400x500 |
 | et-mode | 500x750 | 400x600 |
 | et-user | 480x650 | 400x500 |
+| et-radio-config | 560x750 | 450x500 |
 
 ## File Structure
 
@@ -59,9 +63,13 @@ et-flask-apps/
 │   ├── et-mode.py
 │   ├── static/css/, js/
 │   └── templates/
-└── et-user/
-    ├── et-user.py
-    ├── static/css/, js/
+├── et-user/
+│   ├── et-user.py
+│   ├── static/css/, js/
+│   └── templates/
+└── et-radio-config/
+    ├── et-radio-config.py
+    ├── static/css/
     └── templates/
 ```
 

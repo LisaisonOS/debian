@@ -2,6 +2,9 @@
   "id": "qrplabs-qmx",
   "vendor": "QRP Labs",
   "model": "QMX",
+  "bands": [
+    "HF"
+  ],
   "rigctrl": {
     "id": "2002",
     "baud": "38400",

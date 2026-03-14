@@ -1,0 +1,509 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : 7 March 2026
+# Purpose : Full system diagnostic — collects all relevant info for remote
+#           troubleshooting and saves to a file the user can email.
+#
+# Usage:
+#   et-diag           → runs diagnostic, saves to ~/Documents/et-diag-<date>.txt
+#   et-diag --test    → also probes all serial ports for working CAT
+#   et-diag --help    → usage info
+
+source /opt/emcomm-tools/bin/et-common
+
+DIAG_DIR="${HOME}/Documents"
+DIAG_FILE="${DIAG_DIR}/et-diag-$(date '+%Y%m%d-%H%M%S').txt"
+SEPARATOR="============================================================"
+RUN_TEST=0
+
+# ---------------------------------------------------------------------------
+# Helpers — write to both stdout and the file
+# ---------------------------------------------------------------------------
+out() { echo -e "$*" | tee -a "$DIAG_FILE"; }
+section() {
+  out ""
+  out "$SEPARATOR"
+  out "  $*"
+  out "$SEPARATOR"
+}
+
+# ---------------------------------------------------------------------------
+# 1. System Info
+# ---------------------------------------------------------------------------
+diag_system() {
+  section "SYSTEM INFO"
+  out "Date         : $(date '+%Y-%m-%d %H:%M:%S %Z')"
+  out "Hostname     : $(hostname)"
+  out "Kernel       : $(uname -r)"
+  out "Architecture : $(uname -m)"
+  out "Debian       : $(cat /etc/debian_version 2>/dev/null || echo 'N/A')"
+
+  # EmComm-Tools version
+  local ver="N/A"
+  if [ -f /opt/emcomm-tools/version.txt ]; then
+    ver=$(cat /opt/emcomm-tools/version.txt)
+  fi
+  out "ET Version   : ${ver}"
+
+  # Live Run vs HDD
+  if grep -q 'overlay' /proc/mounts 2>/dev/null && [ -d /run/live ]; then
+    out "Boot mode    : Live Run (USB)"
+  else
+    out "Boot mode    : HDD Install"
+  fi
+
+  # Uptime
+  out "Uptime       : $(uptime -p 2>/dev/null || uptime)"
+  out "Memory       : $(free -h 2>/dev/null | grep '^Mem:' | awk '{print "Total: "$2", Used: "$3", Free: "$4}')"
+  out "Disk (root)  : $(df -h / 2>/dev/null | tail -1 | awk '{print "Size: "$2", Used: "$3" ("$5"), Free: "$4}')"
+}
+
+# ---------------------------------------------------------------------------
+# 2. User & Groups
+# ---------------------------------------------------------------------------
+diag_user() {
+  section "USER & GROUPS"
+  out "User     : $(whoami) (uid=$(id -u))"
+  out "Groups   : $(groups 2>/dev/null)"
+
+  # Check critical groups
+  local critical="dialout audio plugdev bluetooth"
+  for grp in $critical; do
+    if id -nG | grep -qw "$grp"; then
+      out "  [OK]  Member of '${grp}'"
+    else
+      out "  [!!]  NOT in '${grp}' group"
+    fi
+  done
+}
+
+# ---------------------------------------------------------------------------
+# 3. Active Radio Config
+# ---------------------------------------------------------------------------
+diag_radio_config() {
+  section "ACTIVE RADIO CONFIG"
+
+  if [ ! -L "$ET_ACTIVE_RADIO_CONF" ]; then
+    out "[!!] No active radio configured (symlink missing: $ET_ACTIVE_RADIO_CONF)"
+    return
+  fi
+
+  local target
+  target=$(readlink -f "$ET_ACTIVE_RADIO_CONF")
+  out "Config file : ${target}"
+  out ""
+  out "--- JSON content ---"
+  cat "$ET_ACTIVE_RADIO_CONF" 2>/dev/null | tee -a "$DIAG_FILE"
+  out ""
+  out "--- end ---"
+}
+
+# ---------------------------------------------------------------------------
+# 4. USB Devices
+# ---------------------------------------------------------------------------
+diag_usb_devices() {
+  section "USB DEVICES (lsusb)"
+  lsusb 2>/dev/null | tee -a "$DIAG_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# 5. USB Serial Devices
+# ---------------------------------------------------------------------------
+diag_serial() {
+  section "USB SERIAL DEVICES"
+
+  local devices=(/dev/ttyUSB* /dev/ttyACM*)
+  local found=0
+
+  for dev in "${devices[@]}"; do
+    [ ! -e "$dev" ] && continue
+    found=1
+
+    out ""
+    out "--- ${dev} ---"
+    out "  Permissions : $(ls -l "$dev" 2>/dev/null | awk '{print $1, $3, $4}')"
+
+    local vid pid vendor_db model_db serial iface
+    vid=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_VENDOR_ID='  | cut -d= -f2)
+    pid=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_MODEL_ID='   | cut -d= -f2)
+    vendor_db=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_VENDOR_FROM_DATABASE='  | cut -d= -f2-)
+    model_db=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_MODEL_FROM_DATABASE='   | cut -d= -f2-)
+    serial=$(udevadm info --query=property --name="$dev" 2>/dev/null | grep '^ID_SERIAL_SHORT=' | cut -d= -f2)
+    iface=$(udevadm info --attribute-walk --name="$dev" 2>/dev/null | grep 'bInterfaceNumber' | head -1 | sed 's/.*=="\(.*\)".*/\1/')
+
+    out "  VID:PID     : ${vid:-?}:${pid:-?}"
+    [ -n "$vendor_db" ] && out "  Vendor      : ${vendor_db}"
+    [ -n "$model_db" ]  && out "  Model       : ${model_db}"
+    [ -n "$serial" ]    && out "  Serial      : ${serial}"
+    [ -n "$iface" ]     && out "  Interface#  : ${iface}"
+
+    # stty check
+    if stty -F "$dev" > /dev/null 2>&1; then
+      out "  stty probe  : [OK] Port responds"
+    else
+      out "  stty probe  : [!!] Port NOT responding"
+    fi
+  done
+
+  if [ "$found" -eq 0 ]; then
+    out "[!!] No USB serial devices found (/dev/ttyUSB*, /dev/ttyACM*)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# 6. ET Symlinks
+# ---------------------------------------------------------------------------
+diag_symlinks() {
+  section "ET DEVICE SYMLINKS"
+
+  local links=("$ET_DEVICE_CAT" "$ET_DEVICE_AUDIO" "$ET_DEVICE_GPS" "$ET_DEVICE_SDR" "/dev/rfcomm0")
+
+  for link in "${links[@]}"; do
+    if [ -L "$link" ]; then
+      local target
+      target=$(readlink -f "$link")
+      if [ -e "$target" ]; then
+        out "  [OK]  ${link} -> ${target}"
+      else
+        out "  [!!]  ${link} -> BROKEN (target: ${target})"
+      fi
+    elif [ -e "$link" ]; then
+      out "  [OK]  ${link} (device present)"
+    else
+      out "  [--]  ${link} not found"
+    fi
+  done
+}
+
+# ---------------------------------------------------------------------------
+# 7. Audio Devices
+# ---------------------------------------------------------------------------
+diag_audio() {
+  section "AUDIO DEVICES"
+
+  out "--- Capture (arecord -l) ---"
+  arecord -l 2>/dev/null | tee -a "$DIAG_FILE"
+
+  out ""
+  out "--- Playback (aplay -l) ---"
+  aplay -l 2>/dev/null | tee -a "$DIAG_FILE"
+
+  out ""
+  out "--- PulseAudio sources ---"
+  pactl list sources short 2>/dev/null | tee -a "$DIAG_FILE"
+
+  out ""
+  out "--- PulseAudio sinks ---"
+  pactl list sinks short 2>/dev/null | tee -a "$DIAG_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# 8. rigctld Status
+# ---------------------------------------------------------------------------
+diag_rigctld() {
+  section "RIGCTLD STATUS"
+
+  local count
+  count=$(pgrep -c rigctld 2>/dev/null || echo "0")
+
+  if [ "$count" -eq 0 ]; then
+    out "[!!] rigctld is NOT running"
+  else
+    out "[OK] rigctld running (${count} instance(s))"
+    out ""
+    out "Process:"
+    ps -eo pid,args 2>/dev/null | grep '[r]igctld' | while IFS= read -r line; do
+      out "  ${line}"
+    done
+  fi
+
+  # Port check
+  out ""
+  out "--- Port 4532 (ss) ---"
+  ss -tlnp sport = :4532 2>/dev/null | tee -a "$DIAG_FILE"
+
+  # Frequency test via localhost
+  out ""
+  out "--- Frequency check (127.0.0.1:4532) ---"
+  local freq
+  freq=$(timeout 3 rigctl -m 2 -r 127.0.0.1:4532 f 2>&1)
+  if [ $? -eq 0 ] && [ -n "$freq" ]; then
+    out "[OK] Frequency: ${freq} Hz"
+  else
+    out "[!!] Failed: ${freq}"
+  fi
+
+  # Also try localhost (IPv6)
+  out ""
+  out "--- Frequency check (localhost:4532) ---"
+  freq=$(timeout 3 rigctl -m 2 -r localhost:4532 f 2>&1)
+  if [ $? -eq 0 ] && [ -n "$freq" ]; then
+    out "[OK] Frequency: ${freq} Hz"
+  else
+    out "[!!] Failed: ${freq}"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# 9. ET-Supervisor
+# ---------------------------------------------------------------------------
+diag_supervisor() {
+  section "ET-SUPERVISOR"
+
+  # Service status
+  out "--- systemctl --user status et-supervisor ---"
+  systemctl --user status et-supervisor 2>&1 | head -15 | tee -a "$DIAG_FILE"
+
+  # IPC socket
+  out ""
+  local sock="/run/user/$(id -u)/et-supervisor.sock"
+  if [ -S "$sock" ]; then
+    out "[OK] IPC socket exists: ${sock}"
+  else
+    out "[!!] IPC socket MISSING: ${sock}"
+  fi
+
+  # Status via CLI
+  out ""
+  out "--- et-supervisor-ctl status ---"
+  /opt/emcomm-tools/bin/et-supervisor-ctl status 2>&1 | tee -a "$DIAG_FILE"
+
+  # Mode list
+  out ""
+  out "--- et-supervisor-ctl list-modes ---"
+  /opt/emcomm-tools/bin/et-supervisor-ctl list-modes 2>&1 | tee -a "$DIAG_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# 10. Network Ports (ham radio related)
+# ---------------------------------------------------------------------------
+diag_network() {
+  section "NETWORK PORTS (ham radio)"
+
+  out "--- Listening ports (rigctld, VARA, VarAC, Pat, etc.) ---"
+  ss -tlnp 2>/dev/null | grep -E ':(4532|8300|8350|8100|8515|1981|5000|12345|8080|8049)' | tee -a "$DIAG_FILE"
+
+  if [ -z "$(ss -tlnp 2>/dev/null | grep -E ':(4532|8300|8350|8100|8515|1981|5000|12345|8080|8049)')" ]; then
+    out "(none found)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# 11. Bluetooth
+# ---------------------------------------------------------------------------
+diag_bluetooth() {
+  section "BLUETOOTH"
+
+  out "--- rfcomm ---"
+  rfcomm 2>/dev/null | tee -a "$DIAG_FILE"
+  if [ -z "$(rfcomm 2>/dev/null)" ]; then
+    out "(no rfcomm bindings)"
+  fi
+
+  out ""
+  out "--- bluetoothctl devices ---"
+  bluetoothctl devices 2>/dev/null | tee -a "$DIAG_FILE"
+  if [ -z "$(bluetoothctl devices 2>/dev/null)" ]; then
+    out "(no paired devices)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# 12. GPS
+# ---------------------------------------------------------------------------
+diag_gps() {
+  section "GPS"
+
+  if [ -e "$ET_DEVICE_GPS" ]; then
+    out "[OK] GPS device: ${ET_DEVICE_GPS} -> $(readlink -f "$ET_DEVICE_GPS" 2>/dev/null)"
+  else
+    out "[--] No GPS device (${ET_DEVICE_GPS})"
+  fi
+
+  if [ -f /tmp/et-gps-connected ]; then
+    out "[OK] GPS flag file present (/tmp/et-gps-connected)"
+  else
+    out "[--] GPS flag file absent"
+  fi
+
+  # Check gpsd
+  if pgrep -x gpsd > /dev/null 2>&1; then
+    out "[OK] gpsd running"
+  else
+    out "[--] gpsd not running"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# 13. Logs (last 50 lines)
+# ---------------------------------------------------------------------------
+diag_logs() {
+  section "ET-SUPERVISOR LOG (last 50 lines)"
+
+  local logfile="${HOME}/.local/share/emcomm-tools/et-supervisor.log"
+  if [ -f "$logfile" ]; then
+    tail -50 "$logfile" | tee -a "$DIAG_FILE"
+  else
+    out "(log file not found: ${logfile})"
+  fi
+
+  section "RIGCTLD JOURNAL (last 30 lines)"
+  journalctl --user -u rigctld --no-pager -n 30 2>&1 | tee -a "$DIAG_FILE"
+}
+
+# ---------------------------------------------------------------------------
+# 14. udev Rules
+# ---------------------------------------------------------------------------
+diag_udev() {
+  section "ET UDEV RULES"
+
+  local rules_dir="/etc/udev/rules.d"
+  for rule in "${rules_dir}"/[0-9]*-et-*.rules; do
+    [ ! -f "$rule" ] && continue
+    out ""
+    out "--- $(basename "$rule") ---"
+    cat "$rule" | tee -a "$DIAG_FILE"
+  done
+
+  if [ -z "$(ls "${rules_dir}/"*-et-*.rules 2>/dev/null)" ]; then
+    out "(no et-* udev rules found)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# 15. CAT Port Probe (--test only)
+# ---------------------------------------------------------------------------
+diag_cat_test() {
+  section "CAT PORT PROBE (testing all /dev/ttyUSB*)"
+
+  if [ ! -L "$ET_ACTIVE_RADIO_CONF" ]; then
+    out "[!!] No active radio config — cannot run port test"
+    return
+  fi
+
+  local rig_id baud ptt conf set_conf=""
+  rig_id=$(jq -r '.rigctrl.id'   "$ET_ACTIVE_RADIO_CONF")
+  baud=$(jq   -r '.rigctrl.baud' "$ET_ACTIVE_RADIO_CONF")
+  ptt=$(jq    -r '.rigctrl.ptt'  "$ET_ACTIVE_RADIO_CONF")
+  conf=$(jq   -r '.rigctrl.conf // empty' "$ET_ACTIVE_RADIO_CONF" 2>/dev/null)
+
+  if [ "$rig_id" = "1" ]; then
+    out "Active radio uses dummy rig (audio-only) — port test not applicable"
+    return
+  fi
+
+  if [ -n "$conf" ]; then
+    set_conf="--set-conf=${conf}"
+  fi
+
+  local model
+  model=$(jq -r '.model // "radio"' "$ET_ACTIVE_RADIO_CONF")
+  out "Testing with: Hamlib ID=${rig_id}, baud=${baud}, PTT=${ptt}, model=${model}"
+
+  out ""
+  out "[!!] This will KILL any running rigctld!"
+  killall rigctld 2>/dev/null
+  sleep 1
+
+  local devices=(/dev/ttyUSB*)
+  if [ ! -e "${devices[0]}" ]; then
+    out "[!!] No /dev/ttyUSB* devices to test"
+    return
+  fi
+
+  local found=0
+  for dev in "${devices[@]}"; do
+    out ""
+    out "Trying ${dev} ..."
+
+    rigctld -m "$rig_id" -r "$dev" -s "$baud" -P "$ptt" $set_conf &
+    local rgpid=$!
+    sleep 2
+
+    if ! kill -0 "$rgpid" 2>/dev/null; then
+      out "  [!!] rigctld exited immediately on ${dev}"
+      continue
+    fi
+
+    local freq
+    freq=$(timeout 3 rigctl -m 2 -r 127.0.0.1:4532 f 2>&1)
+    if [ $? -eq 0 ] && [ -n "$freq" ]; then
+      out "  [OK] SUCCESS on ${dev} — Frequency: ${freq} Hz"
+      out "  rigctld left running (PID ${rgpid})"
+      found=1
+      break
+    else
+      out "  [!!] No response on ${dev}: ${freq}"
+      kill "$rgpid" 2>/dev/null
+      wait "$rgpid" 2>/dev/null
+    fi
+  done
+
+  if [ "$found" -eq 0 ]; then
+    out ""
+    out "[!!] No working CAT port found on any /dev/ttyUSB* device"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Usage
+# ---------------------------------------------------------------------------
+usage() {
+  echo "Usage: $(basename "$0") [--test] [--help]"
+  echo ""
+  echo "  Runs a full system diagnostic and saves the report to:"
+  echo "    ~/Documents/et-diag-<date>.txt"
+  echo ""
+  echo "  --test   Also probe all serial ports for working CAT"
+  echo "           (WARNING: kills running rigctld)"
+  echo "  --help   Show this help"
+  echo ""
+  echo "  The report file can be emailed for remote troubleshooting."
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+case "${1:-}" in
+  --test)  RUN_TEST=1 ;;
+  --help)  usage; exit 0 ;;
+  "")      ;;
+  *)       echo "Unknown option: $1"; usage; exit 1 ;;
+esac
+
+# Create output dir if needed
+mkdir -p "$DIAG_DIR"
+
+# Start fresh
+> "$DIAG_FILE"
+
+out "EmComm-Tools Full Diagnostic Report"
+out "Generated: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+out ""
+
+diag_system
+diag_user
+diag_radio_config
+diag_usb_devices
+diag_serial
+diag_symlinks
+diag_audio
+diag_rigctld
+diag_supervisor
+diag_network
+diag_bluetooth
+diag_gps
+diag_logs
+diag_udev
+
+if [ "$RUN_TEST" -eq 1 ]; then
+  diag_cat_test
+fi
+
+out ""
+out "$SEPARATOR"
+out "  REPORT SAVED: ${DIAG_FILE}"
+out "$SEPARATOR"
+out ""
+out "Send this file to VA2OPS for troubleshooting."

@@ -421,10 +421,29 @@ if merge_user_json "${PERSISTENCE_PATH}/user.json" "${HOME}/.config/emcomm-tools
     ((RESTORED++)) || true
 fi
 
+# --- Custom Radio Configs (BEFORE active radio so custom radios are available) ---
+RADIOS_DIR="/opt/emcomm-tools/conf/radios.d"
+USER_RADIOS="${HOME}/.config/emcomm-tools/radios.d"
+RADIOS_USB="${PERSISTENCE_PATH}/configs/radios"
+if [[ -d "$RADIOS_USB" ]] && [[ -n "$(ls -A "$RADIOS_USB" 2>/dev/null)" ]]; then
+    mkdir -p "$USER_RADIOS"
+    cp -f "$RADIOS_USB"/*.json "$USER_RADIOS/" 2>/dev/null || true
+    # Create symlinks in system radios dir for each custom radio
+    for f in "$USER_RADIOS"/*.json; do
+        fname=$(basename "$f")
+        rm -f "${RADIOS_DIR}/${fname}" 2>/dev/null || true
+        ln -sf "$f" "${RADIOS_DIR}/${fname}" 2>/dev/null || true
+    done
+    RADIO_COUNT=$(ls -1 "$USER_RADIOS"/*.json 2>/dev/null | wc -l)
+    log "✓ Restored: Custom radio configs ($RADIO_COUNT files)"
+    ((RESTORED++)) || true
+else
+    log "⏭ Skip: Custom radio configs (none saved)"
+fi
+
 # --- Active Radio (restore symlink) ---
 # Uses et-data group permissions (NO sudo needed - same as et-radio Flask app)
 log "Restoring active radio..."
-RADIOS_DIR="/opt/emcomm-tools/conf/radios.d"
 ACTIVE_RADIO_LINK="${RADIOS_DIR}/active-radio.json"
 if [[ -f "${PERSISTENCE_PATH}/active-radio.txt" ]]; then
     RADIO_TARGET=$(cat "${PERSISTENCE_PATH}/active-radio.txt")
@@ -592,46 +611,41 @@ log "Starting WiFi restore..."
 WIFI_SRC="${PERSISTENCE_PATH}/configs/wifi"
 WIFI_DEST="/etc/NetworkManager/system-connections"
 if [[ -d "$WIFI_SRC" ]] && [[ -n "$(ls -A "$WIFI_SRC" 2>/dev/null)" ]]; then
-    if is_live_boot; then
-        log "WiFi restore: Live mode detected"
-        WIFI_COUNT=$(ls -1 "$WIFI_SRC" 2>/dev/null | wc -l)
-        
-        # Copy and strip interface-name (hardware-specific) for portability
-        for wifi_file in "$WIFI_SRC"/*; do
-            if [[ -f "$wifi_file" ]]; then
-                filename=$(basename "$wifi_file")
-                conn_id=$(grep "^id=" "$wifi_file" | cut -d= -f2)
-                log "WiFi restore: processing $filename (id=$conn_id)"
-                
-                # Delete any existing connections with same base name (avoid "Sergent_971 1" duplicates)
-                if [[ -n "$conn_id" ]]; then
-                    sudo rm -f "$WIFI_DEST/${conn_id}"*.nmconnection 2>/dev/null
-                fi
-                
-                # Copy without interface-name line
-                grep -v "^interface-name=" "$wifi_file" | sudo tee "$WIFI_DEST/$filename" > /dev/null
-            fi
-        done
-        # Fix permissions (NetworkManager requires 600)
-        sudo chmod 600 "$WIFI_DEST"/*.nmconnection 2>/dev/null
-        sudo chown root:root "$WIFI_DEST"/*.nmconnection 2>/dev/null
-        # Restart NetworkManager to pick up new files
-        sudo systemctl restart NetworkManager 2>/dev/null
-        sleep 2
-        # Load and try to connect each network
-        for wifi_file in "$WIFI_DEST"/*.nmconnection; do
-            sudo nmcli connection load "$wifi_file" 2>/dev/null || true
-            # Try to bring up the connection (uses id= from file)
-            conn_id=$(sudo grep "^id=" "$wifi_file" 2>/dev/null | cut -d= -f2)
+    WIFI_COUNT=$(ls -1 "$WIFI_SRC" 2>/dev/null | wc -l)
+
+    # Copy and strip interface-name (hardware-specific) for portability
+    for wifi_file in "$WIFI_SRC"/*; do
+        if [[ -f "$wifi_file" ]]; then
+            filename=$(basename "$wifi_file")
+            conn_id=$(grep "^id=" "$wifi_file" | cut -d= -f2)
+            log "WiFi restore: processing $filename (id=$conn_id)"
+
+            # Delete any existing connections with same base name (avoid "Sergent_971 1" duplicates)
             if [[ -n "$conn_id" ]]; then
-                sudo nmcli connection up "$conn_id" 2>/dev/null || true
+                sudo rm -f "$WIFI_DEST/${conn_id}"*.nmconnection 2>/dev/null
             fi
-        done
-        log "✓ Restored: WiFi networks ($WIFI_COUNT connections) [live mode]"
-        ((RESTORED++)) || true
-    else
-        log "⏭ Skipped: WiFi networks (installed system - run: sudo et-restore-hw)"
-    fi
+
+            # Copy without interface-name line
+            grep -v "^interface-name=" "$wifi_file" | sudo tee "$WIFI_DEST/$filename" > /dev/null
+        fi
+    done
+    # Fix permissions (NetworkManager requires 600)
+    sudo chmod 600 "$WIFI_DEST"/*.nmconnection 2>/dev/null
+    sudo chown root:root "$WIFI_DEST"/*.nmconnection 2>/dev/null
+    # Restart NetworkManager to pick up new files
+    sudo systemctl restart NetworkManager 2>/dev/null
+    sleep 2
+    # Load and try to connect each network
+    for wifi_file in "$WIFI_DEST"/*.nmconnection; do
+        sudo nmcli connection load "$wifi_file" 2>/dev/null || true
+        # Try to bring up the connection (uses id= from file)
+        conn_id=$(sudo grep "^id=" "$wifi_file" 2>/dev/null | cut -d= -f2)
+        if [[ -n "$conn_id" ]]; then
+            sudo nmcli connection up "$conn_id" 2>/dev/null || true
+        fi
+    done
+    log "✓ Restored: WiFi networks ($WIFI_COUNT connections)"
+    ((RESTORED++)) || true
 else
     log "⏭ Skip: WiFi (no saved networks)"
 fi
@@ -641,23 +655,18 @@ log "Starting Bluetooth restore..."
 BT_TAR="${PERSISTENCE_PATH}/configs/bluetooth/bt-pairings.tar"
 BT_DEST="/var/lib/bluetooth"
 if [[ -f "$BT_TAR" ]]; then
-    if is_live_boot; then
-        log "Bluetooth restore: Live mode detected"
-        # Recreate dir in overlay upper layer — lower layer dir is read-only
-        sudo rm -rf "$BT_DEST"
-        sudo mkdir -p "$BT_DEST"
-        sudo tar xf "$BT_TAR" -C "$BT_DEST" 2>/dev/null
-        sudo chown -R root:bluetooth "$BT_DEST/" 2>/dev/null
-        sudo chmod -R 700 "$BT_DEST/" 2>/dev/null
-        # Restart bluetooth service to load restored pairings
-        sudo systemctl restart bluetooth 2>/dev/null
-        sleep 2
-        BT_COUNT=$(sudo find "$BT_DEST" -mindepth 2 -maxdepth 2 -type d 2>/dev/null | wc -l)
-        log "✓ Restored: Bluetooth pairings ($BT_COUNT devices) [live mode]"
-        ((RESTORED++)) || true
-    else
-        log "⏭ Skipped: Bluetooth pairings (installed system - run: sudo et-restore-hw)"
-    fi
+    # Recreate dir — on live systems, overlay lower layer dir is read-only
+    sudo rm -rf "$BT_DEST"
+    sudo mkdir -p "$BT_DEST"
+    sudo tar xf "$BT_TAR" -C "$BT_DEST" 2>/dev/null
+    sudo chown -R root:bluetooth "$BT_DEST/" 2>/dev/null
+    sudo chmod -R 700 "$BT_DEST/" 2>/dev/null
+    # Restart bluetooth service to load restored pairings
+    sudo systemctl restart bluetooth 2>/dev/null
+    sleep 2
+    BT_COUNT=$(sudo find "$BT_DEST" -mindepth 2 -maxdepth 2 -type d 2>/dev/null | wc -l)
+    log "✓ Restored: Bluetooth pairings ($BT_COUNT devices)"
+    ((RESTORED++)) || true
 else
     log "⏭ Skip: Bluetooth (no saved pairings)"
 fi

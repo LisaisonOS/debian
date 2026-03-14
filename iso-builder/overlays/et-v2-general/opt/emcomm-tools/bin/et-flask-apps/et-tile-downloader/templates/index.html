@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t['title'] }} - EmComm-Tools</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="card-header">
+            <h1>{{ t['title'] }}</h1>
+            <div class="subtitle">{{ t['subtitle'] }}</div>
+        </div>
+
+        {% if storage_info == 'usb' %}
+        <div class="storage-banner storage-usb">{{ t['storage_usb'] }}</div>
+        {% elif storage_info == 'no_usb' %}
+        <div class="storage-banner storage-no-usb">
+            <strong>{{ t['no_usb'] }}</strong><br>
+            <small>{{ t['no_usb_detail'] }}</small>
+        </div>
+        {% else %}
+        <div class="storage-banner storage-local">{{ t['storage_local'] }}</div>
+        {% endif %}
+
+        <div class="card-body">
+            <div class="tile-list" id="tile-list">
+                {% for filename, info in tile_files.items() %}
+                <div class="tile-item{% if filename in existing_files %} installed{% endif %}" id="row-{{ loop.index0 }}">
+                    <input type="checkbox" id="cb-{{ loop.index0 }}"
+                           value="{{ filename }}"
+                           {% if filename in existing_files %}checked disabled{% endif %}>
+                    <label for="cb-{{ loop.index0 }}">
+                        <span class="tile-label">{{ info.label }}</span>
+                        <span>
+                            {% if filename in existing_files %}
+                            <span class="tile-status done">{{ t['already_installed'] }}</span>
+                            {% endif %}
+                            <span class="tile-size">{{ info.size }}</span>
+                        </span>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="progress-container" id="progress-container" style="display:none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress" style="width: 0%"></div>
+            </div>
+            <div class="progress-text" id="progress-text"></div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-primary" id="download-btn" onclick="startDownloads()">
+                {{ t['download'] }}
+            </button>
+        </div>
+    </div>
+
+<script>
+    const existingFiles = {{ existing_files | tojson }};
+    const T = {{ t | tojson }};
+
+    function getSelectedFiles() {
+        const selected = [];
+        document.querySelectorAll('.tile-item input[type="checkbox"]:checked:not(:disabled)').forEach(cb => {
+            selected.push(cb.value);
+        });
+        return selected;
+    }
+
+    async function startDownloads() {
+        const files = getSelectedFiles();
+
+        if (files.length === 0) {
+            return;
+        }
+
+        // Disable controls
+        const btn = document.getElementById('download-btn');
+        btn.disabled = true;
+        btn.textContent = T['downloading'] + '...';
+        document.querySelectorAll('.tile-item input[type="checkbox"]:not(:disabled)').forEach(cb => {
+            cb.disabled = true;
+        });
+
+        // Show progress
+        document.getElementById('progress-container').style.display = 'block';
+
+        let completed = 0;
+
+        for (const file of files) {
+            // Find the row for this file
+            const allCheckboxes = document.querySelectorAll('.tile-item input[type="checkbox"]');
+            let rowEl = null;
+            allCheckboxes.forEach(cb => {
+                if (cb.value === file) {
+                    rowEl = cb.closest('.tile-item');
+                }
+            });
+
+            // Update status to downloading
+            if (rowEl) {
+                const statusSpan = rowEl.querySelector('.tile-status');
+                if (statusSpan) {
+                    statusSpan.className = 'tile-status downloading';
+                    statusSpan.innerHTML = '<span class="spinner"></span> ' + T['downloading'];
+                } else {
+                    const label = rowEl.querySelector('label > span:last-child');
+                    const newStatus = document.createElement('span');
+                    newStatus.className = 'tile-status downloading';
+                    newStatus.innerHTML = '<span class="spinner"></span> ' + T['downloading'];
+                    label.insertBefore(newStatus, label.firstChild);
+                }
+            }
+
+            document.getElementById('progress-text').textContent =
+                T['downloading'] + ': ' + file + ' (' + (completed + 1) + '/' + files.length + ')';
+
+            try {
+                const response = await fetch('/api/download/tile', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({file: file})
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    if (rowEl) {
+                        rowEl.classList.add('installed');
+                        const statusSpan = rowEl.querySelector('.tile-status');
+                        if (statusSpan) {
+                            statusSpan.className = 'tile-status done';
+                            statusSpan.textContent = result.skipped ? T['already_installed'] : T['complete'];
+                        }
+                    }
+                } else {
+                    if (rowEl) {
+                        const statusSpan = rowEl.querySelector('.tile-status');
+                        if (statusSpan) {
+                            statusSpan.className = 'tile-status error';
+                            statusSpan.textContent = T['error'] + ': ' + (result.error || 'Failed');
+                        }
+                    }
+                }
+            } catch (e) {
+                if (rowEl) {
+                    const statusSpan = rowEl.querySelector('.tile-status');
+                    if (statusSpan) {
+                        statusSpan.className = 'tile-status error';
+                        statusSpan.textContent = T['error'] + ': ' + e.message;
+                    }
+                }
+            }
+
+            completed++;
+            const pct = (completed / files.length) * 100;
+            document.getElementById('progress').style.width = pct + '%';
+        }
+
+        document.getElementById('progress-text').textContent = T['complete'] + '!';
+        btn.textContent = T['close'];
+        btn.disabled = false;
+        btn.onclick = () => window.close();
+    }
+</script>
+</body>
+</html>

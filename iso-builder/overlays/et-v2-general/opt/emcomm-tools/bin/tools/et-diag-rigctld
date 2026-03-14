@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# Author  : Sylvain Deguire (VA2OPS)
+# Date    : 8 March 2026
+# Purpose : Verbose rigctld diagnostic — kills existing rigctld, restarts with
+#           full debug output, and tests the TCP connection. Saves everything
+#           to a file for remote troubleshooting.
+
+ET_HOME=/opt/emcomm-tools
+ACTIVE_RADIO="${ET_HOME}/conf/radios.d/active-radio.json"
+DIAG_FILE="${HOME}/Documents/et-diag-rigctld-$(date '+%Y%m%d-%H%M%S').txt"
+
+mkdir -p "${HOME}/Documents"
+
+out() { echo -e "$*" | tee -a "$DIAG_FILE"; }
+
+out "=== rigctld Verbose Diagnostic ==="
+out "Date: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+out ""
+
+# Check active radio config
+if [ ! -L "$ACTIVE_RADIO" ]; then
+  out "[!!] No active radio configured — cannot test"
+  exit 1
+fi
+
+ID=$(jq -r '.rigctrl.id' "$ACTIVE_RADIO")
+BAUD=$(jq -r '.rigctrl.baud' "$ACTIVE_RADIO")
+PTT=$(jq -r '.rigctrl.ptt' "$ACTIVE_RADIO")
+CONF=$(jq -e -r '.rigctrl.conf // empty' "$ACTIVE_RADIO" 2>/dev/null)
+MODEL=$(jq -r '.model // "unknown"' "$ACTIVE_RADIO")
+SET_CONF=""
+if [ -n "$CONF" ]; then
+  SET_CONF="--set-conf=${CONF}"
+fi
+
+out "Radio  : ${MODEL}"
+out "Hamlib : id=${ID} baud=${BAUD} ptt=${PTT} conf=${CONF}"
+out "Device : /dev/et-cat -> $(readlink -f /dev/et-cat 2>/dev/null || echo 'NOT FOUND')"
+out ""
+
+# Kill existing rigctld
+out "--- Stopping existing rigctld ---"
+killall rigctld 2>/dev/null
+sleep 2
+out ""
+
+# Start rigctld with verbose output
+out "--- Starting rigctld (verbose) ---"
+CMD="rigctld -m ${ID} -r /dev/et-cat -s ${BAUD} -P ${PTT} ${SET_CONF} -vvvvv"
+out "CMD: ${CMD}"
+out ""
+
+$CMD >> "$DIAG_FILE" 2>&1 &
+RIGPID=$!
+sleep 3
+
+# Check if rigctld is still alive
+if ! kill -0 "$RIGPID" 2>/dev/null; then
+  out "[!!] rigctld exited immediately — check output above"
+  out ""
+  out "=== REPORT SAVED: ${DIAG_FILE} ==="
+  exit 1
+fi
+
+out "[OK] rigctld running (PID ${RIGPID})"
+out ""
+
+# Test TCP connection
+out "--- Frequency check (127.0.0.1:4532, verbose) ---"
+timeout 5 rigctl -m 2 -r 127.0.0.1:4532 -vvvvv f >> "$DIAG_FILE" 2>&1
+RESULT=$?
+out ""
+
+if [ "$RESULT" -eq 0 ]; then
+  out "[OK] Frequency query succeeded"
+else
+  out "[!!] Frequency query failed (exit code ${RESULT})"
+fi
+
+out ""
+
+# Also try get_info
+out "--- Radio info check (127.0.0.1:4532) ---"
+timeout 5 rigctl -m 2 -r 127.0.0.1:4532 _ >> "$DIAG_FILE" 2>&1
+out ""
+
+# Leave rigctld running
+out "--- rigctld left running (PID ${RIGPID}) ---"
+out "To stop: kill ${RIGPID}"
+out ""
+out "============================================"
+out "  REPORT SAVED: ${DIAG_FILE}"
+out "============================================"
+out ""
+out "Send this file to VA2OPS for troubleshooting."

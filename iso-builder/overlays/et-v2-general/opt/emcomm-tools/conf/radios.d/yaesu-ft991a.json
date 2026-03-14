@@ -2,11 +2,22 @@
   "id": "yaesu-ft991a",
   "vendor": "Yaesu",
   "model": "FT-991A",
+  "bands": [
+    "HF",
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "1035",
     "baud": "38400",
-    "ptt": "RIG",
-    "conf": "rts_state=OFF,dtr_state=OFF"
+    "ptt": "RIG"
+  },
+  "varafm": {
+    "pttPort": "COM5",
+    "pttVia": "1",
+    "baud": "38400",
+    "dtr": "0",
+    "rts": "0"
   },
   "notes": [
     "031 CAT RATE = 38400bps",
@@ -29,6 +40,5 @@
     "For HF digital operation always set WDH = 3000Hz",
     "For FM packet operation always set Mode = DATA-FM"
   ],
-  "fieldNotes": [
-  ]
+  "fieldNotes": []
 }

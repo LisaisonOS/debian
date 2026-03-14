@@ -2,10 +2,22 @@
   "id": "yaesu-ft857d",
   "vendor": "Yaesu",
   "model": "FT-857D (DigiRig)",
+  "bands": [
+    "HF",
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "1022",
     "baud": "38400",
     "ptt": "RTS"
+  },
+  "varafm": {
+    "pttPort": "COM10",
+    "pttVia": "1",
+    "baud": "38400",
+    "dtr": "1",
+    "rts": "0"
   },
   "audio": {
     "script": "/opt/emcomm-tools/conf/radios.d/audio/yaesu-ft857d.sh"

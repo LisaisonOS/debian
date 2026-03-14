@@ -2,7 +2,7 @@
 Type=Application
 Name=EmComm-Tools Wallpaper Refresh
 Comment=Refresh wallpaper after display scaling is applied
-Exec=bash -c "sleep 2 && pkill xfdesktop && xfdesktop &"
+Exec=/opt/emcomm-tools/bin/et-wallpaper-refresh
 Hidden=false
 NoDisplay=true
 X-XFCE-Autostart-Override=true

@@ -122,6 +122,14 @@ _TR = {
         "en": "Failed to bind /dev/rfcomm0: {}",
         "fr": "Échec de la liaison /dev/rfcomm0 : {}",
     },
+    "band_mismatch": {
+        "en": "Mode requires {} but radio supports {}",
+        "fr": "Le mode nécessite {} mais la radio supporte {}",
+    },
+    "wrong_frequency": {
+        "en": "Radio is on {} — switch to {} frequency first",
+        "fr": "La radio est sur {} — changez pour une fréquence {} d'abord",
+    },
 }
 
 
@@ -201,6 +209,21 @@ class ModeEngine:
                 modes.append(filename[:-5])
         return modes
 
+    def get_active_radio_bands(self):
+        """Read bands from active radio config.
+
+        Returns:
+            list of band strings (e.g. ["HF", "VHF", "UHF"]), or []
+            if no active radio or no bands field.
+        """
+        radio_path = os.path.join(ET_HOME, "conf/radios.d/active-radio.json")
+        try:
+            with open(radio_path) as f:
+                radio = json.load(f)
+            return radio.get("bands", [])
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
     def start_mode(self, mode_id, params=None):
         """Start a mode: prechecks, config, chain start.
 
@@ -214,6 +237,24 @@ class ModeEngine:
         config = self.load_mode(mode_id)
         if config is None:
             return False, _t("mode_not_found", mode_id)
+
+        # Check band compatibility (safety net — dashboard already filters)
+        required_bands = config.get("requires_bands", [])
+        if required_bands:
+            radio_bands = self.get_active_radio_bands()
+            if radio_bands and not set(required_bands) & set(radio_bands):
+                return False, _t("band_mismatch", required_bands, radio_bands)
+
+        # Check current frequency matches required band — prevents starting
+        # a VHF mode on HF frequency or vice versa
+        if required_bands:
+            current_band = self._get_band_from_radio()
+            if current_band:
+                band_category = self._band_to_category(current_band)
+                if band_category and band_category not in required_bands:
+                    required_str = "/".join(required_bands)
+                    return False, _t("wrong_frequency",
+                                     current_band, required_str)
 
         mode_name = config.get("name", {}).get("en", mode_id)
         log.info("Starting mode: %s (%s)", mode_id, mode_name)
@@ -234,7 +275,13 @@ class ModeEngine:
 
         # Kill all first if requested
         if config.get("kill_all_first", False):
-            self._run_kill_all()
+            wine_was_running = self._run_kill_all()
+            # Only restart rigctld if Wine was running (e.g. VARA FM
+            # disrupted the serial port) and the new mode needs it
+            if wine_was_running:
+                required_services = config.get("requires", {}).get("services", [])
+                if "rigctld" in required_services:
+                    self._restart_rigctld()
 
         # Run prechecks
         checks = config.get("prechecks", [])
@@ -419,6 +466,16 @@ class ModeEngine:
                 self._kill_wineserver()
 
         self._pm.stop_all()
+
+        # Restart rigctld after Wine modes — Wine shares the serial port
+        # and corrupts rigctld's connection. Same as unplugging/replugging.
+        if config:
+            chain = config.get("chain", [])
+            has_wine = any("wine" in " ".join(s.get("command", [])).lower()
+                           for s in chain)
+            if has_wine:
+                self._restart_rigctld()
+
         self._current_mode = None
         self._mode_config = None
         return True, _t("mode_stopped", mode_id)
@@ -458,6 +515,16 @@ class ModeEngine:
                 self._kill_wineserver()
 
         self._pm.stop_all()
+
+        # Restart rigctld after Wine modes — Wine shares the serial port
+        # and corrupts rigctld's connection. Same as unplugging/replugging.
+        if self._mode_config:
+            chain = self._mode_config.get("chain", [])
+            has_wine = any("wine" in " ".join(s.get("command", [])).lower()
+                           for s in chain)
+            if has_wine:
+                self._restart_rigctld()
+
         self._current_mode = None
         self._mode_config = None
 
@@ -614,6 +681,10 @@ class ModeEngine:
             self._open_browser(action.get("url", ""))
         elif action_type == "prime-rigctld":
             self._prime_rigctld()
+        elif action_type == "stop-rigctld":
+            self._stop_rigctld()
+        elif action_type == "set-radio-width":
+            self._set_radio_width(action.get("width", 2750))
         elif action_type == "pat-config":
             self._apply_pat_config(action.get("template", ""))
         elif action_type == "vara-fm-ptt-config":
@@ -634,6 +705,8 @@ class ModeEngine:
             self._apply_qttermtcp_config()
         elif action_type == "js8spotter-setup":
             self._setup_js8spotter()
+        elif action_type == "launch-js8spotter":
+            self._launch_js8spotter()
         elif action_type == "bbs-inetd-config":
             self._configure_bbs_inetd()
         elif action_type == "bbs-config":
@@ -645,8 +718,15 @@ class ModeEngine:
             log.warning("Unknown action: %s", action_type)
 
     def _run_kill_all(self):
-        """Stop all running mode processes."""
+        """Stop all running mode processes.
+
+        Returns True if Wine was running (serial port may be disrupted).
+        """
         self._pm.stop_all()
+        # Check if Wine was running before killing it
+        wine_was_running = self._is_wineserver_running()
+        if wine_was_running:
+            self._kill_wineserver()
         # Also kill any leftover processes from v1 scripts
         try:
             subprocess.run(
@@ -655,6 +735,10 @@ class ModeEngine:
             )
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
+        if wine_was_running:
+            # Wait for serial port to be free after Wine releases it
+            self._wait_for_serial_port_free()
+        return wine_was_running
 
     def _run_audio_config(self):
         """Configure ALSA mixer settings."""
@@ -879,6 +963,53 @@ class ModeEngine:
             return "70cm"
         return band_map.get(mhz, "")
 
+    @staticmethod
+    def _band_to_category(band):
+        """Map a specific band name to HF/VHF/UHF category.
+
+        Returns:
+            "HF", "VHF", "UHF", or "" if unknown.
+        """
+        hf = {"160m", "80m", "60m", "40m", "30m", "20m", "17m",
+              "15m", "12m", "10m"}
+        vhf = {"6m", "2m"}
+        uhf = {"70cm"}
+        if band in hf:
+            return "HF"
+        if band in vhf:
+            return "VHF"
+        if band in uhf:
+            return "UHF"
+        return ""
+
+    def _set_radio_width(self, width):
+        """Set radio filter bandwidth via rigctld.
+
+        Some radios (FT-891, FT-991A) default to 500Hz filter width which
+        limits VARA HF performance. This sets the passband width to the
+        specified value (e.g. 2750 for full VARA HF support).
+        Uses rigctl 'M' command to set current mode with new passband.
+        """
+        try:
+            # First get current mode
+            result = subprocess.run(
+                ["rigctl", "-m", "2", "m"],
+                timeout=10, capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                # Output is "MODE\nPASSBAND\n", e.g. "USB\n2400\n"
+                current_mode = result.stdout.strip().split('\n')[0]
+                log.info("Setting radio width: mode=%s width=%s",
+                         current_mode, width)
+                subprocess.run(
+                    ["rigctl", "-m", "2", "M", current_mode, str(width)],
+                    timeout=10, capture_output=True
+                )
+            else:
+                log.warning("Could not read current mode from rigctld")
+        except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+            log.warning("Failed to set radio width: %s", e)
+
     def _prime_rigctld(self):
         """Prime rig control connection (for radios that need warmup)."""
         try:
@@ -889,6 +1020,17 @@ class ModeEngine:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
 
+    def _is_wineserver_running(self):
+        """Check if Wine server is currently running."""
+        try:
+            result = subprocess.run(
+                ["pgrep", "-x", "wineserver"],
+                timeout=5, capture_output=True
+            )
+            return result.returncode == 0
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return False
+
     def _kill_wineserver(self):
         """Kill Wine server for clean shutdown."""
         try:
@@ -898,6 +1040,72 @@ class ModeEngine:
             )
         except (FileNotFoundError, subprocess.TimeoutExpired):
             pass
+
+    def _wait_for_serial_port_free(self):
+        """Wait for /dev/et-cat serial port to be released after Wine exits.
+
+        After wineserver -k, the serial port may still be held briefly by
+        the kernel driver. Poll with fuser until no process owns the port,
+        so the next mode (e.g. rigctld) can grab it cleanly.
+        """
+        cat_device = "/dev/et-cat"
+        if not os.path.exists(cat_device):
+            return
+        real_dev = os.path.realpath(cat_device)
+        max_attempts = 10
+        delay = 0.5
+        for i in range(max_attempts):
+            try:
+                result = subprocess.run(
+                    ["fuser", real_dev],
+                    timeout=5, capture_output=True
+                )
+                if result.returncode != 0:
+                    # No process using the port — it's free
+                    log.info("Serial port %s is free (attempt %d/%d)",
+                             real_dev, i + 1, max_attempts)
+                    return
+                log.info("Serial port %s still in use (attempt %d/%d)",
+                         real_dev, i + 1, max_attempts)
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                return  # fuser not available, skip
+            time.sleep(delay)
+        log.warning("Serial port %s still in use after %d attempts",
+                    real_dev, max_attempts)
+
+    def _stop_rigctld(self):
+        """Stop rigctld by killing the process directly (not systemctl)."""
+        log.info("Stopping rigctld process...")
+        try:
+            subprocess.run(
+                ["sudo", "killall", "rigctld"],
+                timeout=5, capture_output=True
+            )
+            time.sleep(0.5)
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            log.warning("Failed to stop rigctld: %s", e)
+
+    def _restart_rigctld(self):
+        """Restart rigctld: kill existing process, then start via systemd."""
+        log.info("Restarting rigctld...")
+        # Kill existing process directly (systemctl restart hangs
+        # when rigctld won't release the serial port gracefully)
+        try:
+            subprocess.run(
+                ["sudo", "killall", "rigctld"],
+                timeout=5, capture_output=True
+            )
+            time.sleep(1)
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
+        # Start fresh via systemd
+        try:
+            subprocess.run(
+                ["sudo", "systemctl", "start", "rigctld"],
+                timeout=15, capture_output=True
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            log.warning("Failed to start rigctld: %s", e)
 
     # -----------------------------------------------------------------
     # Wine/VARA action implementations
@@ -1462,6 +1670,32 @@ class ModeEngine:
                 pass
 
         log.info("JS8Spotter setup complete: %s", home_dir)
+
+    def _launch_js8spotter(self):
+        """Launch JS8Spotter as a detached process (not tracked by supervisor).
+
+        The user can close JS8Spotter independently without stopping JS8Call.
+        When the mode stops, et-kill-all will clean up any remaining processes.
+        """
+        home_dir = os.path.expanduser(
+            "~/.local/share/emcomm-tools/js8spotter")
+        script = os.path.join(home_dir, "js8spotter.py")
+
+        if not os.path.exists(script):
+            log.warning("JS8Spotter not found: %s", script)
+            return
+
+        try:
+            subprocess.Popen(
+                ["python3", "js8spotter.py"],
+                cwd=home_dir,
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            log.info("JS8Spotter launched (detached)")
+        except OSError as e:
+            log.warning("Failed to launch JS8Spotter: %s", e)
 
 
     def _apply_bbs_config(self, template_name):

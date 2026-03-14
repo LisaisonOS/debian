@@ -2,10 +2,22 @@
   "id": "yaesu-ft897d",
   "vendor": "Yaesu",
   "model": "FT-897D (DigiRig)",
+  "bands": [
+    "HF",
+    "VHF",
+    "UHF"
+  ],
   "rigctrl": {
     "id": "1043",
     "baud": "38400",
     "ptt": "RTS"
+  },
+  "varafm": {
+    "pttPort": "COM10",
+    "pttVia": "1",
+    "baud": "38400",
+    "dtr": "1",
+    "rts": "0"
   },
   "notes": [
     "Menu 019 CAT RATE = 38400bps",

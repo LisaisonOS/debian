@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ t.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Inline critical styles — WebKitGTK dark theme fix */
+        body { background: #1a1a1a !important; color: #e0e0e0 !important; }
+        .radio-item {
+            background: #2d2d2d !important;
+            color: #e0e0e0 !important;
+        }
+        .radio-item * { color: inherit !important; }
+        .radio-item.active { background: rgba(255,165,0,0.15) !important; }
+        ::selection { background: #FFA500 !important; color: #1a1a1a !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1>{{ t.title }}</h1>
+                <p class="subtitle">{{ t.subtitle }}</p>
+            </div>
+            <div class="card-body">
+                <div class="toolbar">
+                    <span style="color: var(--text-secondary); font-size: 0.85rem;">
+                        {{ radios|length }} radios
+                    </span>
+                    <a href="/new" class="btn btn-primary">+ {{ t.new_radio }}</a>
+                </div>
+
+                {% if radios %}
+                <div class="radio-list">
+                    {% for radio in radios %}
+                    <div class="radio-item {% if radio.filename == active_filename %}active{% endif %}">
+                        <div class="radio-info">
+                            <div class="radio-name">
+                                {{ radio.data.vendor }} {{ radio.data.model }}
+                                {% if radio.filename == active_filename %}
+                                <span class="badge badge-active">{{ t.active }}</span>
+                                {% endif %}
+                                {% if radio.custom %}
+                                <span class="badge badge-custom">{{ t.custom }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="radio-meta">
+                                <span>
+                                    {% for band in radio.data.get('bands', []) %}
+                                    <span class="band-badge band-{{ band|lower }}">{{ band }}</span>
+                                    {% endfor %}
+                                </span>
+                                <span class="conn-badge">
+                                    {% if radio.conn_type == 'bt' %}
+                                    {{ t.bt }}
+                                    {% elif radio.conn_type == 'usb' %}
+                                    {{ t.usb }}
+                                    {% else %}
+                                    {{ t.audio_only }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="radio-actions">
+                            <a href="/edit/{{ radio.filename }}" class="btn btn-sm btn-secondary">{{ t.edit }}</a>
+                            <a href="/duplicate/{{ radio.filename }}" class="btn btn-sm btn-secondary">{{ t.duplicate }}</a>
+                            {% if radio.filename != active_filename %}
+                            <button class="btn btn-sm btn-danger" onclick="deleteRadio('{{ radio.filename }}')">{{ t.delete }}</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="no-data">{{ t.no_radios }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete confirmation modal -->
+    <div id="deleteModal" class="modal" style="display:none">
+        <div class="modal-content">
+            <h3>{{ t.confirm_delete }}</h3>
+            <p>{{ t.confirm_delete_msg }}</p>
+            <p id="deleteFilenameDisplay" style="color: var(--accent-primary); font-family: monospace; font-size: 0.85rem;"></p>
+            <div class="btn-group" style="justify-content: center;">
+                <button class="btn btn-secondary" onclick="closeModal()">{{ t.cancel }}</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">{{ t.delete }}</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    let deleteFilename = null;
+
+    function deleteRadio(filename) {
+        deleteFilename = filename;
+        document.getElementById('deleteFilenameDisplay').textContent = filename;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        deleteFilename = null;
+    }
+
+    function confirmDelete() {
+        if (!deleteFilename) return;
+        fetch('/api/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({filename: deleteFilename})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.error);
+                closeModal();
+            }
+        })
+        .catch(() => {
+            alert('Error communicating with server');
+            closeModal();
+        });
+    }
+
+    // Close modal on background click
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+    </script>
+</body>
+</html>
