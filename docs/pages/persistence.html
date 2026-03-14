@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persistence - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html" class="active">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Persistence
+                <span class="subtitle">Save/restore system for Live Run on USB</span>
+            </h1>
+
+            <h2>The Problem</h2>
+
+            <p>On <strong>Live Run</strong> (booting from USB), the root filesystem uses OverlayFS with a tmpfs upper layer. All changes &mdash; configuration files, user documents, Bluetooth pairings, WiFi passwords &mdash; are lost on reboot. The persistence system solves this by saving critical data to a writable partition on the USB drive before shutdown.</p>
+
+            <div class="callout callout-info">
+                <strong>HDD installs don't need this</strong>
+                On HDD installs, the filesystem is fully writable and changes persist normally. The persistence scripts detect the install type and skip when not on Live Run (except for <code>et-restore-hw</code> which handles WiFi/BT import on HDD).
+            </div>
+
+            <h2>USB Partition Layout</h2>
+
+            <div class="file-tree">
+<span class="dir">USB Drive</span>
+├── <span class="dir">Partition 1: ISO (read-only)</span>     <span class="highlight"># Live system image</span>
+└── <span class="dir">Partition 2: et-config (writable)</span> <span class="highlight"># FAT32/exFAT persistence partition</span>
+    └── <span class="dir">et-config/</span>
+        ├── <span class="dir">configs/</span>
+        │   ├── <span class="dir">emcomm-tools/</span>       <span class="highlight"># user.json, callsign, grid, language</span>
+        │   ├── <span class="dir">radios/</span>             <span class="highlight"># Custom radio JSON profiles</span>
+        │   ├── <span class="file">active-radio</span>        <span class="highlight"># Active radio filename</span>
+        │   ├── <span class="dir">pat/</span>                <span class="highlight"># Winlink configuration</span>
+        │   ├── <span class="dir">js8call/</span>             <span class="highlight"># JS8Call settings</span>
+        │   ├── <span class="dir">chattervox/</span>          <span class="highlight"># Chattervox keys</span>
+        │   ├── <span class="dir">wifi/</span>               <span class="highlight"># NetworkManager .nmconnection files</span>
+        │   └── <span class="dir">bluetooth/</span>           <span class="highlight"># bt-pairings.tar (archived)</span>
+        ├── <span class="dir">user-data/</span>
+        │   ├── <span class="dir">documents/</span>           <span class="highlight"># ~/Documents (Winlink PDFs, logs)</span>
+        │   └── <span class="dir">downloads/</span>           <span class="highlight"># ~/Downloads</span>
+        └── <span class="dir">update/</span>                 <span class="highlight"># Patch .tar.gz files (offline updates)</span>
+            </div>
+
+            <h2>Save &amp; Shutdown Menu</h2>
+
+            <p>Users trigger persistence save via the desktop menu:</p>
+
+            <table>
+                <tr><th>Menu Entry</th><th>Script</th><th>Action</th></tr>
+                <tr>
+                    <td>Save &amp; Reboot</td>
+                    <td><code>et-save-and-reboot</code></td>
+                    <td>Save all data to USB, then reboot</td>
+                </tr>
+                <tr>
+                    <td>Save &amp; Shutdown</td>
+                    <td><code>et-save-and-shutdown</code></td>
+                    <td>Save all data to USB, then power off</td>
+                </tr>
+                <tr>
+                    <td>Save &amp; Suspend</td>
+                    <td><code>et-save-and-suspend</code></td>
+                    <td>Save all data to USB, then suspend to RAM</td>
+                </tr>
+            </table>
+
+            <p>All three scripts show a progress bar dialog (zenity) with stages:</p>
+
+            <ol>
+                <li><strong>10%</strong> &mdash; Detecting USB persistence partition</li>
+                <li><strong>20%</strong> &mdash; Saving EmComm-Tools config (user.json)</li>
+                <li><strong>30%</strong> &mdash; Saving active radio selection</li>
+                <li><strong>35%</strong> &mdash; Saving custom radio configs</li>
+                <li><strong>40%</strong> &mdash; Saving Pat/Winlink config</li>
+                <li><strong>50%</strong> &mdash; Saving JS8Call settings</li>
+                <li><strong>60%</strong> &mdash; Saving Chattervox keys</li>
+                <li><strong>70%</strong> &mdash; Saving Thunderbird profile</li>
+                <li><strong>78%</strong> &mdash; Saving Documents &amp; Downloads</li>
+                <li><strong>85%</strong> &mdash; Saving WiFi configurations</li>
+                <li><strong>90%</strong> &mdash; Saving Bluetooth pairings</li>
+                <li><strong>100%</strong> &mdash; Complete</li>
+            </ol>
+
+            <h2>Save Script: et-persistence-save</h2>
+
+            <p>Key behaviors:</p>
+
+            <ul>
+                <li>Detects USB via <code>et-persistence-detect</code> (scans <code>/media/</code> and <code>/run/media/</code> for <code>et-config/</code> directory)</li>
+                <li>Documents/Downloads use <code>rsync --delete --modify-window=2</code> for FAT-safe incremental sync, with <code>cp -ru</code> fallback</li>
+                <li>Space check with 10% margin before large copies</li>
+                <li>Bluetooth pairings saved as <code>bt-pairings.tar</code> (FAT/exFAT can't store colons in filenames like MAC addresses)</li>
+                <li><code>sudo tar</code> writes to <code>/tmp</code> first, then user copies to USB (FUSE mounts block root writes)</li>
+            </ul>
+
+            <h2>Restore Script: et-persistence-restore</h2>
+
+            <p>Runs automatically on boot (autostart desktop entry). Restores data in reverse order:</p>
+
+            <ol>
+                <li>Custom radio configs (copy + symlink into system dir)</li>
+                <li>Active radio selection (recreate symlink)</li>
+                <li>EmComm-Tools config (user.json)</li>
+                <li>Pat/Winlink, JS8Call, Chattervox settings</li>
+                <li>Documents &amp; Downloads (rsync <strong>without</strong> <code>--delete</code> to merge, not overwrite)</li>
+            </ol>
+
+            <div class="callout callout-warn">
+                <strong>WiFi &amp; Bluetooth on HDD</strong>
+                <code>et-persistence-restore</code> skips WiFi/BT on HDD installs (they persist natively). To import WiFi/BT configs from USB to a new HDD install, use <code>sudo et-restore-hw</code> (standalone script with sudoers entry).
+            </div>
+
+            <h2>Known Gotchas</h2>
+
+            <div class="callout callout-danger">
+                <strong>exFAT/FAT32 Limitations</strong>
+                <ul style="margin-top: 6px;">
+                    <li>No colons in filenames &mdash; BT MAC addresses must be archived, not stored as directory names</li>
+                    <li><code>cp -a</code> fails &mdash; FAT doesn't support Unix ownership/xattrs, so <code>-a</code> flag returns errors</li>
+                    <li>2-second timestamp resolution &mdash; use <code>rsync --modify-window=2</code> for accurate sync</li>
+                </ul>
+            </div>
+
+            <div class="callout callout-danger">
+                <strong>OverlayFS Lower Layer</strong>
+                <code>/var/lib/bluetooth/</code> exists in the ISO's read-only lower layer. Writes appear to succeed (tar shows extracted files) but nothing persists. Must <code>sudo rm -rf /var/lib/bluetooth &amp;&amp; sudo mkdir -p /var/lib/bluetooth</code> to recreate in the writable upper layer before restoring pairings.
+            </div>
+
+            <div class="callout callout-danger">
+                <strong>FUSE Mount Permissions</strong>
+                <code>sudo</code> cannot write directly to FUSE-mounted USB partitions. And <code>sudo</code> commands fail with "getcwd: cannot access parent directories" when the working directory is on a FUSE mount. Solution: write to <code>/tmp</code> with sudo, then copy to USB as the regular user.
+            </div>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

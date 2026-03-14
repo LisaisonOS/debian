@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmComm-Tools Documentation</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="index.html" class="active">Overview</a>
+                <a href="pages/architecture.html">Architecture</a>
+                <a href="pages/build.html">Building the ISO</a>
+
+                <div class="nav-section">Core Systems</div>
+                <a href="pages/supervisor.html">Supervisor &amp; Modes</a>
+                <a href="pages/radios.html">Radio Profiles</a>
+                <a href="pages/flask-apps.html">Flask Web Apps</a>
+                <a href="pages/persistence.html">Persistence</a>
+
+                <div class="nav-section">Operations</div>
+                <a href="pages/patch-system.html">Offline Patch System</a>
+                <a href="pages/troubleshooting.html">Troubleshooting</a>
+
+                <div class="nav-section">Reference</div>
+                <a href="pages/hooks.html">Hook Scripts</a>
+                <a href="pages/json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>EmComm-Tools Debian Edition
+                <span class="subtitle">Emergency Communications Toolkit for Ham Radio Operators</span>
+            </h1>
+
+            <p>EmComm-Tools is a <strong>Debian 13 (Trixie)</strong>-based live/installable Linux distribution designed for amateur radio digital communications. It packages 18 operating modes, 24 supported radios, and a complete suite of digital communication software into a turnkey system that boots from USB or installs to disk.</p>
+
+            <div class="callout callout-info">
+                <strong>Author</strong>
+                Sylvain Deguire (VA2OPS) &mdash; Original concept by Gaston Gonzalez (KT7RUN), "The Tech Prepper"
+            </div>
+
+            <h2>Key Features</h2>
+
+            <ul class="feature-list">
+                <li><strong>18 Operating Modes</strong> Winlink, APRS, Packet, FT8, JS8Call, VarAC, chattervox, fldigi &mdash; one-click start/stop</li>
+                <li><strong>24 Radio Profiles</strong> Pre-configured JSON profiles for Icom, Yaesu, Kenwood, Elecraft, Xiegu, and more</li>
+                <li><strong>Live Run &amp; HDD Install</strong> Boot from USB with full persistence, or install to hard drive</li>
+                <li><strong>Bilingual EN/FR</strong> All apps and interfaces support English and French</li>
+                <li><strong>Offline Operation</strong> Designed for field deployment with no internet required</li>
+                <li><strong>Offline Maps</strong> Pre-loaded OpenStreetMap tiles for Navit GPS and YAAC APRS</li>
+                <li><strong>Bluetooth TNC</strong> Native Bluetooth KISS TNC support for HTs (TH-D74, TH-D75, VR-N76, UV-PRO)</li>
+                <li><strong>Offline Patching</strong> Update systems via USB without network connectivity</li>
+            </ul>
+
+            <h2>How It Works</h2>
+
+            <p>EmComm-Tools v2 is built around a <strong>supervisor daemon</strong> that replaces 12 individual systemd services with a single orchestrator. The supervisor reads JSON mode configurations and manages the entire process chain &mdash; from rigctld and Direwolf to end-user applications like YAAC, Pat (Winlink), or JS8Call.</p>
+
+            <div class="diagram">
+  Dashboard (GTK)        Flask Web Apps          CLI
+       |                      |                   |
+       +----------+-----------+-------------------+
+                  |
+          IPC (Unix Socket)
+                  |
+         +--------+--------+
+         |  et-supervisor   |
+         |  (Python daemon) |
+         +--------+--------+
+                  |
+    +-------------+-------------+
+    |             |             |
+ ModeEngine  ProcessMgr  HealthMonitor
+    |             |             |
+    |      fork/exec/signal     |
+    |             |             |
+ JSON modes   rigctld      PID + port
+ in modes.d/  direwolf     liveness
+              pat-http     checks
+              yaac, etc.
+            </div>
+
+            <h2>System Architecture at a Glance</h2>
+
+            <table>
+                <tr>
+                    <th>Component</th>
+                    <th>Location</th>
+                    <th>Purpose</th>
+                </tr>
+                <tr>
+                    <td><code>et-supervisor</code></td>
+                    <td><code>bin/et-supervisor</code></td>
+                    <td>Main daemon &mdash; process lifecycle, IPC, health checks</td>
+                </tr>
+                <tr>
+                    <td><code>et-supervisor-ctl</code></td>
+                    <td><code>bin/et-supervisor-ctl</code></td>
+                    <td>CLI client &mdash; start/stop modes, query status</td>
+                </tr>
+                <tr>
+                    <td><code>et-dashboard</code></td>
+                    <td><code>bin/et-flask-apps/et-dashboard</code></td>
+                    <td>GTK panel applet &mdash; mode buttons, status indicators</td>
+                </tr>
+                <tr>
+                    <td>Flask Apps (x7)</td>
+                    <td><code>bin/et-flask-apps/</code></td>
+                    <td>Web UIs for configuration: radio, mode, user, etc.</td>
+                </tr>
+                <tr>
+                    <td>Mode Configs</td>
+                    <td><code>conf/modes.d/*.json</code></td>
+                    <td>18 JSON files defining process chains per mode</td>
+                </tr>
+                <tr>
+                    <td>Radio Profiles</td>
+                    <td><code>conf/radios.d/*.json</code></td>
+                    <td>24 JSON files with CAT, PTT, BT, audio settings</td>
+                </tr>
+                <tr>
+                    <td>Supervisor Library</td>
+                    <td><code>lib/et_supervisor/</code></td>
+                    <td>Python package: mode_engine, process_manager, health_monitor, etc.</td>
+                </tr>
+                <tr>
+                    <td>Persistence</td>
+                    <td><code>bin/et-persistence/</code></td>
+                    <td>Save/restore configs, documents, WiFi, BT to USB</td>
+                </tr>
+            </table>
+
+            <h2>Supported Software</h2>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>Winlink</h3>
+                    <p>Email over radio via Pat client. Supports VARA HF, VARA FM, ARDOP, and VHF/UHF Packet.</p>
+                </div>
+                <div class="card">
+                    <h3>APRS</h3>
+                    <p>Automatic Packet Reporting System via YAAC client and Direwolf TNC. Supports digipeater mode.</p>
+                </div>
+                <div class="card">
+                    <h3>JS8Call</h3>
+                    <p>Keyboard-to-keyboard HF messaging based on FT8 modulation. Store-and-forward capable.</p>
+                </div>
+                <div class="card">
+                    <h3>WSJT-X (FT8/FT4)</h3>
+                    <p>Weak signal digital modes for HF propagation testing and contacts.</p>
+                </div>
+                <div class="card">
+                    <h3>VarAC</h3>
+                    <p>VARA Chat &mdash; keyboard-to-keyboard chat over VARA HF modem. Runs via Wine.</p>
+                </div>
+                <div class="card">
+                    <h3>fldigi</h3>
+                    <p>Multi-mode digital modem: PSK31, RTTY, Olivia, MFSK, and many more modes.</p>
+                </div>
+                <div class="card">
+                    <h3>Chattervox</h3>
+                    <p>AX.25 keyboard chat with cryptographic identity verification (secp256k1 signing).</p>
+                </div>
+                <div class="card">
+                    <h3>LinBPQ</h3>
+                    <p>Packet BBS server with AX.25 networking. Runs alongside Direwolf TNC.</p>
+                </div>
+            </div>
+
+            <h2>Quick Start</h2>
+
+            <ol>
+                <li><strong>Download or Build</strong> &mdash; Build the ISO with <code>setup-emcomm-iso.sh</code> (see <a href="pages/build.html">Building the ISO</a>)</li>
+                <li><strong>Write to USB</strong> &mdash; Use <code>dd</code> or Balena Etcher to flash the ISO to a USB drive</li>
+                <li><strong>Boot &amp; Configure</strong> &mdash; The First Boot Wizard guides you through callsign, radio, and data setup</li>
+                <li><strong>Start a Mode</strong> &mdash; Click a mode button on the dashboard or use <code>et-supervisor-ctl start &lt;mode&gt;</code></li>
+            </ol>
+
+            <h2>Project Links</h2>
+
+            <ul>
+                <li>Repository: <a href="https://github.com/emcomm-tools/debian-dev">github.com/emcomm-tools/debian-dev</a></li>
+                <li>Website: <a href="https://emcomm-tools.ca">emcomm-tools.ca</a></li>
+            </ul>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html" class="active">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Architecture
+                <span class="subtitle">System design, overlay structure, and the v1/v2 split</span>
+            </h1>
+
+            <h2>Version History: v1 vs v2</h2>
+
+            <p>The repository contains two architecture versions. <strong>v1 is frozen</strong> (no new development); all active work targets v2.</p>
+
+            <table>
+                <tr>
+                    <th>Aspect</th>
+                    <th>v1 (Frozen)</th>
+                    <th>v2 (Active)</th>
+                </tr>
+                <tr>
+                    <td>Service management</td>
+                    <td>12 individual systemd user services</td>
+                    <td>Single <code>et-supervisor</code> daemon</td>
+                </tr>
+                <tr>
+                    <td>Mode switching</td>
+                    <td>Shell scripts per mode</td>
+                    <td>JSON configs in <code>modes.d/</code></td>
+                </tr>
+                <tr>
+                    <td>Dashboard</td>
+                    <td>Bash + zenity dialogs</td>
+                    <td>GTK panel applet with IPC</td>
+                </tr>
+                <tr>
+                    <td>Configuration</td>
+                    <td>Text files + shell scripts</td>
+                    <td>JSON profiles + Flask web UIs</td>
+                </tr>
+                <tr>
+                    <td>Overlays</td>
+                    <td><code>et-v1-general</code>, <code>et-v1-personal</code></td>
+                    <td><code>et-v2-general</code>, <code>et-v2-personal</code></td>
+                </tr>
+                <tr>
+                    <td>Hooks</td>
+                    <td><code>scripts/hooks/v1/</code></td>
+                    <td><code>scripts/hooks/v2/</code></td>
+                </tr>
+            </table>
+
+            <h2>Overlay System</h2>
+
+            <p>EmComm-Tools uses <strong>live-build overlays</strong> to inject files into the ISO filesystem. Each overlay maps to <code>/opt/emcomm-tools/</code> on the installed system.</p>
+
+            <div class="file-tree">
+<span class="dir">overlays/</span>
+├── <span class="dir">et-v2-general/</span>          <span class="highlight"># General edition (no personal data)</span>
+│   └── <span class="dir">overlay/</span>
+│       ├── <span class="dir">etc/skel/</span>         <span class="highlight"># User home template (copied by useradd -m)</span>
+│       ├── <span class="dir">opt/emcomm-tools/</span> <span class="highlight"># Main application tree</span>
+│       │   ├── <span class="dir">bin/</span>           <span class="highlight"># Scripts, Flask apps, dashboard</span>
+│       │   ├── <span class="dir">conf/</span>          <span class="highlight"># modes.d/, radios.d/, update.conf</span>
+│       │   ├── <span class="dir">lib/</span>           <span class="highlight"># et_supervisor Python package</span>
+│       │   └── <span class="dir">sbin/</span>          <span class="highlight"># Wrapper scripts (rigctld, etc.)</span>
+│       └── <span class="dir">usr/share/</span>        <span class="highlight"># .desktop files, sudoers, udev rules</span>
+└── <span class="dir">et-v2-personal/</span>         <span class="highlight"># Personal edition (mirrors general)</span>
+    └── <span class="dir">overlay/</span>              <span class="highlight"># Same structure, may include personal configs</span>
+            </div>
+
+            <div class="callout callout-warn">
+                <strong>Dual Overlay Rule</strong>
+                Changes must go in <strong>both</strong> <code>et-v2-general</code> and <code>et-v2-personal</code> overlays &mdash; they mirror each other. The General edition ships without personal data (callsign, Winlink password); the Personal edition can include pre-configured credentials.
+            </div>
+
+            <h2>Build Pipeline</h2>
+
+            <p>The ISO is built with <code>setup-emcomm-iso.sh</code>, a dialog-based interactive script that drives Debian <code>live-build</code>.</p>
+
+            <div class="diagram">
+  setup-emcomm-iso.sh
+         |
+    [Dialog menus]
+    Select: version (v1/v2), edition (general/personal)
+         |
+    [lb config]
+    Set: mirror, architecture, packages, bootloader
+         |
+    [lb build]
+         |
+    +----+----+
+    |         |
+  Hooks     Overlays
+  (chroot)  (file copy)
+    |         |
+    +----+----+
+         |
+    Live ISO (.hybrid.iso)
+            </div>
+
+            <h3>Hook Scripts</h3>
+
+            <p>Hooks run <strong>inside the chroot</strong> during ISO build. They install software, configure services, and set permissions. Numbered for execution order (e.g., <code>0100-apt-setup.hook.chroot</code> runs before <code>0170-install-yaac.hook.chroot</code>).</p>
+
+            <p>See <a href="hooks.html">Hook Scripts</a> for the full list and best practices.</p>
+
+            <h2>Runtime Architecture</h2>
+
+            <h3>Process Hierarchy</h3>
+
+            <div class="diagram">
+  systemd --user
+       |
+  et-supervisor.service
+       |
+  et-supervisor (Python daemon)
+       |
+       +-- ProcessManager
+       |     |-- rigctld (CAT control)
+       |     |-- direwolf (TNC)
+       |     |-- pat-http (Winlink)
+       |     +-- yaac / js8call / wsjtx / ...
+       |
+       +-- ModeEngine
+       |     |-- Load JSON mode config
+       |     |-- Run prechecks (device, audio, callsign)
+       |     |-- Apply config templates
+       |     +-- Orchestrate start/stop chain
+       |
+       +-- HealthMonitor
+       |     |-- PID liveness checks
+       |     +-- TCP port probes
+       |
+       +-- IPCServer
+             |-- Unix socket: /run/user/$UID/et-supervisor.sock
+             +-- JSON request/response protocol
+            </div>
+
+            <h3>IPC Protocol</h3>
+
+            <p>The dashboard and CLI communicate with the supervisor via a Unix domain socket using newline-delimited JSON messages.</p>
+
+            <pre><code># Start a mode
+{"action": "start", "mode": "winlink-vara-hf"}
+
+# Stop current mode
+{"action": "stop"}
+
+# Query status
+{"action": "status"}
+
+# Response
+{"status": "ok", "mode": "winlink-vara-hf", "state": "running", "processes": [...]}</code></pre>
+
+            <h2>File Paths at Runtime</h2>
+
+            <table>
+                <tr>
+                    <th>Path</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>/opt/emcomm-tools/</code></td>
+                    <td>Main application tree (read-only on Live Run)</td>
+                </tr>
+                <tr>
+                    <td><code>~/.config/emcomm-tools/</code></td>
+                    <td>User configuration (user.json, custom radios)</td>
+                </tr>
+                <tr>
+                    <td><code>~/.config/systemd/user/</code></td>
+                    <td>Systemd user service files</td>
+                </tr>
+                <tr>
+                    <td><code>/run/user/$UID/et-supervisor.sock</code></td>
+                    <td>Supervisor IPC socket</td>
+                </tr>
+                <tr>
+                    <td><code>~/Documents/</code></td>
+                    <td>User documents (persisted to USB on Live Run)</td>
+                </tr>
+                <tr>
+                    <td><code>/var/lib/bluetooth/</code></td>
+                    <td>Bluetooth pairings (requires special handling on Live Run)</td>
+                </tr>
+            </table>
+
+            <h2>Live Run vs HDD Install</h2>
+
+            <p>EmComm-Tools supports both <strong>Live Run</strong> (boot from USB, no install) and <strong>HDD Install</strong> (permanent installation). The key differences affect how data is stored and services are started.</p>
+
+            <table>
+                <tr>
+                    <th>Aspect</th>
+                    <th>Live Run (USB)</th>
+                    <th>HDD Install</th>
+                </tr>
+                <tr>
+                    <td>Root filesystem</td>
+                    <td>OverlayFS (read-only lower + tmpfs upper)</td>
+                    <td>Normal ext4 (fully writable)</td>
+                </tr>
+                <tr>
+                    <td>Persistence</td>
+                    <td>Manual save to USB partition (<code>et-persistence-save</code>)</td>
+                    <td>Automatic (normal filesystem)</td>
+                </tr>
+                <tr>
+                    <td>User services</td>
+                    <td>Needs <code>loginctl enable-linger</code> + <code>daemon-reload</code> on login</td>
+                    <td>Standard systemd user session</td>
+                </tr>
+                <tr>
+                    <td>Bluetooth</td>
+                    <td>Must <code>rm -rf</code> + recreate <code>/var/lib/bluetooth/</code> in upper layer</td>
+                    <td>Normal operation</td>
+                </tr>
+                <tr>
+                    <td>WiFi configs</td>
+                    <td>Saved/restored via persistence scripts</td>
+                    <td>Persistent in <code>/etc/NetworkManager/</code></td>
+                </tr>
+                <tr>
+                    <td>Custom radios</td>
+                    <td>Saved to <code>~/.config/emcomm-tools/radios.d/</code> + symlinked</td>
+                    <td>Same approach (works everywhere)</td>
+                </tr>
+            </table>
+
+            <div class="callout callout-danger">
+                <strong>Live Run Overlay Gotcha</strong>
+                On Live Run, <code>/opt/emcomm-tools/</code> exists in the read-only lower layer. Files can appear writable but changes disappear on reboot. Custom files must be written to the user directory and symlinked into the system path. The <code>et-persistence-save</code> script handles saving critical data to USB before shutdown.
+            </div>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

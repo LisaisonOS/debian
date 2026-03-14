@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html" class="active">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Troubleshooting
+                <span class="subtitle">Common issues and solutions</span>
+            </h1>
+
+            <h2>Audio Issues</h2>
+
+            <h3>Direwolf: "Audio device busy"</h3>
+
+            <p><strong>Symptom:</strong> Direwolf fails to start with "Audio device busy" error, especially on USB Live Run.</p>
+
+            <p><strong>Cause:</strong> PulseAudio holds exclusive ALSA access on USB boot. Slower I/O on USB means PulseAudio takes longer to release the device.</p>
+
+            <p><strong>Solution:</strong> Built-in retry loop in <code>et-direwolf</code> wrapper (5 attempts, 3s delay). No action needed. If it persists, check for other processes holding the audio device:</p>
+
+            <pre><code># Check what's using the audio device
+fuser -v /dev/snd/*
+
+# Restart PulseAudio
+pulseaudio --kill && pulseaudio --start</code></pre>
+
+            <h2>Radio / CAT Control</h2>
+
+            <h3>rigctld not connecting to radio</h3>
+
+            <p><strong>Check the serial port:</strong></p>
+            <pre><code># Is the radio's USB cable detected?
+ls -la /dev/ttyUSB* /dev/ttyACM*
+
+# Check udev symlink
+ls -la /dev/et-radio</code></pre>
+
+            <p><strong>Check the Hamlib rig ID:</strong></p>
+            <pre><code># List supported radios
+rigctl -l | grep -i "icom\|yaesu\|kenwood"
+
+# Test manually
+rigctld -m 3085 -r /dev/et-radio -s 19200 &
+rigctl -m 2 -r localhost:4532 f</code></pre>
+
+            <h3>Dashboard shows "CAT: N/A" (grey)</h3>
+
+            <p><strong>This is normal for audio-only radios</strong> (DigiRig Lite, FTX-1). rigctld runs in dummy mode (rig ID "1") and returns "Audio only" status. All modes work correctly &mdash; PTT via VOX or external circuit.</p>
+
+            <h3>DigiRig Lite not detected</h3>
+
+            <p><strong>Check the udev rule:</strong></p>
+            <pre><code>cat /etc/udev/rules.d/91-et-digirig-lite.rules
+# Should contain a comma before RUN+=
+# Missing comma silently prevents the rule from firing</code></pre>
+
+            <h2>Bluetooth TNC</h2>
+
+            <h3>rfcomm0 not created after pairing</h3>
+
+            <pre><code># Check Bluetooth service
+systemctl status bluetooth
+
+# Check if device is paired
+bluetoothctl devices
+
+# Create rfcomm manually (replace MAC)
+sudo rfcomm bind 0 AA:BB:CC:DD:EE:FF 1
+
+# Verify
+ls -la /dev/rfcomm0</code></pre>
+
+            <h3>BT pairings lost on reboot (Live Run)</h3>
+
+            <p><strong>Cause:</strong> <code>/var/lib/bluetooth/</code> exists in the read-only lower layer of OverlayFS. Writes appear to succeed but don't persist.</p>
+
+            <p><strong>Solution:</strong> Use "Save &amp; Reboot" from the persistence menu. The save script archives BT pairings as <code>bt-pairings.tar</code> on USB, and the restore script recreates <code>/var/lib/bluetooth/</code> in the writable upper layer on next boot.</p>
+
+            <h2>Modes</h2>
+
+            <h3>Mode won't start &mdash; precheck failure</h3>
+
+            <pre><code># Check supervisor status
+et-supervisor-ctl status
+
+# Try starting with verbose output
+et-supervisor-ctl start winlink-vara-hf
+
+# Check logs
+ls ~/et-supervisor-logs/
+cat ~/et-supervisor-logs/&lt;mode&gt;-*.log</code></pre>
+
+            <p>Common precheck failures:</p>
+            <ul>
+                <li><strong>No audio device</strong> &mdash; Radio USB cable not connected or not detected by udev</li>
+                <li><strong>No callsign</strong> &mdash; Run <code>et-user</code> to set your callsign</li>
+                <li><strong>No rfcomm0</strong> &mdash; BT mode requires paired Bluetooth TNC</li>
+            </ul>
+
+            <h3>Terminal window closes immediately</h3>
+
+            <p><strong>Cause:</strong> Modes with only <code>xfce4-terminal</code> in the chain need the <code>--disable-server</code> flag. Without it, the terminal forks and the supervisor loses the PID (no STOP button).</p>
+
+            <h2>Persistence</h2>
+
+            <h3>USB not detected for persistence</h3>
+
+            <pre><code># Check mounted devices
+mount | grep media
+
+# Look for the et-config directory
+find /media /run/media -name "et-config" -type d 2>/dev/null</code></pre>
+
+            <p>The USB persistence partition must contain an <code>et-config/</code> directory. Create it manually if needed:</p>
+            <pre><code>mkdir -p /media/user/USB/et-config</code></pre>
+
+            <h3>"No USB detected" dialog on Save &amp; Shutdown</h3>
+
+            <p>The script shows a dialog with options to run the Setup Wizard or shutdown without saving. This is normal if the USB persistence partition isn't mounted.</p>
+
+            <h2>Build Issues</h2>
+
+            <h3>Packages "not installable" during build</h3>
+
+            <p><strong>Cause:</strong> <code>apt-get update</code> returns 0 even on partial failure. Some package indices weren't downloaded, making packages appear unavailable.</p>
+
+            <p><strong>Fix:</strong> Check network connectivity in the chroot. Hook 0100 has retry logic, but persistent network issues need manual intervention.</p>
+
+            <h3>YAAC missing after build</h3>
+
+            <p><strong>Cause:</strong> <code>unzip</code> without <code>-o</code> flag prompts for overwrite confirmation in non-interactive chroot, silently failing.</p>
+
+            <p><strong>Fix:</strong> Ensure hook 0170 uses <code>unzip -o</code> and verifies <code>YAAC.jar</code> exists after extraction.</p>
+
+            <h2>Quick Diagnostics</h2>
+
+            <pre><code># System info
+et-system-info
+
+# Supervisor status
+et-supervisor-ctl status
+
+# Check installed version
+cat /opt/emcomm-tools/version.txt
+
+# Check active radio
+readlink /opt/emcomm-tools/conf/radios.d/active-radio.json
+
+# Check user config
+cat ~/.config/emcomm-tools/user.json
+
+# Check if Live Run or HDD
+findmnt / | grep -q overlay && echo "Live Run" || echo "HDD Install"
+
+# List running ET processes
+ps aux | grep -E "et-supervisor|rigctld|direwolf|pat|yaac|js8call" | grep -v grep</code></pre>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

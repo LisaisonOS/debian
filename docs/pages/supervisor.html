@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supervisor &amp; Modes - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html" class="active">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Supervisor &amp; Modes
+                <span class="subtitle">The et-supervisor daemon and JSON mode orchestration</span>
+            </h1>
+
+            <h2>Overview</h2>
+
+            <p>The <code>et-supervisor</code> daemon is the heart of EmComm-Tools v2. It replaces 12 individual systemd services with a single Python process that manages the entire lifecycle of radio communication modes &mdash; from hardware prechecks through process startup to health monitoring.</p>
+
+            <h2>Supervisor Components</h2>
+
+            <table>
+                <tr>
+                    <th>Module</th>
+                    <th>File</th>
+                    <th>Purpose</th>
+                </tr>
+                <tr>
+                    <td><strong>ProcessManager</strong></td>
+                    <td><code>process_manager.py</code></td>
+                    <td>Fork, exec, track PIDs, handle signals. States: IDLE &rarr; STARTING &rarr; RUNNING &rarr; STOPPING. Per-process log files.</td>
+                </tr>
+                <tr>
+                    <td><strong>ModeEngine</strong></td>
+                    <td><code>mode_engine.py</code></td>
+                    <td>Load JSON mode configs, run prechecks (device, audio, callsign), apply config templates, orchestrate process chains.</td>
+                </tr>
+                <tr>
+                    <td><strong>ConfigTemplater</strong></td>
+                    <td><code>config_templater.py</code></td>
+                    <td>Template variable substitution for INI files (JS8Call, WSJT-X), XML files (YAAC, fldigi), grid-to-latlon conversion.</td>
+                </tr>
+                <tr>
+                    <td><strong>DeviceChecker</strong></td>
+                    <td><code>device_checker.py</code></td>
+                    <td>Verify hardware preconditions: udev symlinks, audio device tags, systemd services, validated callsign.</td>
+                </tr>
+                <tr>
+                    <td><strong>HealthMonitor</strong></td>
+                    <td><code>health_monitor.py</code></td>
+                    <td>Periodic PID liveness and TCP port probes. Triggers crash callbacks when processes die.</td>
+                </tr>
+                <tr>
+                    <td><strong>IPCServer</strong></td>
+                    <td><code>ipc_server.py</code></td>
+                    <td>Unix domain socket server. Handles JSON requests from dashboard and CLI.</td>
+                </tr>
+                <tr>
+                    <td><strong>GridUtils</strong></td>
+                    <td><code>grid_utils.py</code></td>
+                    <td>Convert Maidenhead grid squares (4-6 chars) to latitude/longitude for station position.</td>
+                </tr>
+            </table>
+
+            <h2>Mode Startup Sequence</h2>
+
+            <p>When a mode is started (via dashboard button or CLI), the supervisor follows this sequence:</p>
+
+            <ol>
+                <li><strong>Stop current mode</strong> &mdash; Kill all running processes from the previous mode</li>
+                <li><strong>Load mode JSON</strong> &mdash; Read the mode configuration from <code>conf/modes.d/</code></li>
+                <li><strong>Run prechecks</strong> &mdash; Verify required hardware, audio devices, and services</li>
+                <li><strong>Apply templates</strong> &mdash; Update app config files with current radio/station settings</li>
+                <li><strong>Execute pre-start actions</strong> &mdash; Run any required shell commands before starting</li>
+                <li><strong>Start process chain</strong> &mdash; Launch each process in sequence (e.g., rigctld &rarr; direwolf &rarr; yaac), waiting for each to be ready before starting the next</li>
+                <li><strong>Enable health monitoring</strong> &mdash; Begin periodic PID and port checks</li>
+            </ol>
+
+            <h2>Available Modes (18)</h2>
+
+            <h3>Winlink (Email over Radio)</h3>
+
+            <table>
+                <tr><th>Mode</th><th>Config</th><th>Process Chain</th><th>Band</th></tr>
+                <tr>
+                    <td>Winlink HF (VARA)</td>
+                    <td><code>winlink-vara-hf.json</code></td>
+                    <td>vara-hf &rarr; pat-http</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                </tr>
+                <tr>
+                    <td>Winlink VHF/UHF (VARA FM)</td>
+                    <td><code>winlink-vara-fm.json</code></td>
+                    <td>vara-fm &rarr; pat-http</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+                <tr>
+                    <td>Winlink HF (ARDOP)</td>
+                    <td><code>winlink-ardop.json</code></td>
+                    <td>ardopcf &rarr; pat-http</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                </tr>
+                <tr>
+                    <td>Winlink VHF/UHF Packet</td>
+                    <td><code>winlink-packet.json</code></td>
+                    <td>direwolf &rarr; pat-http</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+            </table>
+
+            <h3>APRS (Position Reporting)</h3>
+
+            <table>
+                <tr><th>Mode</th><th>Config</th><th>Process Chain</th><th>Band</th></tr>
+                <tr>
+                    <td>APRS Client (YAAC)</td>
+                    <td><code>aprs-client.json</code></td>
+                    <td>direwolf &rarr; yaac</td>
+                    <td><span class="badge badge-vhf">VHF</span></td>
+                </tr>
+                <tr>
+                    <td>APRS (YAAC BT)</td>
+                    <td><code>aprs-client-bt.json</code></td>
+                    <td>yaac</td>
+                    <td><span class="badge badge-vhf">VHF</span></td>
+                </tr>
+                <tr>
+                    <td>APRS Digipeater</td>
+                    <td><code>aprs-digipeater.json</code></td>
+                    <td>direwolf</td>
+                    <td><span class="badge badge-vhf">VHF</span></td>
+                </tr>
+            </table>
+
+            <h3>Packet Radio</h3>
+
+            <table>
+                <tr><th>Mode</th><th>Config</th><th>Process Chain</th><th>Band</th></tr>
+                <tr>
+                    <td>BBS Client (QtTermTCP)</td>
+                    <td><code>bbs-client-qttermtcp.json</code></td>
+                    <td>direwolf &rarr; qttermtcp</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+                <tr>
+                    <td>BBS Client (Paracon)</td>
+                    <td><code>bbs-client-paracon.json</code></td>
+                    <td>direwolf &rarr; paracon</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+                <tr>
+                    <td>BBS Server (LinBPQ)</td>
+                    <td><code>bbs-server.json</code></td>
+                    <td>direwolf &rarr; linbpq</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+                <tr>
+                    <td>Direwolf KISS TNC</td>
+                    <td><code>direwolf-tnc.json</code></td>
+                    <td>direwolf</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+                <tr>
+                    <td>Packet Digipeater</td>
+                    <td><code>packet-digipeater.json</code></td>
+                    <td>direwolf</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+            </table>
+
+            <h3>Chat &amp; Digital</h3>
+
+            <table>
+                <tr><th>Mode</th><th>Config</th><th>Process Chain</th><th>Band</th></tr>
+                <tr>
+                    <td>Chat (chattervox)</td>
+                    <td><code>chat-chattervox.json</code></td>
+                    <td>direwolf &rarr; chattervox</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+                <tr>
+                    <td>Chattervox (BT)</td>
+                    <td><code>chat-chattervox-bt.json</code></td>
+                    <td>chattervox</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                </tr>
+                <tr>
+                    <td>JS8Call</td>
+                    <td><code>js8call.json</code></td>
+                    <td>js8call</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                </tr>
+                <tr>
+                    <td>FT8/FT4 (WSJT-X)</td>
+                    <td><code>ft8.json</code></td>
+                    <td>wsjtx</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                </tr>
+                <tr>
+                    <td>fldigi</td>
+                    <td><code>fldigi.json</code></td>
+                    <td>fldigi</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                </tr>
+                <tr>
+                    <td>VarAC (VARA Chat)</td>
+                    <td><code>varac.json</code></td>
+                    <td>varac</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                </tr>
+            </table>
+
+            <h2>CLI Usage</h2>
+
+            <pre><code># List available modes
+et-supervisor-ctl list
+
+# Start a mode
+et-supervisor-ctl start winlink-vara-hf
+
+# Stop the current mode
+et-supervisor-ctl stop
+
+# Check status
+et-supervisor-ctl status
+
+# Health check
+et-supervisor-ctl health</code></pre>
+
+            <h2>Dashboard Integration</h2>
+
+            <p>The <code>et-dashboard</code> GTK panel applet communicates with the supervisor over the IPC socket. Mode buttons are dynamically generated from <code>modes.d/</code> and filtered by the active radio's band capabilities. For example, if the active radio only supports VHF/UHF, HF-only modes like FT8 and JS8Call are hidden.</p>
+
+            <p>Status indicators show:</p>
+            <ul>
+                <li><strong>GPS</strong> &mdash; GPSD fix status (green/red)</li>
+                <li><strong>CAT</strong> &mdash; rigctld connection to radio (green/red/grey for audio-only)</li>
+                <li><strong>Audio</strong> &mdash; Sound card detection</li>
+                <li><strong>BT TNC</strong> &mdash; Bluetooth RFCOMM device (<code>/dev/rfcomm0</code>)</li>
+                <li><strong>UTC</strong> &mdash; Current UTC time</li>
+            </ul>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Reference - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html" class="active">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>JSON Reference
+                <span class="subtitle">Complete schema for radio profiles, mode configs, and user settings</span>
+            </h1>
+
+            <h2>Radio Profile Schema</h2>
+
+            <p>Location: <code>conf/radios.d/*.json</code></p>
+
+            <table>
+                <tr><th>Section</th><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+                <tr><td rowspan="4"><strong>Core</strong></td><td><code>id</code></td><td>string</td><td>Yes</td><td>Unique ID, matches filename (auto-generated from vendor+model)</td></tr>
+                <tr><td><code>vendor</code></td><td>string</td><td>Yes</td><td>Manufacturer name (Icom, Yaesu, Kenwood...)</td></tr>
+                <tr><td><code>model</code></td><td>string</td><td>Yes</td><td>Model name, may include interface type</td></tr>
+                <tr><td><code>bands</code></td><td>array</td><td>Yes</td><td>Supported bands: <code>["HF"]</code>, <code>["VHF", "UHF"]</code>, etc.</td></tr>
+
+                <tr><td rowspan="6"><strong>rigctrl</strong></td><td><code>id</code></td><td>string</td><td>Yes*</td><td>Hamlib rig model number (use <code>rigctl -l</code> to find). <code>"1"</code> = dummy/audio-only</td></tr>
+                <tr><td><code>baud</code></td><td>string</td><td>No</td><td>Serial baud rate: 4800, 9600, 19200, 38400, 57600, 115200</td></tr>
+                <tr><td><code>ptt</code></td><td>string</td><td>No</td><td>PTT method: <code>RIG</code> (default), <code>RTS</code>, <code>DTR</code>, <code>NONE</code></td></tr>
+                <tr><td><code>conf</code></td><td>string</td><td>No</td><td>Hamlib <code>--set-conf</code> options (e.g., <code>dcd_type=NONE</code>)</td></tr>
+                <tr><td><code>pttOnly</code></td><td>string</td><td>No</td><td><code>"true"</code> if radio only supports PTT, no frequency control</td></tr>
+                <tr><td><code>primeRig</code></td><td>boolean</td><td>No</td><td>Send initialization command to radio on connect</td></tr>
+
+                <tr><td rowspan="5"><strong>varafm</strong></td><td><code>pttPort</code></td><td>string</td><td>No</td><td>Wine COM port for PTT (COM5, COM10)</td></tr>
+                <tr><td><code>pttVia</code></td><td>string</td><td>No</td><td><code>"1"</code> = RTS, <code>"2"</code> = DTR</td></tr>
+                <tr><td><code>baud</code></td><td>string</td><td>No</td><td>Serial baud rate for VARA FM</td></tr>
+                <tr><td><code>dtr</code></td><td>string</td><td>No</td><td><code>"0"</code> or <code>"1"</code> &mdash; DTR line state</td></tr>
+                <tr><td><code>rts</code></td><td>string</td><td>No</td><td><code>"0"</code> or <code>"1"</code> &mdash; RTS line state</td></tr>
+
+                <tr><td rowspan="3"><strong>bluetooth</strong></td><td><code>deviceName</code></td><td>string</td><td>No</td><td>BT advertised device name (for display)</td></tr>
+                <tr><td><code>channel</code></td><td>string</td><td>No</td><td>RFCOMM channel: <code>"1"</code> or <code>"2"</code></td></tr>
+                <tr><td><code>mac</code></td><td>string</td><td>No</td><td>BT MAC address (user fills in their device's MAC)</td></tr>
+
+                <tr><td><strong>audio</strong></td><td><code>script</code></td><td>string</td><td>No</td><td>Path to ALSA setup script</td></tr>
+
+                <tr><td><strong>notes</strong></td><td></td><td>array</td><td>No</td><td>User-facing setup instructions (array of strings)</td></tr>
+                <tr><td><strong>fieldNotes</strong></td><td></td><td>array</td><td>No</td><td>Internal/developer notes (array of strings)</td></tr>
+            </table>
+
+            <p><small>* <code>rigctrl.id</code> is required if the rigctrl section is present.</small></p>
+
+            <h3>Example: USB/CAT Radio (Icom IC-705)</h3>
+
+            <pre><code>{
+  "id": "icom-ic705",
+  "vendor": "Icom",
+  "model": "IC-705",
+  "bands": ["HF", "VHF", "UHF"],
+  "rigctrl": {
+    "id": "3085",
+    "baud": "19200",
+    "ptt": "RIG"
+  },
+  "varafm": {
+    "pttPort": "COM5",
+    "pttVia": "1",
+    "baud": "19200",
+    "dtr": "0",
+    "rts": "0"
+  },
+  "notes": [
+    "Connect USB cable to radio USB port",
+    "Set CI-V baud rate to 19200 in radio menu"
+  ]
+}</code></pre>
+
+            <h3>Example: Bluetooth TNC Radio (Kenwood TH-D74)</h3>
+
+            <pre><code>{
+  "id": "kenwood-thd74",
+  "vendor": "Kenwood",
+  "model": "TH-D74 (BT)",
+  "bands": ["VHF", "UHF"],
+  "rigctrl": {
+    "id": "1",
+    "ptt": "NONE"
+  },
+  "bluetooth": {
+    "deviceName": "TH-D74",
+    "channel": "2",
+    "mac": ""
+  },
+  "notes": [
+    "Pair via bluetoothctl",
+    "Set KISS TNC mode on radio"
+  ]
+}</code></pre>
+
+            <h3>Example: Audio-Only (DigiRig Lite)</h3>
+
+            <pre><code>{
+  "id": "digirig-lite",
+  "vendor": "DigiRig",
+  "model": "Lite",
+  "bands": ["HF", "VHF", "UHF"],
+  "rigctrl": {
+    "id": "1",
+    "ptt": "RTS"
+  },
+  "notes": [
+    "Connect DigiRig Lite to radio audio port",
+    "PTT via VOX or DigiRig RTS"
+  ]
+}</code></pre>
+
+            <h2>Mode Configuration Schema</h2>
+
+            <p>Location: <code>conf/modes.d/*.json</code></p>
+
+            <pre><code>{
+  "id": "winlink-vara-hf",
+  "name": {
+    "en": "Winlink HF (VARA)",
+    "fr": "Winlink HF (VARA)"
+  },
+  "description": {
+    "en": "Winlink email over VARA HF modem",
+    "fr": "Courriel Winlink via modem VARA HF"
+  },
+  "bands": ["HF"],
+  "chain": ["vara-hf", "pat-http"],
+  "requires": {
+    "devices": ["et-radio"],
+    "audio": true,
+    "callsign": true
+  },
+  "templates": [
+    {
+      "type": "ini",
+      "target": "~/.config/pat/config.json",
+      "values": {
+        "mycall": "{{callsign}}"
+      }
+    }
+  ],
+  "pre_start": [
+    "et-kill-all"
+  ]
+}</code></pre>
+
+            <h3>Mode Fields</h3>
+
+            <table>
+                <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>id</code></td><td>string</td><td>Unique mode identifier (matches filename without .json)</td></tr>
+                <tr><td><code>name</code></td><td>object</td><td>Bilingual display name (<code>en</code>, <code>fr</code>)</td></tr>
+                <tr><td><code>description</code></td><td>object</td><td>Bilingual description</td></tr>
+                <tr><td><code>bands</code></td><td>array</td><td>Required bands &mdash; mode hidden if active radio doesn't support them</td></tr>
+                <tr><td><code>chain</code></td><td>array</td><td>Ordered list of processes to start</td></tr>
+                <tr><td><code>requires</code></td><td>object</td><td>Prechecks: devices, audio, services, callsign</td></tr>
+                <tr><td><code>templates</code></td><td>array</td><td>Config file templates to apply before start</td></tr>
+                <tr><td><code>pre_start</code></td><td>array</td><td>Shell commands to run before starting the chain</td></tr>
+                <tr><td><code>post_start</code></td><td>array</td><td>Shell commands to run after all processes are up</td></tr>
+            </table>
+
+            <h2>User Configuration</h2>
+
+            <p>Location: <code>~/.config/emcomm-tools/user.json</code></p>
+
+            <pre><code>{
+  "callsign": "VA2OPS",
+  "grid": "FN35",
+  "name": "Sylvain",
+  "language": "en",
+  "winlink_password": "***"
+}</code></pre>
+
+            <table>
+                <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+                <tr><td><code>callsign</code></td><td>string</td><td>Amateur radio callsign (uppercase)</td></tr>
+                <tr><td><code>grid</code></td><td>string</td><td>Maidenhead grid locator (4 or 6 characters)</td></tr>
+                <tr><td><code>name</code></td><td>string</td><td>Operator name</td></tr>
+                <tr><td><code>language</code></td><td>string</td><td><code>"en"</code> or <code>"fr"</code></td></tr>
+                <tr><td><code>winlink_password</code></td><td>string</td><td>Winlink CMS password</td></tr>
+            </table>
+
+            <h2>Build Configuration</h2>
+
+            <p>Location: <code>build-config.json</code> (repository root)</p>
+
+            <pre><code>{
+    "version": "2.1.2",
+    "codename": "Trixie",
+    "distro_name": "EmComm-Tools Debian Edition",
+    "website": "https://emcomm-tools.ca",
+    "author": "Sylvain Deguire - VA2OPS"
+}</code></pre>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

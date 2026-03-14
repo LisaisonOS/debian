@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building the ISO - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html" class="active">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Building the ISO
+                <span class="subtitle">From source to bootable USB</span>
+            </h1>
+
+            <h2>Prerequisites</h2>
+
+            <pre><code># Debian 13 (Trixie) build host
+sudo apt install live-build debootstrap jq dialog
+
+# Optional: apt cache for faster rebuilds
+# (see Apt Cache section below)</code></pre>
+
+            <h2>Build Process</h2>
+
+            <p>There are two build scripts:</p>
+
+            <table>
+                <tr><th>Script</th><th>Mode</th><th>Description</th></tr>
+                <tr><td><code>setup-emcomm-iso.sh</code></td><td>Interactive</td><td>Original script with dialog menus (v1 + v2)</td></tr>
+                <tr><td><code>setup-emcomm-iso-v2.sh</code></td><td>Interactive or Profile</td><td>V2 script with build profile support (recommended)</td></tr>
+            </table>
+
+            <h3>Using Build Profiles (Recommended)</h3>
+
+            <p>Build profiles are JSON files in <code>build-profiles/</code> that store all build settings. This allows repeatable, headless builds without dialog prompts:</p>
+
+            <pre><code># Clone the repository
+git clone https://github.com/emcomm-tools/debian-dev.git emcomm-tools
+cd emcomm-tools
+
+# Build using a profile (headless &mdash; no prompts)
+./setup-emcomm-iso-v2.sh build-profiles/general-v2.json
+
+# Or run interactively (dialog prompts)
+./setup-emcomm-iso-v2.sh</code></pre>
+
+            <h3>Build Profile Schema</h3>
+
+            <pre><code>{
+    "language": "en",
+    "arch_version": "v2",
+    "overlay": "et-v2-general",
+    "maps": {
+        "include": false,
+        "osm_regions": []
+    },
+    "wallpaper": {
+        "mode": "generate",
+        "callsign": "emcomm-tools",
+        "tagline": "Explore. Connect. Respond.",
+        "color": 2,
+        "center_size": 72,
+        "tag_size": 50,
+        "tag_offset": 170
+    },
+    "boot_logo": "callsign",
+    "update": {
+        "enabled": true,
+        "url": "https://raw.githubusercontent.com/emcomm-tools/updates/main",
+        "channel": "stable"
+    },
+    "motd": "emcomm-motd",
+    "iso_type": "complete",
+    "wine_prefix": "General"
+}</code></pre>
+
+            <table>
+                <tr><th>Field</th><th>Description</th></tr>
+                <tr><td><code>language</code></td><td><code>"en"</code> or <code>"fr"</code></td></tr>
+                <tr><td><code>arch_version</code></td><td><code>"v2"</code> (active) or <code>"v1"</code> (frozen)</td></tr>
+                <tr><td><code>overlay</code></td><td>Overlay to use: <code>et-v2-general</code> or <code>et-v2-personal</code></td></tr>
+                <tr><td><code>maps.include</code></td><td>Include OSM map tiles in the ISO</td></tr>
+                <tr><td><code>wallpaper</code></td><td>Wallpaper generator settings (callsign, tagline, colors)</td></tr>
+                <tr><td><code>boot_logo</code></td><td>Plymouth boot logo style</td></tr>
+                <tr><td><code>update</code></td><td>Online update channel configuration</td></tr>
+                <tr><td><code>motd</code></td><td>Terminal banner from <code>motd/</code> directory</td></tr>
+                <tr><td><code>iso_type</code></td><td><code>"complete"</code> for full ISO</td></tr>
+                <tr><td><code>wine_prefix</code></td><td>Wine prefix from <code>wine-sources/</code> (VarAC, VARA)</td></tr>
+            </table>
+
+            <h3>Interactive Mode (Legacy)</h3>
+
+            <p>Running without a profile opens dialog menus:</p>
+
+            <pre><code>./setup-emcomm-iso.sh</code></pre>
+
+            <p>The dialog menus let you choose:</p>
+
+            <ol>
+                <li><strong>Architecture version</strong> &mdash; v1 (frozen) or v2 (active)</li>
+                <li><strong>Edition</strong> &mdash; General (no personal data) or Personal (pre-configured)</li>
+                <li><strong>Build options</strong> &mdash; Mirror, locale, etc.</li>
+            </ol>
+
+            <h2>Build Configuration</h2>
+
+            <p>Version and metadata are read from <code>build-config.json</code>:</p>
+
+            <pre><code>{
+    "version": "2.1.2",
+    "codename": "Trixie",
+    "distro_name": "EmComm-Tools Debian Edition",
+    "website": "https://emcomm-tools.ca",
+    "author": "Sylvain Deguire - VA2OPS"
+}</code></pre>
+
+            <h2>Hook Scripts</h2>
+
+            <p>Hooks run inside the chroot during build and are numbered for execution order. They live in <code>scripts/hooks/v2/</code> (v1 hooks are frozen). See <a href="hooks.html">Hook Scripts</a> for the full reference.</p>
+
+            <pre><code>scripts/hooks/v2/
+├── 0100-apt-setup.hook.chroot
+├── 0110-install-hamlib.hook.chroot
+├── 0120-install-direwolf.hook.chroot
+├── 0130-install-pat.hook.chroot
+├── 0140-install-js8call.hook.chroot
+├── 0150-install-wsjtx.hook.chroot
+├── 0160-install-fldigi.hook.chroot
+├── 0170-install-yaac.hook.chroot
+├── 0180-install-chattervox.hook.chroot
+├── 0185-install-varac.hook.chroot
+├── 0189-install-et-predict.hook.chroot
+├── 0190-install-linbpq.hook.chroot
+├── 0193-install-et-api.hook.chroot
+├── 0194-install-js8spotter.hook.chroot
+├── 0195-install-navit.hook.chroot
+├── 0196-install-qttermtcp.hook.chroot
+├── 0197-install-paracon.hook.chroot
+├── 0198-install-ardopcf.hook.chroot
+├── 0199-configure-system.hook.chroot
+└── 0200-cleanup.hook.chroot</code></pre>
+
+            <h2>Important Build Lessons</h2>
+
+            <div class="callout callout-danger">
+                <strong>Mirror Protocol</strong>
+                Use <code>http://</code> (not <code>https://</code>) for the build mirror. Chroot CA certificates can cause SSL failures during <code>lb build</code>.
+            </div>
+
+            <div class="callout callout-danger">
+                <strong>Security/Updates Repos</strong>
+                Use <code>--security false --updates false</code> in <code>lb config</code> to avoid mixing packages from main and security repos during build. The installed system still gets security updates via the binary mirror.
+            </div>
+
+            <div class="callout callout-warn">
+                <strong>Apt Cache Poisoning</strong>
+                The <code>save-apt-cache.sh</code> script captures ALL .deb files from a build. If the build pulled from testing/forky, the cache has testing packages. Adding that cache as an apt source in the next build mixes testing + stable packages &rarr; dependency hell. <strong>Always verify the apt cache was created from a clean stable build before reusing.</strong>
+            </div>
+
+            <div class="callout callout-warn">
+                <strong>apt-get update Returns 0 on Partial Failure</strong>
+                If some indices fail (rate limiting, network issues), packages silently appear as "not installable" even though <code>apt-get update</code> returned success. Hook 0100 has retry logic and diagnostics for this.
+            </div>
+
+            <h2>Writing to USB</h2>
+
+            <pre><code># Find your USB device
+lsblk
+
+# Write the ISO (replace /dev/sdX with your device!)
+sudo dd if=live-image-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress
+
+# Or use Balena Etcher for a GUI approach</code></pre>
+
+            <div class="callout callout-danger">
+                <strong>Double-check the device!</strong>
+                <code>dd</code> will overwrite whatever device you point it at. Make sure <code>/dev/sdX</code> is your USB drive, not your system disk.
+            </div>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

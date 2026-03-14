@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Patch System - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html" class="active">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Offline Patch System
+                <span class="subtitle">Update deployed systems via USB without network connectivity</span>
+            </h1>
+
+            <h2>Overview</h2>
+
+            <p>EmComm-Tools is designed for field deployment where internet may not be available. The offline patch system allows updating installed systems by copying a <code>.tar.gz</code> patch file to a USB drive. The patch contains only changed files, SHA256 verification, and automatic rollback on failure.</p>
+
+            <h2>Workflow</h2>
+
+            <div class="diagram">
+  Developer Machine                          Target PC
+  ─────────────────                          ─────────
+
+  1. Make changes to overlay
+  2. Run et-patch-build
+     ├── Generate new manifest
+     ├── Compare with old manifest
+     ├── Stage changed files
+     └── Create .tar.gz
+
+  3. Copy .tar.gz to USB
+     └── /update/ folder          ─────>     4. Plug in USB
+                                             5. Run et-patch-apply
+                                                ├── Auto-detect patch on USB
+                                                ├── Verify version match
+                                                ├── SHA256 check all files
+                                                ├── Backup originals
+                                                ├── Apply changes
+                                                └── Update version.txt
+            </div>
+
+            <h2>Building a Patch (Developer)</h2>
+
+            <h3>Prerequisites</h3>
+
+            <ul>
+                <li>A saved manifest from the old version (in <code>tools/manifests/</code>)</li>
+                <li><code>jq</code> installed (<code>sudo apt install jq</code>)</li>
+                <li><code>build-config.json</code> set to the <strong>target</strong> version</li>
+            </ul>
+
+            <h3>Usage</h3>
+
+            <pre><code># Build patch from version 2.1.1 to current overlay
+./tools/et-patch-build -o tools/manifests/manifest-2.1.1.json
+
+# Specify output directory
+./tools/et-patch-build -o tools/manifests/manifest-2.1.1.json -O ~/patches/
+
+# Custom overlay path (for building from a different overlay)
+./tools/et-patch-build -o tools/manifests/manifest-2.1.1.json \
+    -d overlays/et-v2-general/overlay/opt/emcomm-tools</code></pre>
+
+            <h3>What It Does</h3>
+
+            <ol>
+                <li>Reads old version from the old manifest and new version from <code>build-config.json</code></li>
+                <li>Generates a fresh manifest by scanning the overlay (SHA256 + permissions for every file)</li>
+                <li>Compares old vs new manifest &mdash; classifies files as added, modified, or deleted</li>
+                <li>Stages changed/added files under <code>files/</code> in the patch directory</li>
+                <li>Creates <code>patch-manifest.json</code> with the change list</li>
+                <li>Includes a bootstrap copy of <code>et-patch-apply</code> (self-updating)</li>
+                <li>Saves the new manifest to <code>tools/manifests/</code> for future diffs</li>
+                <li>Creates <code>emcomm-tools-patch-OLD-to-NEW.tar.gz</code></li>
+            </ol>
+
+            <h3>Output Example</h3>
+
+            <pre><code>────────────────────────────────────────────────────
+  Patch Summary
+────────────────────────────────────────────────────
+  From:     2.1.1
+  To:       2.1.2
+  Added:    0
+  Modified: 37
+  Deleted:  0
+  Total:    37
+────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────
+  Patch Created Successfully
+────────────────────────────────────────────────────
+  Archive:  emcomm-tools-patch-2.1.1-to-2.1.2.tar.gz
+  Size:     64K
+  Location: ./emcomm-tools-patch-2.1.1-to-2.1.2.tar.gz
+────────────────────────────────────────────────────</code></pre>
+
+            <h2>Applying a Patch (User)</h2>
+
+            <h3>Automatic Detection</h3>
+
+            <pre><code># Just plug in the USB and run:
+et-patch-apply
+
+# The script auto-scans for patches at:
+#   /media/*/*/update/emcomm-tools-patch-*.tar.gz
+#   /run/media/*/*/update/emcomm-tools-patch-*.tar.gz</code></pre>
+
+            <h3>Manual Path</h3>
+
+            <pre><code># Specify patch file explicitly
+et-patch-apply /path/to/emcomm-tools-patch-2.1.1-to-2.1.2.tar.gz
+
+# Dry run (show what would change without applying)
+et-patch-apply --dry-run
+
+# Skip confirmation prompt
+et-patch-apply --yes</code></pre>
+
+            <h3>Safety Features</h3>
+
+            <table>
+                <tr><th>Feature</th><th>Description</th></tr>
+                <tr>
+                    <td>Version check</td>
+                    <td>Verifies installed version matches <code>from_version</code> in patch manifest</td>
+                </tr>
+                <tr>
+                    <td>SHA256 verification</td>
+                    <td>Every file in the patch is verified against its SHA256 hash before applying</td>
+                </tr>
+                <tr>
+                    <td>Backup</td>
+                    <td>All modified/deleted files backed up to <code>/opt/emcomm-tools/backup/pre-patch-VERSION/</code></td>
+                </tr>
+                <tr>
+                    <td>Rollback</td>
+                    <td>Full automatic rollback if any verification fails during application</td>
+                </tr>
+                <tr>
+                    <td>Dry run</td>
+                    <td><code>--dry-run</code> flag shows all changes without modifying anything</td>
+                </tr>
+            </table>
+
+            <h2>Manifest Format</h2>
+
+            <h3>Baseline Manifest (tools/manifests/)</h3>
+
+            <pre><code>{
+  "schema_version": "1.0",
+  "distribution": "EmComm-Tools Debian Edition",
+  "version": "2.1.1",
+  "channel": "stable",
+  "release_date": "2026-03-11",
+  "files": [
+    {
+      "path": "bin/et-supervisor",
+      "version": "2.0.0",
+      "sha256": "a1b2c3d4...",
+      "size": 12345,
+      "permissions": "755"
+    },
+    ...
+  ]
+}</code></pre>
+
+            <h3>Patch Manifest (inside .tar.gz)</h3>
+
+            <pre><code>{
+  "from_version": "2.1.1",
+  "to_version": "2.1.2",
+  "release_date": "2026-03-13",
+  "files": [
+    {"path": "bin/et-dashboard", "action": "update", "sha256": "...", "size": 45678, "permissions": "755"},
+    {"path": "conf/radios.d/new-radio.json", "action": "add", "sha256": "...", "size": 890, "permissions": "644"},
+    {"path": "bin/old-script", "action": "delete"}
+  ]
+}</code></pre>
+
+            <h2>Building Patches Across Versions</h2>
+
+            <p>If the current overlay has changes for version 2.1.3 but you need a patch for 2.1.1&rarr;2.1.2, use a <strong>git worktree</strong> at the 2.1.2 commit point:</p>
+
+            <pre><code># Create worktree at the 2.1.2 commit
+git worktree add /tmp/et-212-patch &lt;commit-hash&gt;
+
+# Set version in worktree
+cd /tmp/et-212-patch
+sed -i 's/"2.1.1"/"2.1.2"/' build-config.json
+
+# Build the patch using absolute manifest path
+./tools/et-patch-build -o /path/to/manifests/manifest-2.1.1.json -O /tmp
+
+# Copy result and clean up
+cp /tmp/emcomm-tools-patch-2.1.1-to-2.1.2.tar.gz /media/user/USB/update/
+cd /home/user/emcomm-tools
+git worktree remove --force /tmp/et-212-patch</code></pre>
+
+            <div class="callout callout-tip">
+                <strong>Tip</strong>
+                Always save manifests for released versions in <code>tools/manifests/</code>. These are your baseline references for building future patches.
+            </div>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

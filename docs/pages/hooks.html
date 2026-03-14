@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hook Scripts - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html" class="active">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Hook Scripts
+                <span class="subtitle">Chroot build hooks and best practices</span>
+            </h1>
+
+            <h2>Overview</h2>
+
+            <p>Hook scripts run <strong>inside the chroot</strong> during <code>lb build</code>. They install software, configure services, set permissions, and prepare the system. Hooks are numbered for execution order and located in <code>scripts/hooks/v2/</code> (v1 hooks are frozen).</p>
+
+            <h2>Hook Reference (v2)</h2>
+
+            <table>
+                <tr><th>Number</th><th>Script</th><th>Purpose</th></tr>
+                <tr><td>0100</td><td>apt-setup</td><td>Configure apt sources, retry logic for index downloads</td></tr>
+                <tr><td>0110</td><td>install-hamlib</td><td>Install Hamlib (rigctld, rigctl) for CAT control</td></tr>
+                <tr><td>0120</td><td>install-direwolf</td><td>Install Direwolf software TNC</td></tr>
+                <tr><td>0130</td><td>install-pat</td><td>Install Pat Winlink client</td></tr>
+                <tr><td>0140</td><td>install-js8call</td><td>Install JS8Call (keyboard-to-keyboard HF)</td></tr>
+                <tr><td>0150</td><td>install-wsjtx</td><td>Install WSJT-X (FT8/FT4)</td></tr>
+                <tr><td>0160</td><td>install-fldigi</td><td>Install fldigi multi-mode modem</td></tr>
+                <tr><td>0170</td><td>install-yaac</td><td>Install YAAC APRS client (Java)</td></tr>
+                <tr><td>0180</td><td>install-chattervox</td><td>Install Chattervox AX.25 chat</td></tr>
+                <tr><td>0185</td><td>install-varac</td><td>Install VarAC + Wine for VARA modem</td></tr>
+                <tr><td>0189</td><td>install-et-predict</td><td>Install ET-Predict propagation map app (React/Electron)</td></tr>
+                <tr><td>0190</td><td>install-linbpq</td><td>Install LinBPQ packet BBS server</td></tr>
+                <tr><td>0193</td><td>install-et-api</td><td>Install ET-API Java service (callsign lookup, Lucene)</td></tr>
+                <tr><td>0194</td><td>install-js8spotter</td><td>Install JS8Spotter companion app</td></tr>
+                <tr><td>0195</td><td>install-navit</td><td>Install Navit GPS navigation</td></tr>
+                <tr><td>0196</td><td>install-qttermtcp</td><td>Install QtTermTCP packet terminal</td></tr>
+                <tr><td>0197</td><td>install-paracon</td><td>Install Paracon packet terminal</td></tr>
+                <tr><td>0198</td><td>install-ardopcf</td><td>Install ARDOP modem (ardopcf)</td></tr>
+                <tr><td>0199</td><td>configure-system</td><td>System configuration: users, groups, permissions, systemd</td></tr>
+                <tr><td>0200</td><td>cleanup</td><td>Remove build artifacts, clean apt cache</td></tr>
+            </table>
+
+            <h2>Best Practices</h2>
+
+            <p>These rules were learned through painful debugging sessions. Follow them religiously.</p>
+
+            <div class="callout callout-danger">
+                <strong>Always <code>set -e</code></strong>
+                Without it, failed commands are silently ignored and the build appears to succeed. You'll only discover the problem when the software is missing on the live system.
+            </div>
+
+            <div class="callout callout-danger">
+                <strong>Always <code>unzip -o</code></strong>
+                Without <code>-o</code>, unzip prompts for overwrite confirmation in non-interactive chroot. The prompt is invisible, and unzip silently fails to extract files.
+            </div>
+
+            <div class="callout callout-danger">
+                <strong>Always <code>rm -rf</code> before <code>mkdir -p</code></strong>
+                Stale chroot data from previous builds can leave directories populated with old files. Always clean the installation directory before creating a fresh one.
+            </div>
+
+            <div class="callout callout-danger">
+                <strong>Always verify the key file after extraction</strong>
+                After extracting an archive, verify the expected binary/jar exists. Example:
+                <pre><code>[ -f /opt/yaac/YAAC.jar ] || { echo "YAAC.jar not found!"; exit 1; }</code></pre>
+            </div>
+
+            <div class="callout callout-warn">
+                <strong>Never use <code>mv</code> for extracted directories</strong>
+                <code>mv</code> can't merge into non-empty directories (from stale chroot data). Use <code>cp -rf</code> instead, then <code>rm -rf</code> the source.
+            </div>
+
+            <div class="callout callout-warn">
+                <strong>Use <code>-d</code> flag with unzip</strong>
+                Always specify an explicit destination directory instead of relying on <code>cd</code>. Easier to debug and less error-prone.
+            </div>
+
+            <div class="callout callout-warn">
+                <strong>Never use <code>[ ... ] &amp;&amp; cmd</code> with <code>set -e</code></strong>
+                When the test is false, the entire expression returns non-zero and <code>set -e</code> kills the script. Use <code>if [ ... ]; then cmd; fi</code> instead.
+            </div>
+
+            <div class="callout callout-warn">
+                <strong>Bash <code>((var++))</code> gotcha with <code>set -e</code></strong>
+                <code>((var++))</code> returns exit code 1 when var=0 (post-increment evaluates to 0 = false in bash). Use <code>var=$((var + 1))</code> instead.
+            </div>
+
+            <h2>Hook Template</h2>
+
+            <pre><code>#!/bin/bash
+# =============================================================================
+# NNNN-install-something.hook.chroot
+# Description: Install Something for EmComm-Tools
+# =============================================================================
+
+set -e
+
+APP_NAME="Something"
+INSTALL_DIR="/opt/something"
+DOWNLOAD_URL="https://example.com/something.zip"
+
+echo "=== Installing ${APP_NAME} ==="
+
+# 1. Clean previous installation
+rm -rf "${INSTALL_DIR}"
+mkdir -p "${INSTALL_DIR}"
+
+# 2. Download
+cd /tmp
+rm -f something.zip
+wget -q "${DOWNLOAD_URL}" -O something.zip
+
+# 3. Extract with explicit destination
+unzip -o -d "${INSTALL_DIR}" something.zip
+
+# 4. Verify key file exists
+if [ ! -f "${INSTALL_DIR}/something.bin" ]; then
+    echo "ERROR: something.bin not found after extraction!"
+    exit 1
+fi
+
+# 5. Set permissions
+chmod 755 "${INSTALL_DIR}/something.bin"
+
+# 6. Clean up
+rm -f /tmp/something.zip
+
+echo "=== ${APP_NAME} installation complete ==="</code></pre>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

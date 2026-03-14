@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Profiles - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html" class="active">Radio Profiles</a>
+                <a href="flask-apps.html">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Radio Profiles
+                <span class="subtitle">JSON radio configurations and the Radio Config Editor</span>
+            </h1>
+
+            <h2>Overview</h2>
+
+            <p>Each supported radio has a JSON profile in <code>conf/radios.d/</code> that defines how EmComm-Tools interfaces with it: CAT control (rigctld), PTT method, VARA FM settings, Bluetooth TNC configuration, and audio setup. The active radio is set via a symlink at <code>conf/radios.d/active-radio.json</code>.</p>
+
+            <h2>Supported Radios (24)</h2>
+
+            <h3>HF/VHF/UHF (All-Band)</h3>
+
+            <table>
+                <tr><th>Vendor</th><th>Model</th><th>Bands</th><th>Connection</th><th>File</th></tr>
+                <tr>
+                    <td>Icom</td><td>IC-705</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>icom-ic705.json</code></td>
+                </tr>
+                <tr>
+                    <td>Icom</td><td>IC-7100</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>icom-ic7100.json</code></td>
+                </tr>
+                <tr>
+                    <td>Icom</td><td>IC-9700</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>icom-ic9700.json</code></td>
+                </tr>
+                <tr>
+                    <td>Yaesu</td><td>FT-991A</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>yaesu-ft991a.json</code></td>
+                </tr>
+                <tr>
+                    <td>Yaesu</td><td>FT-857D (DigiRig)</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>yaesu-ft857d.json</code></td>
+                </tr>
+                <tr>
+                    <td>Yaesu</td><td>FT-897D (DigiRig)</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>yaesu-ft897d.json</code></td>
+                </tr>
+                <tr>
+                    <td>Yaesu</td><td>FT-818ND (DigiRig)</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>yaesu-ft818nd.json</code></td>
+                </tr>
+                <tr>
+                    <td>Yaesu</td><td>FTX-1 (No CAT)</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-audio">Audio Only</span></td>
+                    <td><code>yaesu-ftx1.json</code></td>
+                </tr>
+                <tr>
+                    <td>DigiRig</td><td>Lite</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-audio">Audio Only</span></td>
+                    <td><code>digirig-lite.json</code></td>
+                </tr>
+                <tr>
+                    <td>DigiRig</td><td>Mobile (No CAT)</td>
+                    <td><span class="badge badge-hf">HF</span> <span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>digirig-mobile-no-cat.json</code></td>
+                </tr>
+            </table>
+
+            <h3>HF Only</h3>
+
+            <table>
+                <tr><th>Vendor</th><th>Model</th><th>Bands</th><th>Connection</th><th>File</th></tr>
+                <tr>
+                    <td>Icom</td><td>IC-7200</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>icom-ic7200.json</code></td>
+                </tr>
+                <tr>
+                    <td>Icom</td><td>IC-7300</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>icom-ic7300.json</code></td>
+                </tr>
+                <tr>
+                    <td>Yaesu</td><td>FT-710</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>yaesu-ft710.json</code></td>
+                </tr>
+                <tr>
+                    <td>Yaesu</td><td>FT-891 (DR-891)</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>yaesu-ft891.json</code></td>
+                </tr>
+                <tr>
+                    <td>Elecraft</td><td>KX-2 (DigiRig)</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>elecraft-kx2.json</code></td>
+                </tr>
+                <tr>
+                    <td>Xiegu</td><td>G90 (DigiRig)</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>xiegu-g90.json</code></td>
+                </tr>
+                <tr>
+                    <td>Xiegu</td><td>X6100</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>xiegu-x6100.json</code></td>
+                </tr>
+                <tr>
+                    <td>Lab599</td><td>TX-500MP (DigiRig)</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>lab599-tx500mp.json</code></td>
+                </tr>
+                <tr>
+                    <td>QRP Labs</td><td>QMX</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>qrplabs-qmx.json</code></td>
+                </tr>
+                <tr>
+                    <td>BG2FX</td><td>FX-4CR</td>
+                    <td><span class="badge badge-hf">HF</span></td>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td><code>bg2fx-fx4cr.json</code></td>
+                </tr>
+            </table>
+
+            <h3>Bluetooth TNC</h3>
+
+            <table>
+                <tr><th>Vendor</th><th>Model</th><th>Bands</th><th>Connection</th><th>File</th></tr>
+                <tr>
+                    <td>Kenwood</td><td>TH-D74 (BT)</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-bt">Bluetooth</span></td>
+                    <td><code>kenwood-thd74.bt.json</code></td>
+                </tr>
+                <tr>
+                    <td>Kenwood</td><td>TH-D75 (BT)</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-bt">Bluetooth</span></td>
+                    <td><code>kenwood-thd75.bt.json</code></td>
+                </tr>
+                <tr>
+                    <td>VGC</td><td>VR-N76 (BT)</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-bt">Bluetooth</span></td>
+                    <td><code>vgc-vrn76.bt.json</code></td>
+                </tr>
+                <tr>
+                    <td>BTECH</td><td>UV PRO (BT)</td>
+                    <td><span class="badge badge-vhf">VHF</span> <span class="badge badge-uhf">UHF</span></td>
+                    <td><span class="badge badge-bt">Bluetooth</span></td>
+                    <td><code>btech-uvpro.bt.json</code></td>
+                </tr>
+            </table>
+
+            <h2>Radio JSON Schema</h2>
+
+            <p>Each radio profile is a JSON file with sections for different subsystems. Only relevant sections are included &mdash; a USB-only HF radio won't have a <code>bluetooth</code> section.</p>
+
+            <pre><code>{
+  "id": "icom-ic705",
+  "vendor": "Icom",
+  "model": "IC-705",
+  "bands": ["HF", "VHF", "UHF"],
+
+  "rigctrl": {
+    "id": "3085",          // Hamlib rig model number
+    "baud": "19200",       // Serial baud rate
+    "ptt": "RIG",          // PTT method: RIG, RTS, DTR, NONE
+    "conf": "dcd_type=NONE" // Optional hamlib --set-conf
+  },
+
+  "varafm": {              // Only for radios supporting VARA FM
+    "pttPort": "COM5",     // Wine COM port
+    "pttVia": "1",         // 1=RTS, 2=DTR
+    "baud": "19200",
+    "dtr": "0",
+    "rts": "0"
+  },
+
+  "bluetooth": {           // Only for BT TNC radios
+    "deviceName": "TH-D74",
+    "channel": "1",        // RFCOMM channel
+    "mac": ""              // User fills in their device MAC
+  },
+
+  "audio": {               // Optional ALSA setup script
+    "script": "/opt/emcomm-tools/conf/radios.d/audio/ic705.sh"
+  },
+
+  "notes": [               // User-facing setup instructions
+    "Connect USB cable to radio",
+    "Set CI-V baud rate to 19200"
+  ],
+
+  "fieldNotes": [          // Developer notes
+    "Tested with firmware 1.40"
+  ]
+}</code></pre>
+
+            <h2>Connection Types</h2>
+
+            <table>
+                <tr><th>Type</th><th>How It Works</th><th>File Naming</th></tr>
+                <tr>
+                    <td><span class="badge badge-usb">USB/CAT</span></td>
+                    <td>USB serial connection, rigctld manages CAT control and PTT. Most common type.</td>
+                    <td><code>vendor-model.json</code></td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-bt">Bluetooth</span></td>
+                    <td>BT KISS TNC on <code>/dev/rfcomm0</code>. Used for HTs with built-in TNC. No sound card needed.</td>
+                    <td><code>vendor-model.bt.json</code></td>
+                </tr>
+                <tr>
+                    <td><span class="badge badge-audio">Audio Only</span></td>
+                    <td>No CAT control. rigctld runs in dummy mode (rig ID "1"). PTT via VOX or external circuit.</td>
+                    <td><code>vendor-model.json</code></td>
+                </tr>
+            </table>
+
+            <h2>Radio Config Editor</h2>
+
+            <p>The <strong>et-radio-config</strong> Flask app (port 5057) provides a web UI for managing radio profiles. Users can:</p>
+
+            <ul>
+                <li>View all radio profiles with band badges and connection type</li>
+                <li>Edit existing profiles (stock or custom)</li>
+                <li>Create new profiles from scratch</li>
+                <li>Duplicate and modify existing profiles</li>
+                <li>Delete custom profiles (the active radio cannot be deleted)</li>
+            </ul>
+
+            <div class="callout callout-info">
+                <strong>Custom Radio Storage</strong>
+                Custom/edited radio configs are saved to <code>~/.config/emcomm-tools/radios.d/</code> and symlinked into the system directory. On Live Run, the persistence system saves them to USB and restores them on boot.
+            </div>
+
+            <h2>Selecting the Active Radio</h2>
+
+            <p>The active radio is selected through the <strong>et-radio</strong> Flask app (port 5052) or during first boot. The selection creates a symlink:</p>
+
+            <pre><code>/opt/emcomm-tools/conf/radios.d/active-radio.json -> icom-ic705.json</code></pre>
+
+            <p>The supervisor reads this symlink at mode start to configure rigctld, Direwolf, VARA, and application templates with the correct radio parameters.</p>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

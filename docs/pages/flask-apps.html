@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Web Apps - EmComm-Tools Docs</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">&#9776;</button>
+    <div class="layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h2>EmComm-Tools</h2>
+                <div class="version">Debian Edition v2.1</div>
+            </div>
+            <nav>
+                <div class="nav-section">Getting Started</div>
+                <a href="../index.html">Overview</a>
+                <a href="architecture.html">Architecture</a>
+                <a href="build.html">Building the ISO</a>
+                <div class="nav-section">Core Systems</div>
+                <a href="supervisor.html">Supervisor &amp; Modes</a>
+                <a href="radios.html">Radio Profiles</a>
+                <a href="flask-apps.html" class="active">Flask Web Apps</a>
+                <a href="persistence.html">Persistence</a>
+                <div class="nav-section">Operations</div>
+                <a href="patch-system.html">Offline Patch System</a>
+                <a href="troubleshooting.html">Troubleshooting</a>
+                <div class="nav-section">Reference</div>
+                <a href="hooks.html">Hook Scripts</a>
+                <a href="json-reference.html">JSON Reference</a>
+            </nav>
+        </aside>
+
+        <main class="main">
+            <h1>Flask Web Apps
+                <span class="subtitle">Configuration UIs built with Flask and PyWebView</span>
+            </h1>
+
+            <h2>Overview</h2>
+
+            <p>EmComm-Tools uses lightweight Flask web applications for user-facing configuration. Each app runs on a dedicated port and opens in a native <strong>PyWebView</strong> window (GTK/WebKitGTK backend). All apps share a consistent dark theme and support bilingual EN/FR interfaces.</p>
+
+            <h2>App Inventory</h2>
+
+            <div class="card-grid">
+                <div class="card">
+                    <h3>et-firstboot</h3>
+                    <p>First Boot Wizard &mdash; 6-step guided setup: callsign, radio selection, data transfer from USB, map downloads, drive setup.</p>
+                    <span class="port">Port 5051</span>
+                </div>
+                <div class="card">
+                    <h3>et-radio</h3>
+                    <p>Radio selection &mdash; grid of radio cards, click to set the active radio. Shows band badges and connection type.</p>
+                    <span class="port">Port 5052</span>
+                </div>
+                <div class="card">
+                    <h3>et-mode</h3>
+                    <p>Mode selection &mdash; choose an operating mode with modem selection dialog (1200/9600/300/VARA).</p>
+                    <span class="port">Port 5053</span>
+                </div>
+                <div class="card">
+                    <h3>et-user</h3>
+                    <p>User configuration &mdash; callsign, Maidenhead grid, Winlink password, language preference.</p>
+                    <span class="port">Port 5054</span>
+                </div>
+                <div class="card">
+                    <h3>et-chattervox-keys</h3>
+                    <p>Chattervox key management &mdash; view/manage secp256k1 public keys for identity verification.</p>
+                    <span class="port">Port 5055</span>
+                </div>
+                <div class="card">
+                    <h3>et-tile-downloader</h3>
+                    <p>Map tile downloader &mdash; download OpenStreetMap .mbtiles for offline use with Navit and YAAC. Supports USB source.</p>
+                    <span class="port">Port 5056</span>
+                </div>
+                <div class="card">
+                    <h3>et-radio-config</h3>
+                    <p>Radio configuration editor &mdash; view, edit, create, and duplicate radio JSON profiles with a form-based UI.</p>
+                    <span class="port">Port 5057</span>
+                </div>
+            </div>
+
+            <h2>Common Patterns</h2>
+
+            <h3>Launch Modes</h3>
+
+            <p>Every app supports three launch modes:</p>
+
+            <pre><code># Native PyWebView window (default)
+python3 et-radio.py
+
+# Open in web browser
+python3 et-radio.py --browser
+
+# Server only, no window (debugging)
+python3 et-radio.py --no-browser</code></pre>
+
+            <h3>Bilingual Support</h3>
+
+            <p>All apps use a <code>TRANSLATIONS</code> dictionary with EN/FR keys. The language is read from <code>~/.config/emcomm-tools/user.json</code>:</p>
+
+            <pre><code>TRANSLATIONS = {
+    'en': {
+        'title': 'Radio Selection',
+        'select': 'Select',
+        ...
+    },
+    'fr': {
+        'title': 'Selection de radio',
+        'select': 'Selectionnez',
+        ...
+    }
+}
+
+def get_language():
+    config = json.load(open(ET_CONFIG_FILE))
+    return config.get('language', 'en')</code></pre>
+
+            <h3>Dark Theme</h3>
+
+            <p>All apps share the same CSS variable system for consistent styling:</p>
+
+            <pre><code>:root {
+    --bg-dark: #1a1a1a;
+    --bg-card: rgba(26, 26, 26, 0.98);
+    --bg-input: #2d2d2d;
+    --text-primary: #e0e0e0;
+    --text-secondary: #9e9e9e;
+    --accent-primary: #FFA500;   /* Orange */
+    --accent-danger: #f87171;    /* Red */
+    --accent-success: #4ade80;   /* Green */
+    --border-color: #404040;
+}</code></pre>
+
+            <div class="callout callout-warn">
+                <strong>WebKitGTK Gotcha</strong>
+                PyWebView uses WebKitGTK on Linux, which renders native form elements (like <code>&lt;select&gt;</code> dropdowns) as GTK widgets. CSS cannot override their popup colors. Use custom div-based dropdowns instead of native <code>&lt;select&gt;</code> elements to ensure proper dark theme styling.
+            </div>
+
+            <h3>Window Sizing</h3>
+
+            <p>Apps detect screen size via GDK and adapt window dimensions for small screens (7" tablets, etc.):</p>
+
+            <table>
+                <tr><th>App</th><th>Default Size</th><th>Min Size</th></tr>
+                <tr><td>et-firstboot</td><td>520x800</td><td>420x600</td></tr>
+                <tr><td>et-radio</td><td>500x700</td><td>400x500</td></tr>
+                <tr><td>et-mode</td><td>500x750</td><td>400x600</td></tr>
+                <tr><td>et-user</td><td>480x650</td><td>400x500</td></tr>
+                <tr><td>et-radio-config</td><td>560x750</td><td>450x500</td></tr>
+            </table>
+
+            <h3>Shutdown Route</h3>
+
+            <p>All apps implement a <code>POST /shutdown</code> route for graceful shutdown. PyWebView's window close event triggers this endpoint to stop the Flask server:</p>
+
+            <pre><code>@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        os._exit(0)
+    func()
+    return 'Server shutting down...'</code></pre>
+
+            <h2>File Structure</h2>
+
+            <div class="file-tree">
+<span class="dir">bin/et-flask-apps/</span>
+├── <span class="highlight">et-dashboard</span>              <span class="dir"># GTK panel applet (not Flask)</span>
+├── <span class="dir">et-firstboot/</span>
+│   ├── <span class="file">et-firstboot.py</span>
+│   ├── <span class="dir">static/css/, js/</span>
+│   └── <span class="dir">templates/</span>             <span class="dir"># Multi-step wizard pages</span>
+├── <span class="dir">et-radio/</span>
+│   ├── <span class="file">et-radio.py</span>
+│   ├── <span class="dir">static/css/, js/</span>
+│   └── <span class="dir">templates/</span>
+├── <span class="dir">et-mode/</span>
+├── <span class="dir">et-user/</span>
+├── <span class="dir">et-chattervox-keys/</span>
+├── <span class="dir">et-tile-downloader/</span>
+└── <span class="dir">et-radio-config/</span>
+    ├── <span class="file">et-radio-config.py</span>
+    ├── <span class="dir">static/css/</span>
+    │   └── <span class="file">style.css</span>
+    └── <span class="dir">templates/</span>
+        ├── <span class="file">index.html</span>         <span class="dir"># Radio list page</span>
+        └── <span class="file">editor.html</span>        <span class="dir"># Edit/create form</span>
+            </div>
+
+            <h2>Desktop Menu Integration</h2>
+
+            <p>Each app has a <code>.desktop</code> file in <code>usr/share/applications/</code> that adds it to the XFCE application menu under the <strong>HamRadio</strong> category. Example:</p>
+
+            <pre><code>[Desktop Entry]
+Type=Application
+Name=Radio Configuration
+Name[fr]=Configuration Radio
+Comment=View and edit radio profiles
+Exec=/opt/emcomm-tools/bin/et-flask-apps/et-radio-config/et-radio-config.py
+Icon=preferences-other
+Categories=HamRadio;
+Terminal=false</code></pre>
+
+            <div class="footer">
+                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
