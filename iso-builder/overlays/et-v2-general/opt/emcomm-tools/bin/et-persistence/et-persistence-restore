@@ -570,6 +570,37 @@ else
     log "⏭ Skip: YAAC (not found on USB)"
 fi
 
+# --- YAAC plugin configs (tile sources, station colors) ---
+YAAC_CONFIG_DIR="${HOME}/.yaac"
+if [[ -d "${PERSISTENCE_PATH}/configs/yaac-config" ]]; then
+    mkdir -p "$YAAC_CONFIG_DIR"
+    restore_file "${PERSISTENCE_PATH}/configs/yaac-config/tile-sources.json" "$YAAC_CONFIG_DIR/tile-sources.json" "YAAC tile sources"
+    restore_file "${PERSISTENCE_PATH}/configs/yaac-config/station-colors.json" "$YAAC_CONFIG_DIR/station-colors.json" "YAAC station colors"
+    restore_file "${PERSISTENCE_PATH}/configs/yaac-config/sar-objects.json" "$YAAC_CONFIG_DIR/sar-objects.json" "YAAC SAR objects"
+fi
+
+# --- YAAC MapCache (tile cache .db files — symlinks to USB) ---
+USB_ROOT=$(dirname "$PERSISTENCE_PATH")
+YAAC_MAPCACHE_USB="${USB_ROOT}/YAAC-MapCache"
+YAAC_MAPCACHE_DIR="${HOME}/YAAC/mapcache"
+if [[ -d "$YAAC_MAPCACHE_USB" ]]; then
+    mkdir -p "$YAAC_MAPCACHE_DIR"
+    MAPCACHE_COUNT=0
+    for db in "$YAAC_MAPCACHE_USB"/*.db; do
+        [[ -f "$db" ]] || continue
+        name=$(basename "$db")
+        target="$YAAC_MAPCACHE_DIR/$name"
+        rm -f "$target"
+        ln -s "$db" "$target"
+        MAPCACHE_COUNT=$((MAPCACHE_COUNT + 1))
+    done
+    if [[ $MAPCACHE_COUNT -gt 0 ]]; then
+        log "✓ Restored: YAAC MapCache ($MAPCACHE_COUNT tile caches symlinked)"
+    fi
+else
+    log "⏭ Skip: YAAC MapCache (not found on USB)"
+fi
+
 # --- Chattervox (config + keystore with signing keys) ---
 CHATTERVOX_DIR="${HOME}/.chattervox"
 if [[ -d "${PERSISTENCE_PATH}/configs/chattervox" ]]; then
@@ -677,9 +708,9 @@ if restore_thunderbird_profile; then
     ((RESTORED++)) || true
 fi
 
-# --- Documents & Downloads ---
-log "Starting Documents & Downloads restore..."
-for user_dir in "Documents" "Downloads"; do
+# --- Documents, Downloads & Pictures ---
+log "Starting Documents, Downloads & Pictures restore..."
+for user_dir in "Documents" "Downloads" "Pictures"; do
     src_dir="${PERSISTENCE_PATH}/user-data/${user_dir,,}"
     dest_dir="${HOME}/${user_dir}"
 

@@ -99,6 +99,26 @@
                 </label>
             </div>
             {% endif %}
+
+            {% if data_info.yaac_mapcache.total_bytes > 0 %}
+            <div class="data-item" style="display: flex; align-items: center; padding: 12px; background: #2a2a2a; border-radius: 8px; margin-bottom: 10px;">
+                <input type="checkbox" name="category" value="yaac_mapcache" id="yaac_mapcache"
+                       {% if space_ok %}checked{% endif %}
+                       {% if not space_ok and data_info.yaac_mapcache.total_bytes > hdd_space.free %}disabled{% endif %}
+                       style="width: 20px; height: 20px; margin-right: 15px;">
+                <label for="yaac_mapcache" style="flex: 1; cursor: pointer;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📡 <strong>{{ t('yaac_mapcache') }}</strong></span>
+                        <span style="color: #888;">{{ data_info.yaac_mapcache.total_mb }} MB</span>
+                    </div>
+                    <div style="font-size: 11px; color: #666; margin-top: 3px;">
+                        {{ data_info.yaac_mapcache.files|length }} file(s):
+                        {% for f in data_info.yaac_mapcache.files[:3] %}{{ f.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+                        {% if data_info.yaac_mapcache.files|length > 3 %}...{% endif %}
+                    </div>
+                </label>
+            </div>
+            {% endif %}
         </form>
         
         <!-- Progress (hidden initially) -->

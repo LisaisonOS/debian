@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE map SYSTEM "http://java.sun.com/dtd/preferences.dtd">
+<map MAP_XML_VERSION="1.0">
+  <entry key="drawAge" value="false"/>
+  <entry key="drawAlohaCircle" value="false"/>
+  <entry key="drawCallsign" value="false"/>
+  <entry key="drawDeadReckoning" value="false"/>
+  <entry key="drawNWSMultiLine" value="false"/>
+  <entry key="drawSelf" value="false"/>
+  <entry key="drawTrackStripes" value="false"/>
+  <entry key="maxAgeDRObject" value="86400000"/>
+  <entry key="maxAgeDRSpecialObject" value="86400000"/>
+  <entry key="maxAgeDRStation" value="86400000"/>
+  <entry key="keepSpecificallyTrackedStationsOnScreen" value="false"/>
+  <entry key="maxTrackDuration" value="86400000"/>
+</map>

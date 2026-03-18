@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE map SYSTEM "http://java.sun.com/dtd/preferences.dtd">
+<map MAP_XML_VERSION="1.0">
+  <entry key="ALL" value="true"/>
+  <entry key="ALL.type" value="1"/>
+  <entry key="BOM_WARN" value="true"/>
+  <entry key="BOM_WARN.type" value="2"/>
+  <entry key="CQ" value="true"/>
+  <entry key="CQ.type" value="1"/>
+  <entry key="NWS-ADVIS" value="true"/>
+  <entry key="NWS-ADVIS.type" value="2"/>
+  <entry key="NWS-WARN" value="true"/>
+  <entry key="NWS-WARN.type" value="2"/>
+  <entry key="NWS-WATCH" value="true"/>
+  <entry key="NWS-WATCH.type" value="2"/>
+  <entry key="NWS_ADVIS" value="true"/>
+  <entry key="NWS_ADVIS.type" value="2"/>
+  <entry key="NWS_WARN" value="true"/>
+  <entry key="NWS_WARN.type" value="2"/>
+  <entry key="NWS_WATCH" value="true"/>
+  <entry key="NWS_WATCH.type" value="2"/>
+  <entry key="QSY" value="true"/>
+  <entry key="QSY.type" value="1"/>
+</map>

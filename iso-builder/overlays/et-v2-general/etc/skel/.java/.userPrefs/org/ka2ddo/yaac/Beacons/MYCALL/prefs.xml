@@ -5,16 +5,16 @@
   <entry key="beaconName" value="MYCALL"/>
   <entry key="ctcss" value="TOFF"/>
   <entry key="decayRatio" value="2"/>
-  <entry key="digipeaters" value="WIDE1-1;WIDE1-1,WIDE2-1"/>
+  <entry key="digipeaters" value=" "/>
   <entry key="directionality" value="0"/>
-  <entry key="enabled" value="true"/>
+  <entry key="enabled" value="false"/>
   <entry key="fixedAltitudeM" value="NaN"/>
-  <entry key="freeText" value="ETC R3 APMAIL WINLINK"/>
+  <entry key="freeText" value="emcomm-tools"/>
   <entry key="gain" value="0"/>
   <entry key="height" value="0"/>
   <entry key="initialRateSecs" value="60"/>
-  <entry key="latitude" value="33.0"/>
-  <entry key="longitude" value="-112.0"/>
+  <entry key="latitude" value="0.0"/>
+  <entry key="longitude" value="0.0"/>
   <entry key="monitorFreq" value="0.0"/>
   <entry key="offset" value="0"/>
   <entry key="positionType" value="NO_TIME_W_MESSAGING"/>
@@ -26,8 +26,8 @@
   <entry key="slowRateSecs" value="1800"/>
   <entry key="status" value="7"/>
   <entry key="symTableId" value="/"/>
-  <entry key="symbolCode" value="["/>
-  <entry key="type" value="POSITION"/>
+  <entry key="symbolCode" value="z"/>
+  <entry key="type" value="MicE"/>
   <entry key="useGpsForPosition" value="true"/>
   <entry key="useWeather" value="false"/>
 </map>

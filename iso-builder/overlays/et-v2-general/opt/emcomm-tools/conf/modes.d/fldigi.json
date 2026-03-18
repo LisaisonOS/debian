@@ -37,7 +37,7 @@
                 {"tag": "MT63INTEGRATION", "value": "1"},
                 {"tag": "PRETONE", "value": "2"},
                 {"tag": "OPEN_NBEMS_FOLDER", "value": "1"},
-                {"tag": "FLMSG_PATHNAME", "value": "/usr/bin/flmsg"}
+                {"tag": "FLMSG_PATHNAME", "value": "/usr/local/bin/flmsg"}
             ]
         }
     ],

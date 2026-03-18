@@ -186,6 +186,7 @@ TRANSLATIONS = {
         'map_tiles': 'Map Tiles',
         'osm_maps': 'OSM Maps',
         'wikipedia_files': 'Wikipedia',
+        'yaac_mapcache': 'YAAC Map Cache',
         'copy_selected': 'Copy Selected',
         'skip_copy': 'Keep on USB Only',
         'copying': 'Copying',
@@ -255,6 +256,7 @@ TRANSLATIONS = {
         'map_tiles': 'Tuiles de carte',
         'osm_maps': 'Cartes OSM',
         'wikipedia_files': 'Wikipédia',
+        'yaac_mapcache': 'Cache de cartes YAAC',
         'copy_selected': 'Copier la sélection',
         'skip_copy': 'Garder sur USB seulement',
         'copying': 'Copie en cours',
@@ -266,8 +268,8 @@ TRANSLATIONS = {
 }
 
 def t(key):
-    lang = session.get('lang', 'fr')
-    return TRANSLATIONS.get(lang, TRANSLATIONS['fr']).get(key, key)
+    lang = session.get('lang', 'en')
+    return TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
 
 @app.context_processor
 def utility_processor():
@@ -658,6 +660,23 @@ def create_symlinks():
             dest_dir.symlink_to(usb_dir)
             results.append(f"Linked: {dest_dir} -> {usb_dir}")
     
+    # =========================================================================
+    # YAAC MAPCACHE: Per-file symlinks to USB (.db tile caches)
+    # Replace local files with symlinks — USB version has cached tiles
+    # =========================================================================
+    usb_mapcache = usb_path / "YAAC-MapCache"
+    if usb_mapcache.exists():
+        YAAC_MAPCACHE = Path.home() / "YAAC" / "mapcache"
+        YAAC_MAPCACHE.mkdir(parents=True, exist_ok=True)
+        for db_file in usb_mapcache.glob("*.db"):
+            local_file = YAAC_MAPCACHE / db_file.name
+            if local_file.is_symlink():
+                local_file.unlink()
+            elif local_file.exists():
+                local_file.unlink()
+            local_file.symlink_to(db_file)
+            results.append(f"Linked: {db_file.name} -> {db_file}")
+
     usb_wiki = usb_path / "wikipedia"
     if usb_wiki.exists():
         ZIM_DIR.mkdir(parents=True, exist_ok=True)
@@ -694,7 +713,7 @@ def create_symlinks_for_uncopied(usb_path, copied_categories):
         return []
     
     results = []
-    all_categories = ['tiles', 'maps', 'wikipedia']
+    all_categories = ['tiles', 'maps', 'wikipedia', 'yaac_mapcache']
     uncopied = [cat for cat in all_categories if cat not in copied_categories]
     
     print(f"[SYMLINKS] Copied: {copied_categories}, Uncopied (need symlinks): {uncopied}")
@@ -787,7 +806,21 @@ def create_symlinks_for_uncopied(usb_path, copied_categories):
                         if not local_file.exists():
                             local_file.symlink_to(zim_file)
                             results.append(f"Linked: {zim_file.name}")
-                            
+
+            elif cat == 'yaac_mapcache':
+                usb_mapcache = usb_path / "YAAC-MapCache"
+                if usb_mapcache.exists():
+                    YAAC_MAPCACHE = Path.home() / "YAAC" / "mapcache"
+                    YAAC_MAPCACHE.mkdir(parents=True, exist_ok=True)
+                    for db_file in usb_mapcache.glob("*.db"):
+                        local_file = YAAC_MAPCACHE / db_file.name
+                        if local_file.is_symlink():
+                            local_file.unlink()
+                        elif local_file.exists():
+                            local_file.unlink()
+                        local_file.symlink_to(db_file)
+                        results.append(f"Linked: {db_file.name} -> {db_file}")
+
         except Exception as e:
             results.append(f"Error creating symlink for {cat}: {e}")
             print(f"[SYMLINKS] Error: {e}")
@@ -925,7 +958,8 @@ def get_data_files_info(usb_path):
     info = {
         'tiles': {'files': [], 'total_bytes': 0, 'total_mb': 0},
         'maps': {'files': [], 'total_bytes': 0, 'total_mb': 0},
-        'wikipedia': {'files': [], 'total_bytes': 0, 'total_mb': 0}
+        'wikipedia': {'files': [], 'total_bytes': 0, 'total_mb': 0},
+        'yaac_mapcache': {'files': [], 'total_bytes': 0, 'total_mb': 0},
     }
     
     # Tiles (mbtiles)
@@ -960,9 +994,19 @@ def get_data_files_info(usb_path):
             info['wikipedia']['files'].append({'name': f.name, 'size': size, 'size_mb': round(size / (1024**2), 1)})
             info['wikipedia']['total_bytes'] += size
         info['wikipedia']['total_mb'] = round(info['wikipedia']['total_bytes'] / (1024**2), 1)
-    
+
+    # YAAC MapCache (.db tile caches)
+    mapcache_dir = usb / "YAAC-MapCache"
+    if mapcache_dir.exists():
+        for f in mapcache_dir.glob("*.db"):
+            size = f.stat().st_size
+            info['yaac_mapcache']['files'].append({'name': f.name, 'size': size, 'size_mb': round(size / (1024**2), 1)})
+            info['yaac_mapcache']['total_bytes'] += size
+        info['yaac_mapcache']['total_mb'] = round(info['yaac_mapcache']['total_bytes'] / (1024**2), 1)
+
     # Calculate total
-    info['total_bytes'] = info['tiles']['total_bytes'] + info['maps']['total_bytes'] + info['wikipedia']['total_bytes']
+    info['total_bytes'] = (info['tiles']['total_bytes'] + info['maps']['total_bytes'] +
+                           info['wikipedia']['total_bytes'] + info['yaac_mapcache']['total_bytes'])
     info['total_mb'] = round(info['total_bytes'] / (1024**2), 1)
     info['total_gb'] = round(info['total_bytes'] / (1024**3), 2)
     
@@ -1184,7 +1228,7 @@ def index():
         session['persistence_found'] = True
         session['persistence_callsign'] = config.get('callsign', '')
         session['persistence_grid'] = config.get('grid', '')
-        session['persistence_lang'] = config.get('language', 'fr')
+        session['persistence_lang'] = config.get('language', 'en')
         session['persistence_usb_path'] = usb_path
         # Redirect to welcome back page
         return redirect(url_for('welcome_back'))
@@ -1196,7 +1240,7 @@ def index():
 def welcome_back():
     """Show welcome back screen for returning users with USB persistence."""
     callsign = session.get('persistence_callsign', 'N0CALL')
-    lang = session.get('persistence_lang', 'fr')
+    lang = session.get('persistence_lang', 'en')
     session['lang'] = lang  # Set language from saved config
     return render_template('welcome_back.html', callsign=callsign)
 
@@ -1208,7 +1252,7 @@ def restore_config():
         config = load_user_config()
         session['callsign'] = config.get('callsign', '')
         session['grid'] = config.get('grid', '')
-        session['lang'] = session.get('persistence_lang', 'fr')
+        session['lang'] = session.get('persistence_lang', 'en')
         
         # Set USB path for symlinks if we have it
         usb_path = session.get('persistence_usb_path', '')
@@ -1303,7 +1347,7 @@ def api_restore_complete():
     config = load_user_config()
     session['callsign'] = config.get('callsign', '')
     session['grid'] = config.get('grid', '')
-    session['lang'] = session.get('persistence_lang', 'fr')
+    session['lang'] = session.get('persistence_lang', 'en')
     session['drive_type'] = 'usb'
     session['usb_path'] = usb_path
     session['restored_from_usb'] = True
@@ -1336,7 +1380,10 @@ def post_restore():
 
 @app.route('/lang/<lang>')
 def set_language(lang):
-    session['lang'] = lang if lang in TRANSLATIONS else 'fr'
+    session['lang'] = lang if lang in TRANSLATIONS else 'en'
+    config = load_user_config()
+    config['language'] = session['lang']
+    save_user_config(config)
     return redirect(url_for('user_setup'))
 
 @app.route('/user', methods=['GET', 'POST'])
@@ -1374,11 +1421,11 @@ def radio_settings(radio_id):
     with open(radio_file) as f:
         radio = json.load(f)
     saved_file = radio_file.name
-    return render_template('radio_settings.html', radio=radio, saved_file=saved_file, lang=session.get('lang', 'fr'))
+    return render_template('radio_settings.html', radio=radio, saved_file=saved_file, lang=session.get('lang', 'en'))
 
 @app.route('/internet')
 def internet_check():
-    return render_template('internet_check.html', has_internet=check_internet(), lang=session.get('lang', 'fr'))
+    return render_template('internet_check.html', has_internet=check_internet(), lang=session.get('lang', 'en'))
 
 @app.route('/drive', methods=['GET', 'POST'])
 def drive_setup():
@@ -1621,7 +1668,7 @@ def data_transfer():
                           data_info=data_info,
                           hdd_space=hdd_space,
                           space_ok=space_ok,
-                          lang=session.get('lang', 'fr'))
+                          lang=session.get('lang', 'en'))
 
 @app.route('/api/data_transfer/copy', methods=['POST'])
 def api_data_transfer_copy():
@@ -1706,7 +1753,20 @@ def api_data_transfer_copy():
                             results.append(f"✓ Copied: {f.name}")
                         else:
                             results.append(f"⏭ Exists: {f.name}")
-                            
+
+            elif cat == 'yaac_mapcache':
+                src = usb / "YAAC-MapCache"
+                YAAC_MAPCACHE = Path.home() / "YAAC" / "mapcache"
+                if src.exists():
+                    YAAC_MAPCACHE.mkdir(parents=True, exist_ok=True)
+                    for f in src.glob("*.db"):
+                        dst_file = YAAC_MAPCACHE / f.name
+                        if dst_file.is_symlink() or dst_file.exists():
+                            dst_file.unlink()
+                        shutil.copy2(f, dst_file)
+                        fix_ownership(dst_file, recursive=False)
+                        results.append(f"✓ Copied: {f.name}")
+
         except Exception as e:
             results.append(f"✗ Error copying {cat}: {e}")
     
@@ -1714,6 +1774,80 @@ def api_data_transfer_copy():
     session['copied_categories'] = categories
     
     return jsonify({'success': True, 'results': results})
+
+def configure_yaac_position():
+    """Configure YAAC Beacons/MYCALL prefs with user's position and GPS setting.
+
+    Reads callsign and grid from user config, converts grid to lat/lon,
+    detects GPS, and updates the YAAC prefs.xml accordingly.
+    """
+    try:
+        # Import grid conversion
+        sys.path.insert(0, str(ET_BASE / "lib"))
+        from et_supervisor.grid_utils import grid_to_latlon
+
+        config = load_user_config()
+        callsign = config.get('callsign', 'N0CALL')
+        grid = config.get('grid', '')
+
+        # YAAC Beacons/MYCALL prefs path
+        prefs_dir = Path.home() / ".java" / ".userPrefs" / "org" / "ka2ddo" / "yaac" / "Beacons" / "MYCALL"
+        prefs_file = prefs_dir / "prefs.xml"
+
+        if not prefs_file.exists():
+            print(f"[YAAC] Beacons/MYCALL prefs.xml not found, skipping")
+            return
+
+        content = prefs_file.read_text()
+
+        # Update callsign in beaconName
+        if callsign and callsign != 'N0CALL':
+            content = re.sub(
+                r'<entry key="beaconName" value="[^"]*"/>',
+                f'<entry key="beaconName" value="{callsign}"/>',
+                content)
+
+        # Convert grid to lat/lon and update position
+        if grid:
+            coords = grid_to_latlon(grid)
+            if coords:
+                lat, lon = coords
+                content = re.sub(
+                    r'<entry key="latitude" value="[^"]*"/>',
+                    f'<entry key="latitude" value="{lat}"/>',
+                    content)
+                content = re.sub(
+                    r'<entry key="longitude" value="[^"]*"/>',
+                    f'<entry key="longitude" value="{lon}"/>',
+                    content)
+                print(f"[YAAC] Position set from grid {grid}: lat={lat}, lon={lon}")
+
+                # Remove saved map Center from main YAAC prefs so YAAC
+                # falls back to beacon lat/lon on next startup
+                main_prefs = Path.home() / ".java" / ".userPrefs" / "org" / "ka2ddo" / "yaac" / "prefs.xml"
+                if main_prefs.exists():
+                    main_content = main_prefs.read_text()
+                    if 'key="Center"' in main_content:
+                        main_content = re.sub(
+                            r'\s*<entry key="Center" value="[^"]*"/>', '',
+                            main_content)
+                        main_prefs.write_text(main_content)
+                        print(f"[YAAC] Removed stale map Center from main prefs")
+
+        # Detect GPS and set useGpsForPosition
+        has_gps = os.path.exists('/dev/et-gps')
+        gps_value = "true" if has_gps else "false"
+        content = re.sub(
+            r'<entry key="useGpsForPosition" value="[^"]*"/>',
+            f'<entry key="useGpsForPosition" value="{gps_value}"/>',
+            content)
+        print(f"[YAAC] GPS {'detected' if has_gps else 'not detected'}, useGpsForPosition={gps_value}")
+
+        prefs_file.write_text(content)
+        print(f"[YAAC] Beacons/MYCALL prefs updated")
+
+    except Exception as e:
+        print(f"[YAAC] Failed to configure position: {e}")
 
 @app.route('/complete')
 def complete():
@@ -1782,6 +1916,9 @@ def complete():
             if has_wifi or has_bt:
                 has_hw_configs = True
 
+    # Configure YAAC position from user's grid square and GPS detection
+    configure_yaac_position()
+
     flag = Path.home() / ".config" / "emcomm-tools" / ".firstboot-complete"
     flag.parent.mkdir(parents=True, exist_ok=True)
     flag.touch()
@@ -1789,7 +1926,7 @@ def complete():
     return render_template('complete.html',
                           symlinks=symlinks,
                           has_osm_maps=bool(session.get('osm_regions')),
-                          lang=session.get('lang', 'fr'),
+                          lang=session.get('lang', 'en'),
                           restored=session.get('restored_from_usb', False),
                           persistence_saved=persistence_saved,
                           radio_doc=radio_doc,
