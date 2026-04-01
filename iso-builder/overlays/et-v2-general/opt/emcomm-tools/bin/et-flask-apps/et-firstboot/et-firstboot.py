@@ -194,6 +194,28 @@ TRANSLATIONS = {
         'insufficient_space': 'Insufficient disk space',
         'space_ok': 'Space OK',
         'no_data_to_copy': 'No data files found on USB',
+        'find_my_grid': 'Find my grid',
+        'coordinates': 'Station Coordinates',
+        'coordinates_optional': '(optional — overrides grid square)',
+        'latitude_placeholder': 'e.g., 45.5017',
+        'longitude_placeholder': 'e.g., -73.5673',
+        'create_account': 'Create account / Reset password',
+        'show_password': 'Show password',
+        'saved_to': 'Saved to',
+        'radio_config_saved_to': 'Radio configuration saved to',
+        'restore_wifi_bt': 'Restore WiFi & Bluetooth',
+        'restore_wifi_bt_launched': 'Launched...',
+        'navit_maps_optional': 'Navit Maps (Optional)',
+        'navit_maps_desc': 'Navit navigation maps were found on your USB drive but are too large to copy automatically. To use them, open a terminal and run:',
+        'hw_restore_title': 'WiFi & Bluetooth configurations were found on your USB drive.',
+        'hw_restore_desc': 'Click the button below to restore them. A terminal window will open.',
+        'internet_check': 'Internet Check',
+        'download_maps_files': 'Download Maps & Files',
+        'internet_connected': 'Internet Connected',
+        'internet_connected_msg': 'You can now download offline maps and Wikipedia files.',
+        'no_internet': 'No Internet Connection',
+        'no_internet_msg': 'Connect to the internet to download maps and files, or skip this step.',
+        'retry': 'Retry',
     },
     'fr': {
         'welcome': 'Bienvenue à EmComm-Tools',
@@ -264,6 +286,28 @@ TRANSLATIONS = {
         'insufficient_space': 'Espace disque insuffisant',
         'space_ok': 'Espace OK',
         'no_data_to_copy': 'Aucun fichier de données trouvé sur USB',
+        'find_my_grid': 'Trouver mon grid',
+        'coordinates': 'Coordonnées de la station',
+        'coordinates_optional': '(optionnel — remplace le carré de grille)',
+        'latitude_placeholder': 'ex: 45.5017',
+        'longitude_placeholder': 'ex: -73.5673',
+        'create_account': 'Créer un compte / Réinitialiser',
+        'show_password': 'Afficher le mot de passe',
+        'saved_to': 'Sauvegardé dans',
+        'radio_config_saved_to': 'Configuration radio sauvegardée dans',
+        'restore_wifi_bt': 'Restaurer WiFi et Bluetooth',
+        'restore_wifi_bt_launched': 'Lancé...',
+        'navit_maps_optional': 'Cartes Navit (Optionnel)',
+        'navit_maps_desc': 'Des cartes de navigation Navit ont été trouvées sur votre clé USB mais sont trop volumineuses pour être copiées automatiquement. Pour les utiliser, ouvrez un terminal et exécutez:',
+        'hw_restore_title': 'Des configurations WiFi et Bluetooth ont été trouvées sur votre clé USB.',
+        'hw_restore_desc': 'Cliquez sur le bouton ci-dessous pour les restaurer. Une fenêtre de terminal s\'ouvrira.',
+        'internet_check': 'Vérification Internet',
+        'download_maps_files': 'Télécharger cartes et fichiers',
+        'internet_connected': 'Internet connecté',
+        'internet_connected_msg': 'Vous pouvez maintenant télécharger les cartes et fichiers Wikipedia hors-ligne.',
+        'no_internet': 'Pas de connexion Internet',
+        'no_internet_msg': 'Connectez-vous à Internet pour télécharger les cartes et fichiers, ou passez cette étape.',
+        'retry': 'Réessayer',
     }
 }
 
@@ -273,7 +317,7 @@ def t(key):
 
 @app.context_processor
 def utility_processor():
-    return dict(t=t)
+    return dict(t=t, lang=session.get('lang', 'en'))
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -470,7 +514,7 @@ def load_user_config():
                 return json.load(f)
         except:
             pass
-    return {'callsign': 'N0CALL', 'grid': '', 'winlinkPasswd': ''}
+    return {'callsign': 'N0CALL', 'grid': '', 'latitude': '', 'longitude': '', 'winlinkPasswd': ''}
 
 def save_user_config(config):
     try:
@@ -1392,6 +1436,20 @@ def user_setup():
     if request.method == 'POST':
         config['callsign'] = request.form.get('callsign', 'N0CALL').upper().strip()
         config['grid'] = request.form.get('grid', '').strip()
+        lat_str = request.form.get('latitude', '').strip()
+        lon_str = request.form.get('longitude', '').strip()
+        config['latitude'] = ''
+        config['longitude'] = ''
+        if lat_str:
+            try:
+                config['latitude'] = float(lat_str)
+            except ValueError:
+                pass
+        if lon_str:
+            try:
+                config['longitude'] = float(lon_str)
+            except ValueError:
+                pass
         if request.form.get('winlink_password'):
             config['winlinkPasswd'] = request.form.get('winlink_password')
         save_user_config(config)
@@ -1670,110 +1728,222 @@ def data_transfer():
                           space_ok=space_ok,
                           lang=session.get('lang', 'en'))
 
-@app.route('/api/data_transfer/copy', methods=['POST'])
-def api_data_transfer_copy():
-    """Copy selected data categories from USB to HDD."""
-    usb_path = session.get('usb_path', '') or session.get('persistence_usb_path', '')
-    categories = request.json.get('categories', [])
-    
-    if not usb_path or not categories:
-        return jsonify({'success': False, 'error': 'No USB path or categories'})
-    
-    usb = Path(usb_path)
-    results = []
-    
-    import shutil
-    
-    for cat in categories:
-        try:
-            if cat == 'tiles':
-                src = usb / "tilesets"
-                dst = TILESET_DIR
-                if src.exists():
-                    dst.mkdir(parents=True, exist_ok=True)
-                    for f in src.glob("*.mbtiles"):
-                        dst_file = dst / f.name
-                        if not dst_file.exists():
-                            shutil.copy2(f, dst_file)
-                            fix_ownership(dst_file, recursive=False)
-                            results.append(f"✓ Copied: {f.name}")
-                        else:
-                            results.append(f"⏭ Exists: {f.name}")
+# --- Data transfer progress tracking ---
+_copy_progress = {
+    'active': False,
+    'current_file': '',
+    'current_bytes': 0,
+    'file_size': 0,
+    'files_done': 0,
+    'files_total': 0,
+    'bytes_done': 0,
+    'bytes_total': 0,
+    'results': [],
+    'done': False,
+    'error': None,
+}
 
-                # YAAC tiledir (slippy map tiles) — copy to HDD
-                usb_tiledir = usb / "tiledir"
-                YAAC_TILEDIR = Path.home() / "YAAC" / "tiledir"
-                if usb_tiledir.exists():
+
+def _copy_with_progress(src_path, dst_path, progress):
+    """Copy a file with byte-level progress updates."""
+    import shutil
+    file_size = src_path.stat().st_size
+    progress['current_file'] = src_path.name
+    progress['file_size'] = file_size
+    progress['current_bytes'] = 0
+
+    buf_size = 1024 * 1024  # 1MB chunks
+    with open(src_path, 'rb') as fsrc, open(dst_path, 'wb') as fdst:
+        while True:
+            buf = fsrc.read(buf_size)
+            if not buf:
+                break
+            fdst.write(buf)
+            progress['current_bytes'] += len(buf)
+            progress['bytes_done'] += len(buf)
+
+    # Preserve timestamps
+    import shutil
+    shutil.copystat(src_path, dst_path)
+
+
+def _collect_files(usb, categories):
+    """Build list of (src, dst, category) tuples and compute total size."""
+    files = []
+    YAAC_TILEDIR = Path.home() / "YAAC" / "tiledir"
+    YAAC_MAPCACHE = Path.home() / "YAAC" / "mapcache"
+
+    for cat in categories:
+        if cat == 'tiles':
+            src = usb / "tilesets"
+            if src.exists():
+                TILESET_DIR.mkdir(parents=True, exist_ok=True)
+                for f in src.glob("*.mbtiles"):
+                    dst_file = TILESET_DIR / f.name
+                    if not dst_file.exists():
+                        files.append((f, dst_file, cat))
+
+            usb_tiledir = usb / "tiledir"
+            if usb_tiledir.exists() and not YAAC_TILEDIR.exists():
+                # Collect all files in tiledir tree
+                for f in usb_tiledir.rglob("*"):
+                    if f.is_file():
+                        rel = f.relative_to(usb_tiledir)
+                        dst_file = YAAC_TILEDIR / rel
+                        files.append((f, dst_file, 'tiledir'))
+
+        elif cat == 'maps':
+            src = usb / "my-maps"
+            if src.exists():
+                PBF_MAP_DIR.mkdir(parents=True, exist_ok=True)
+                for f in src.glob("*.pbf"):
+                    dst_file = PBF_MAP_DIR / f.name
+                    if not dst_file.exists():
+                        files.append((f, dst_file, cat))
+
+            navit_src = usb / "navit-maps"
+            if navit_src.exists():
+                NAVIT_MAP_DIR.mkdir(parents=True, exist_ok=True)
+                for f in navit_src.glob("*.bin"):
+                    dst_file = NAVIT_MAP_DIR / f.name
+                    if not dst_file.exists():
+                        files.append((f, dst_file, cat))
+
+        elif cat == 'wikipedia':
+            src = usb / "wikipedia"
+            if src.exists():
+                ZIM_DIR.mkdir(parents=True, exist_ok=True)
+                for f in src.glob("*.zim"):
+                    dst_file = ZIM_DIR / f.name
+                    if not dst_file.exists():
+                        files.append((f, dst_file, cat))
+
+        elif cat == 'yaac_mapcache':
+            src = usb / "YAAC-MapCache"
+            if src.exists():
+                YAAC_MAPCACHE.mkdir(parents=True, exist_ok=True)
+                for f in src.glob("*.db"):
+                    dst_file = YAAC_MAPCACHE / f.name
+                    files.append((f, dst_file, cat))
+
+    return files
+
+
+def _copy_worker(usb_path, categories):
+    """Background worker for data transfer copy."""
+    global _copy_progress
+    try:
+        usb = Path(usb_path)
+        YAAC_TILEDIR = Path.home() / "YAAC" / "tiledir"
+        YAAC_MAPCACHE = Path.home() / "YAAC" / "mapcache"
+
+        # Collect all files and compute total
+        file_list = _collect_files(usb, categories)
+        total_bytes = sum(f[0].stat().st_size for f in file_list)
+
+        _copy_progress['files_total'] = len(file_list)
+        _copy_progress['bytes_total'] = total_bytes
+
+        if not file_list:
+            _copy_progress['results'].append('⏭ Nothing to copy')
+            _copy_progress['done'] = True
+            _copy_progress['active'] = False
+            return
+
+        for src_file, dst_file, cat in file_list:
+            try:
+                # Handle yaac_mapcache: remove existing symlink/file first
+                if cat == 'yaac_mapcache':
+                    if dst_file.is_symlink() or dst_file.exists():
+                        dst_file.unlink()
+
+                # Handle tiledir: remove symlink, create parent dirs
+                if cat == 'tiledir':
                     if YAAC_TILEDIR.is_symlink():
                         YAAC_TILEDIR.unlink()
-                    if not YAAC_TILEDIR.exists():
-                        shutil.copytree(usb_tiledir, YAAC_TILEDIR)
-                        fix_ownership(YAAC_TILEDIR, recursive=True)
-                        results.append(f"✓ Copied: YAAC tiledir")
-                    else:
-                        results.append(f"⏭ Exists: YAAC tiledir")
+                    dst_file.parent.mkdir(parents=True, exist_ok=True)
 
-            elif cat == 'maps':
-                src = usb / "my-maps"
-                dst = PBF_MAP_DIR
-                if src.exists():
-                    dst.mkdir(parents=True, exist_ok=True)
-                    for f in src.glob("*.pbf"):
-                        dst_file = dst / f.name
-                        if not dst_file.exists():
-                            shutil.copy2(f, dst_file)
-                            fix_ownership(dst_file, recursive=False)
-                            results.append(f"✓ Copied: {f.name}")
-                        else:
-                            results.append(f"⏭ Exists: {f.name}")
+                _copy_with_progress(src_file, dst_file, _copy_progress)
+                fix_ownership(dst_file, recursive=False)
+                _copy_progress['files_done'] += 1
+                _copy_progress['results'].append(f"✓ Copied: {src_file.name}")
 
-                # Navit .bin maps — also part of the 'maps' category
-                navit_src = usb / "navit-maps"
-                if navit_src.exists():
-                    NAVIT_MAP_DIR.mkdir(parents=True, exist_ok=True)
-                    for f in navit_src.glob("*.bin"):
-                        dst_file = NAVIT_MAP_DIR / f.name
-                        if not dst_file.exists():
-                            shutil.copy2(f, dst_file)
-                            fix_ownership(dst_file, recursive=False)
-                            results.append(f"✓ Copied: {f.name}")
-                        else:
-                            results.append(f"⏭ Exists: {f.name}")
-                            
-            elif cat == 'wikipedia':
-                src = usb / "wikipedia"
-                dst = ZIM_DIR
-                if src.exists():
-                    dst.mkdir(parents=True, exist_ok=True)
-                    for f in src.glob("*.zim"):
-                        dst_file = dst / f.name
-                        if not dst_file.exists():
-                            shutil.copy2(f, dst_file)
-                            fix_ownership(dst_file, recursive=False)
-                            results.append(f"✓ Copied: {f.name}")
-                        else:
-                            results.append(f"⏭ Exists: {f.name}")
+            except Exception as e:
+                _copy_progress['files_done'] += 1
+                _copy_progress['results'].append(f"✗ Error: {src_file.name}: {e}")
 
-            elif cat == 'yaac_mapcache':
-                src = usb / "YAAC-MapCache"
-                YAAC_MAPCACHE = Path.home() / "YAAC" / "mapcache"
-                if src.exists():
-                    YAAC_MAPCACHE.mkdir(parents=True, exist_ok=True)
-                    for f in src.glob("*.db"):
-                        dst_file = YAAC_MAPCACHE / f.name
-                        if dst_file.is_symlink() or dst_file.exists():
-                            dst_file.unlink()
-                        shutil.copy2(f, dst_file)
-                        fix_ownership(dst_file, recursive=False)
-                        results.append(f"✓ Copied: {f.name}")
+        # Fix tiledir ownership if it was copied
+        if YAAC_TILEDIR.exists() and not YAAC_TILEDIR.is_symlink():
+            fix_ownership(YAAC_TILEDIR, recursive=True)
 
-        except Exception as e:
-            results.append(f"✗ Error copying {cat}: {e}")
-    
-    # Save which categories were copied to session
+        _copy_progress['done'] = True
+        _copy_progress['active'] = False
+
+    except Exception as e:
+        _copy_progress['error'] = str(e)
+        _copy_progress['done'] = True
+        _copy_progress['active'] = False
+
+
+@app.route('/api/data_transfer/copy', methods=['POST'])
+def api_data_transfer_copy():
+    """Start copying selected data categories from USB to HDD (background)."""
+    global _copy_progress
+    usb_path = session.get('usb_path', '') or session.get('persistence_usb_path', '')
+    categories = request.json.get('categories', [])
+
+    if not usb_path or not categories:
+        return jsonify({'success': False, 'error': 'No USB path or categories'})
+
+    if _copy_progress['active']:
+        return jsonify({'success': False, 'error': 'Copy already in progress'})
+
+    # Reset progress
+    _copy_progress = {
+        'active': True,
+        'current_file': '',
+        'current_bytes': 0,
+        'file_size': 0,
+        'files_done': 0,
+        'files_total': 0,
+        'bytes_done': 0,
+        'bytes_total': 0,
+        'results': [],
+        'done': False,
+        'error': None,
+    }
+
+    # Save categories to session
     session['copied_categories'] = categories
-    
-    return jsonify({'success': True, 'results': results})
+
+    thread = threading.Thread(target=_copy_worker, args=(usb_path, categories),
+                              daemon=True)
+    thread.start()
+
+    return jsonify({'success': True, 'started': True})
+
+
+@app.route('/api/data_transfer/progress', methods=['GET'])
+def api_data_transfer_progress():
+    """Return current data transfer copy progress."""
+    pct = 0
+    if _copy_progress['bytes_total'] > 0:
+        pct = int((_copy_progress['bytes_done'] / _copy_progress['bytes_total']) * 100)
+
+    return jsonify({
+        'active': _copy_progress['active'],
+        'percent': min(pct, 100),
+        'current_file': _copy_progress['current_file'],
+        'current_bytes': _copy_progress['current_bytes'],
+        'file_size': _copy_progress['file_size'],
+        'files_done': _copy_progress['files_done'],
+        'files_total': _copy_progress['files_total'],
+        'bytes_done': _copy_progress['bytes_done'],
+        'bytes_total': _copy_progress['bytes_total'],
+        'results': _copy_progress['results'],
+        'done': _copy_progress['done'],
+        'error': _copy_progress['error'],
+    })
 
 def configure_yaac_position():
     """Configure YAAC Beacons/MYCALL prefs with user's position and GPS setting.
@@ -1807,32 +1977,41 @@ def configure_yaac_position():
                 f'<entry key="beaconName" value="{callsign}"/>',
                 content)
 
-        # Convert grid to lat/lon and update position
-        if grid:
+        # Resolve position: prefer explicit coordinates, fall back to grid
+        user_lat = config.get('latitude', '')
+        user_lon = config.get('longitude', '')
+        coords = None
+        if user_lat and user_lon and isinstance(user_lat, (int, float)) and isinstance(user_lon, (int, float)):
+            coords = (float(user_lat), float(user_lon))
+            print(f"[YAAC] Position set from coordinates: lat={user_lat}, lon={user_lon}")
+        elif grid:
             coords = grid_to_latlon(grid)
             if coords:
-                lat, lon = coords
-                content = re.sub(
-                    r'<entry key="latitude" value="[^"]*"/>',
-                    f'<entry key="latitude" value="{lat}"/>',
-                    content)
-                content = re.sub(
-                    r'<entry key="longitude" value="[^"]*"/>',
-                    f'<entry key="longitude" value="{lon}"/>',
-                    content)
-                print(f"[YAAC] Position set from grid {grid}: lat={lat}, lon={lon}")
+                print(f"[YAAC] Position set from grid {grid}: lat={coords[0]}, lon={coords[1]}")
 
-                # Remove saved map Center from main YAAC prefs so YAAC
-                # falls back to beacon lat/lon on next startup
-                main_prefs = Path.home() / ".java" / ".userPrefs" / "org" / "ka2ddo" / "yaac" / "prefs.xml"
-                if main_prefs.exists():
-                    main_content = main_prefs.read_text()
-                    if 'key="Center"' in main_content:
-                        main_content = re.sub(
-                            r'\s*<entry key="Center" value="[^"]*"/>', '',
-                            main_content)
-                        main_prefs.write_text(main_content)
-                        print(f"[YAAC] Removed stale map Center from main prefs")
+        if coords:
+            lat, lon = coords
+            content = re.sub(
+                r'<entry key="latitude" value="[^"]*"/>',
+                f'<entry key="latitude" value="{lat}"/>',
+                content)
+            content = re.sub(
+                r'<entry key="longitude" value="[^"]*"/>',
+                f'<entry key="longitude" value="{lon}"/>',
+                content)
+            print(f"[YAAC] YAAC position updated: lat={lat}, lon={lon}")
+
+            # Remove saved map Center from main YAAC prefs so YAAC
+            # falls back to beacon lat/lon on next startup
+            main_prefs = Path.home() / ".java" / ".userPrefs" / "org" / "ka2ddo" / "yaac" / "prefs.xml"
+            if main_prefs.exists():
+                main_content = main_prefs.read_text()
+                if 'key="Center"' in main_content:
+                    main_content = re.sub(
+                        r'\s*<entry key="Center" value="[^"]*"/>', '',
+                        main_content)
+                    main_prefs.write_text(main_content)
+                    print(f"[YAAC] Removed stale map Center from main prefs")
 
         # Detect GPS and set useGpsForPosition
         has_gps = os.path.exists('/dev/et-gps')
@@ -1949,7 +2128,7 @@ def api_quit():
 # =============================================================================
 
 def run_flask(port):
-    app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False)
+    app.run(host='127.0.0.1', port=port, debug=False, use_reloader=False, threaded=True)
 
 def main():
     import argparse

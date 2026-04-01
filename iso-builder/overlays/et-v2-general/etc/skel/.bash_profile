@@ -1,6 +1,6 @@
 # Author      : Gaston Gonzalez
 # Date        : 23 April 2024
-# Updated     : 18 March 2025
+# Modified    : Sylvain Deguire (VA2OPS), March 2026
 # Description : bash profile
 
 # All user accounts should be in the 'et-data' group to allow data sharing with
@@ -14,10 +14,6 @@ xset b off
 alias pbcopy='xsel --clipboard --input'
 alias pbpaste='xsel --clipboard --output'
 
-RED='\x1B[1;31m'
-BLUE='\x1B[1;34m'
-CYAN='\x1B[1;36m'
-GREEN='\x1B[1;32m'
 YELLOW='\x1B[1;33m'
 NC='\x1B[0m'
 

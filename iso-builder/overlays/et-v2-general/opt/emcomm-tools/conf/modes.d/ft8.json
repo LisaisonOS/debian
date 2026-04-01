@@ -26,14 +26,28 @@
                 {"key": "Rig", "value": "Hamlib NET rigctl"},
                 {"key": "CATNetworkPort", "value": "localhost:4532"},
                 {"key": "SoundInName", "value": "\"sysdefault:CARD=ET_AUDIO\""},
-                {"key": "SoundOutName", "value": "\"sysdefault:CARD=ET_AUDIO\""}
+                {"key": "SoundOutName", "value": "\"sysdefault:CARD=ET_AUDIO\""},
+                {"key": "SaveDir", "source": "detect-savedir", "field": "WSJT-X/save"},
+                {"key": "AzElDir", "source": "detect-savedir", "field": "WSJT-X"}
             ]
         }
     ],
     "pre_start": [
         {"action": "kill-all"},
         {"action": "audio-config"},
-        {"action": "prime-rigctld"}
+        {"action": "prime-rigctld"},
+        {"action": "wait-audio", "seconds": 3},
+        {"action": "qsy-band", "frequencies": {
+            "160m": 1840000,
+            "80m": 3573000,
+            "40m": 7074000,
+            "30m": 10136000,
+            "20m": 14074000,
+            "17m": 18100000,
+            "15m": 21074000,
+            "12m": 24915000,
+            "10m": 28074000
+        }}
     ],
     "chain": [
         {

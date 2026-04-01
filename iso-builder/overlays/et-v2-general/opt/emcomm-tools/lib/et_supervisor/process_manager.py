@@ -110,6 +110,7 @@ class ProcessManager:
 
             proc = subprocess.Popen(
                 cmd,
+                stdin=subprocess.PIPE,
                 stdout=log_file,
                 stderr=log_file,
                 start_new_session=True,

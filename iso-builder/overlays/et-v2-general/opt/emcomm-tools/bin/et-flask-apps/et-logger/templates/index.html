@@ -1,0 +1,1474 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Header -->
+<div class="header">
+    <div class="header-left">
+        <h1>{{ t['title'] }}</h1>
+        <span class="header-subtitle">{{ t['subtitle'] }}</span>
+    </div>
+    <div class="header-right">
+        <div class="status-badges">
+            <span class="badge" id="radio-badge">--</span>
+            <button class="refresh-btn" onclick="refreshRadio()" title="Refresh radio info">&#x21BB;</button>
+            <span class="badge" id="gps-badge">--</span>
+        </div>
+        {% if my_grid %}
+        <span class="grid-badge">{{ my_grid }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+    <button class="tab active" onclick="showTab('sessions')">{{ t['sessions'] }}</button>
+    <button class="tab" onclick="showTab('logger')">{{ t['log'] }}</button>
+    <button class="tab" onclick="showTab('map')">{{ t['map'] }}</button>
+    <button class="tab" onclick="showTab('parks')">{{ t['nearest_parks'] }}</button>
+</div>
+
+<!-- Sessions Tab -->
+<div class="tab-content active" id="tab-sessions">
+    <div class="action-bar">
+        <button class="btn btn-primary" onclick="showNewSessionModal()">+ {{ t['new_session'] }}</button>
+    </div>
+
+    {% if sessions %}
+    <div class="session-list">
+        {% for s in sessions %}
+        <div class="session-card" onclick="openSession({{ s.id }})">
+            <div class="session-info">
+                <strong>{{ s.name }}</strong>
+                <span class="session-meta">{{ s.program }} — {{ s.my_sig_info or 'No park' }} — {{ s.my_callsign }}</span>
+                <span class="session-date">{{ s.created_at }}</span>
+            </div>
+            <div class="session-count">
+                <span class="qso-badge {% if s.qso_count >= 10 %}valid{% endif %}">{{ s.qso_count }}</span>
+                <span class="qso-label">{{ t['qso_count'] }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">{{ t['no_sessions'] }}</div>
+    {% endif %}
+</div>
+
+<!-- Logger Tab -->
+<div class="tab-content" id="tab-logger">
+    <div id="no-session-msg" class="empty-state">Select a session first</div>
+
+    <div id="logger-panel" style="display:none;">
+        <!-- Session info bar -->
+        <div class="session-bar">
+            <span id="session-name-display"></span>
+            <span id="session-park-display" class="park-badge"></span>
+            <div class="progress-ring" id="activation-progress">
+                <span id="qso-counter">0/10</span>
+            </div>
+        </div>
+
+        <!-- Quick log form -->
+        <div class="log-form">
+            <div class="form-row">
+                <div class="form-group form-group-call">
+                    <label>{{ t['callsign'] }}</label>
+                    <input type="text" id="qso-call" placeholder="{{ t['search_callsign'] }}"
+                           oninput="onCallsignInput(this.value)" autocomplete="off" autofocus>
+                    <div class="callsign-dropdown" id="call-dropdown"></div>
+                </div>
+                <div class="form-group form-group-rst">
+                    <label>{{ t['rst_rcvd'] }}</label>
+                    <div class="rst-display" onclick="openRSTPicker('rcvd')">
+                        <div class="rst-value" id="rst-rcvd-display">5 9</div>
+                    </div>
+                    <input type="hidden" id="qso-rst-rcvd-r" value="5">
+                    <input type="hidden" id="qso-rst-rcvd-s" value="9">
+                </div>
+                <div class="form-group form-group-rst">
+                    <label>{{ t['rst_sent'] }}</label>
+                    <div class="rst-display" onclick="openRSTPicker('sent')">
+                        <div class="rst-value" id="rst-sent-display">5 9</div>
+                    </div>
+                    <input type="hidden" id="qso-rst-sent-r" value="5">
+                    <input type="hidden" id="qso-rst-sent-s" value="9">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ t['frequency'] }} (MHz)</label>
+                    <input type="text" id="qso-freq" readonly placeholder="14.0780"
+                           pattern="[0-9]*\.?[0-9]*" inputmode="decimal"
+                           oninput="this.value=this.value.replace(/[^0-9.]/g,''); autoDetectBand()">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['band'] }}</label>
+                    <div class="picker-display" onclick="openPicker('band')" id="band-display-wrap">
+                        <div class="picker-value" id="qso-band-display">--</div>
+                    </div>
+                    <input type="hidden" id="qso-band" value="">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['mode'] }}</label>
+                    <div class="picker-display" onclick="openPicker('mode')" id="mode-display-wrap">
+                        <div class="picker-value" id="qso-mode-display">SSB</div>
+                    </div>
+                    <input type="hidden" id="qso-mode" value="SSB">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['power'] }}</label>
+                    <input type="number" id="qso-power" value="100">
+                </div>
+            </div>
+
+            <!-- Callsign info display -->
+            <div class="call-info" id="call-info" style="display:none;">
+                <span id="call-name"></span>
+                <span id="call-location"></span>
+                <span id="call-distance"></span>
+                <span id="call-dup" class="dup-warning" style="display:none;">DUPLICATE</span>
+            </div>
+
+            <!-- Park-to-Park -->
+            <div class="p2p-section">
+                <div class="p2p-toggle">
+                    <label class="p2p-label">
+                        <input type="checkbox" id="p2p-enabled" onchange="toggleP2P()">
+                        Park-to-Park (P2P)
+                    </label>
+                </div>
+                <div id="p2p-fields" style="display:none;">
+                    <div class="form-row">
+                        <div class="form-group form-group-wide" style="position:relative;">
+                            <label>Their Park(s)</label>
+                            <input type="text" id="p2p-park-search" placeholder="Search park reference or name..."
+                                   oninput="onParkSearchInput(this.value)" autocomplete="off">
+                            <div class="park-dropdown" id="park-dropdown"></div>
+                        </div>
+                    </div>
+                    <div class="p2p-selected" id="p2p-selected-parks"></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group form-group-wide">
+                    <label>{{ t['comment'] }}</label>
+                    <input type="text" id="qso-comment" placeholder="">
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-log" id="btn-log" onclick="logQSO()">
+                {{ t['log_qso'] }}
+            </button>
+        </div>
+
+        <!-- QSO list -->
+        <div class="qso-list" id="qso-list"></div>
+
+        <!-- Export button -->
+        <div class="export-bar">
+            <button class="btn btn-secondary" onclick="exportADIF()">{{ t['export_adif'] }}</button>
+            <button class="btn btn-danger" onclick="deleteSession()">{{ t['delete'] }}</button>
+        </div>
+    </div>
+</div>
+
+<!-- Parks Tab -->
+<!-- Map Tab -->
+<div class="tab-content" id="tab-map">
+    <div id="map-container">
+        <div id="qso-map"></div>
+        <div class="map-legend">
+            <span class="legend-item"><span class="legend-dot legend-me"></span> My Station</span>
+            <span class="legend-item"><span class="legend-dot legend-qso"></span> QSO</span>
+            <span class="legend-item">&#x1F3D5; Park</span>
+            <button class="btn-icon" onclick="clearParkMarkers()" title="Clear parks" style="color:var(--text-muted);font-size:0.8rem;">Clear Parks</button>
+        </div>
+    </div>
+</div>
+
+<!-- Parks Tab -->
+<div class="tab-content" id="tab-parks">
+    <div class="parks-controls">
+        <select id="parks-distance" onchange="loadNearestParks()">
+            <option value="5" selected>5 km</option>
+            <option value="10">10 km</option>
+            <option value="25">25 km</option>
+            <option value="50">50 km</option>
+            <option value="100">100 km</option>
+            <option value="200">200 km</option>
+            <option value="500">500 km</option>
+        </select>
+        <button class="btn btn-primary" onclick="showAllParksOnMap()" style="margin-left:8px;">
+            Show All on Map
+        </button>
+    </div>
+    <div class="parks-list" id="parks-list">
+        <div class="empty-state">Loading parks...</div>
+    </div>
+</div>
+
+<!-- New Session Modal -->
+<div class="modal-overlay" id="new-session-modal" style="display:none;" onclick="closeNewSessionModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>{{ t['new_session'] }}</h3>
+        <div class="form-group">
+            <label>{{ t['session_name'] }}</label>
+            <input type="text" id="new-session-name" placeholder="POTA VE-0001">
+        </div>
+        <div class="form-group">
+            <label>{{ t['program'] }}</label>
+            <select id="new-session-program">
+                <option value="POTA">POTA</option>
+                <option value="SOTA">SOTA</option>
+                <option value="General">General</option>
+            </select>
+        </div>
+        <div class="form-group" style="position:relative;">
+            <label>My Park(s) / Summit</label>
+            <input type="text" id="new-session-park-search" placeholder="Search park reference or name..."
+                   oninput="onSessionParkSearch(this.value)" autocomplete="off">
+            <div class="park-dropdown" id="session-park-dropdown"></div>
+            <div class="p2p-selected" id="session-selected-parks"></div>
+            <input type="hidden" id="new-session-ref">
+        </div>
+        <div class="form-group">
+            <label>{{ t['my_callsign'] }}</label>
+            <input type="text" id="new-session-call" value="{{ my_callsign }}">
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-secondary" onclick="closeNewSessionModal()">{{ t['cancel'] }}</button>
+            <button class="btn btn-primary" onclick="createSession()">{{ t['save'] }}</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit QSO Modal -->
+<div class="modal-overlay" id="edit-qso-modal" style="display:none;" onclick="closeEditQSO(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>Edit QSO</h3>
+        <input type="hidden" id="edit-qso-id">
+
+        <!-- Edit modal tabs -->
+        <div class="modal-tabs">
+            <button class="modal-tab active" onclick="showEditTab('qso')">QSO</button>
+            <button class="modal-tab" onclick="showEditTab('p2p')">P2P</button>
+        </div>
+
+        <!-- QSO tab -->
+        <div class="modal-tab-content active" id="edit-tab-qso">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ t['callsign'] }}</label>
+                    <input type="text" id="edit-qso-call">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['date'] }}</label>
+                    <input type="text" id="edit-qso-date">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['time_utc'] }}</label>
+                    <input type="text" id="edit-qso-time">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ t['frequency'] }}</label>
+                    <input type="text" id="edit-qso-freq">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['band'] }}</label>
+                    <input type="text" id="edit-qso-band">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['mode'] }}</label>
+                    <input type="text" id="edit-qso-mode">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ t['rst_sent'] }}</label>
+                    <input type="text" id="edit-qso-rst-sent" maxlength="3">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['rst_rcvd'] }}</label>
+                    <input type="text" id="edit-qso-rst-rcvd" maxlength="3">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['power'] }}</label>
+                    <input type="number" id="edit-qso-power">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ t['name'] }}</label>
+                    <input type="text" id="edit-qso-name">
+                </div>
+                <div class="form-group">
+                    <label>{{ t['location'] }}</label>
+                    <input type="text" id="edit-qso-state">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group form-group-wide">
+                    <label>{{ t['comment'] }}</label>
+                    <input type="text" id="edit-qso-comment">
+                </div>
+            </div>
+        </div>
+
+        <!-- P2P tab -->
+        <div class="modal-tab-content" id="edit-tab-p2p">
+            <div class="form-group" style="position:relative;">
+                <label>Their Park(s)</label>
+                <input type="text" id="edit-p2p-park-search" placeholder="Search park reference or name..."
+                       oninput="onEditParkSearch(this.value)" autocomplete="off">
+                <div class="park-dropdown" id="edit-park-dropdown"></div>
+            </div>
+            <div class="p2p-selected" id="edit-p2p-selected-parks"></div>
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="deleteQSOFromEdit()">{{ t['delete'] }}</button>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary" onclick="closeEditQSO()">{{ t['cancel'] }}</button>
+                <button class="btn btn-primary" onclick="saveEditQSO()">{{ t['save'] }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Band/Mode Picker Popup -->
+<div class="generic-picker-overlay" id="generic-picker" onclick="closeGenericPicker()">
+    <div class="rst-picker-content" onclick="event.stopPropagation()">
+        <div class="rst-picker-title" id="generic-picker-title"></div>
+        <div class="rst-picker-grid" id="generic-picker-grid"></div>
+    </div>
+</div>
+
+<!-- RST Picker Popup -->
+<div class="rst-picker" id="rst-picker" onclick="closeRSTPicker()">
+    <div class="rst-picker-content" onclick="event.stopPropagation()">
+        <div class="rst-picker-title" id="rst-picker-title"></div>
+        <div class="rst-picker-title" style="margin-bottom:4px;">Readability (1-5)</div>
+        <div class="rst-picker-grid" id="rst-picker-r"></div>
+        <div class="rst-picker-title" style="margin-top:12px;margin-bottom:4px;">Strength (1-9)</div>
+        <div class="rst-picker-grid cols-9" id="rst-picker-s"></div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="alert alert-success" id="success-alert"></div>
+<div class="alert alert-error" id="error-alert"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const T = {{ t | tojson }};
+    let currentSessionId = null;
+    let radioTimer = null;
+    let lastPower = 100;
+
+    // === Tabs ===
+    function showTab(name) {
+        document.querySelectorAll('.tab').forEach((t, i) => {
+            t.classList.toggle('active', t.textContent.trim() === {
+                'sessions': T['sessions'],
+                'logger': T['log'],
+                'map': T['map'],
+                'parks': T['nearest_parks']
+            }[name]);
+        });
+        document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+
+        if (name === 'sessions') loadSessions();
+        if (name === 'parks') loadNearestParks();
+        if (name === 'map') initMap();
+    }
+
+    // (radio polling removed — radio info fetched on demand)
+
+    // === Sessions ===
+    // === Load sessions list ===
+    function loadSessions() {
+        fetch('/api/sessions').then(r => r.json()).then(data => {
+            const container = document.getElementById('tab-sessions');
+            const actionBar = container.querySelector('.action-bar');
+            // Remove old session list
+            const oldList = container.querySelector('.session-list, .empty-state');
+            if (oldList) oldList.remove();
+
+            if (data.sessions.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'empty-state';
+                empty.textContent = T['no_sessions'];
+                container.appendChild(empty);
+            } else {
+                const list = document.createElement('div');
+                list.className = 'session-list';
+                data.sessions.forEach(s => {
+                    list.innerHTML += '<div class="session-card" onclick="openSession(' + s.id + ')">' +
+                        '<div class="session-info">' +
+                        '<strong>' + s.name + '</strong>' +
+                        '<span class="session-meta">' + s.program + ' — ' + (s.my_sig_info || 'No park') + ' — ' + s.my_callsign + '</span>' +
+                        '<span class="session-date">' + s.created_at + '</span>' +
+                        '</div>' +
+                        '<div class="session-count">' +
+                        '<span class="qso-badge ' + (s.qso_count >= 10 ? 'valid' : '') + '">' + s.qso_count + '</span>' +
+                        '<span class="qso-label">' + T['qso_count'] + '</span>' +
+                        '</div></div>';
+                });
+                container.appendChild(list);
+            }
+        });
+    }
+
+    // === Session park search ===
+    let sessionSelectedParks = [];
+    let sessionParkTimer = null;
+
+    function onSessionParkSearch(value) {
+        if (sessionParkTimer) clearTimeout(sessionParkTimer);
+        const q = value.trim();
+        if (q.length < 2) {
+            document.getElementById('session-park-dropdown').style.display = 'none';
+            return;
+        }
+        sessionParkTimer = setTimeout(() => {
+            fetch('/api/parks/search?q=' + encodeURIComponent(q.toUpperCase())).then(r => r.json()).then(data => {
+                const dd = document.getElementById('session-park-dropdown');
+                if (data.parks.length === 0) {
+                    dd.innerHTML = '<div class="dd-item" style="color:var(--text-muted)">No parks found</div>';
+                    dd.style.display = 'block';
+                    return;
+                }
+                dd.innerHTML = data.parks.slice(0, 15).map(p =>
+                    '<div class="dd-item" onclick="addSessionPark(\'' + p.reference + '\', \'' +
+                    p.name.replace(/'/g, "\\'") + '\')">' +
+                    '<strong>' + p.reference + '</strong> ' + p.name +
+                    (p.distance ? ' <span class="dd-loc">' + p.distance + ' km</span>' : '') +
+                    '</div>'
+                ).join('');
+                dd.style.display = 'block';
+            });
+        }, 300);
+    }
+
+    function addSessionPark(ref, name) {
+        if (sessionSelectedParks.find(p => p.ref === ref)) return;
+        sessionSelectedParks.push({ref: ref, name: name});
+        document.getElementById('session-park-dropdown').style.display = 'none';
+        document.getElementById('session-park-dropdown').innerHTML = '';
+        document.getElementById('new-session-park-search').value = '';
+        // Update hidden field and session name
+        document.getElementById('new-session-ref').value = sessionSelectedParks.map(p => p.ref).join(',');
+        if (!document.getElementById('new-session-name').value || sessionSelectedParks.length === 1) {
+            document.getElementById('new-session-name').value =
+                sessionSelectedParks.map(p => p.ref).join(' + ') + ' ' +
+                sessionSelectedParks[0].name;
+        }
+        renderSessionParks();
+    }
+
+    function removeSessionPark(ref) {
+        sessionSelectedParks = sessionSelectedParks.filter(p => p.ref !== ref);
+        document.getElementById('new-session-ref').value = sessionSelectedParks.map(p => p.ref).join(',');
+        renderSessionParks();
+    }
+
+    function renderSessionParks() {
+        const container = document.getElementById('session-selected-parks');
+        if (sessionSelectedParks.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        const label = sessionSelectedParks.length > 1 ?
+            ' <span style="color:var(--success);font-size:0.8rem;">(' + sessionSelectedParks.length + '-fer)</span>' : '';
+        container.innerHTML = sessionSelectedParks.map(p =>
+            '<div class="p2p-park-tag">' +
+            '<span class="p2p-ref">' + p.ref + '</span> ' + p.name +
+            ' <button class="btn-icon" onclick="removeSessionPark(\'' + p.ref + '\')">&times;</button>' +
+            '</div>'
+        ).join('') + label;
+    }
+
+    function showNewSessionModal() {
+        sessionSelectedParks = [];
+        renderSessionParks();
+        document.getElementById('new-session-park-search').value = '';
+        document.getElementById('new-session-ref').value = '';
+        document.getElementById('new-session-name').value = '';
+        document.getElementById('new-session-modal').style.display = 'flex';
+    }
+    function closeNewSessionModal(e) {
+        if (e && e.target !== document.getElementById('new-session-modal')) return;
+        document.getElementById('new-session-modal').style.display = 'none';
+    }
+    function createSession() {
+        const btn = document.querySelector('#new-session-modal .btn-primary');
+        const origText = btn.textContent;
+        btn.textContent = 'Creating...';
+        btn.disabled = true;
+
+        fetch('/api/session', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name: document.getElementById('new-session-name').value,
+                program: document.getElementById('new-session-program').value,
+                sig_info: document.getElementById('new-session-ref').value,
+                my_callsign: document.getElementById('new-session-call').value,
+            })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                closeNewSessionModal();
+                openSession(data.id);
+                showToast('success', 'Session created!');
+            } else {
+                btn.textContent = origText;
+                btn.disabled = false;
+                showToast('error', 'Failed to create session');
+            }
+        }).catch(() => {
+            btn.textContent = origText;
+            btn.disabled = false;
+            showToast('error', 'Failed to create session');
+        });
+    }
+
+    function openSession(id) {
+        currentSessionId = id;
+        showTab('logger');
+        document.getElementById('no-session-msg').style.display = 'none';
+        document.getElementById('logger-panel').style.display = 'block';
+        loadSession(id);
+        refreshRadio();  // One radio query to pre-fill freq/band/mode
+        document.getElementById('qso-call').focus();
+    }
+
+    function loadSession(id) {
+        fetch('/api/session/' + id).then(r => r.json()).then(data => {
+            document.getElementById('session-name-display').textContent = data.session.name;
+            const parks = data.session.my_sig_info ? data.session.my_sig_info.split(',') : [];
+            const parkLabel = parks.length > 1 ?
+                parks.join(' + ') + ' (' + parks.length + '-fer)' :
+                (parks[0] || '--');
+            document.getElementById('session-park-display').textContent =
+                data.session.my_sig + ': ' + parkLabel;
+            updateQSOCounter(data.count);
+            renderQSOList(data.qsos);
+            // Set power from last QSO in session
+            if (data.qsos.length > 0 && data.qsos[0].tx_pwr) {
+                lastPower = data.qsos[0].tx_pwr;
+            }
+            document.getElementById('qso-power').value = lastPower;
+            // Refresh map if visible
+            if (qsoMap) loadMapQSOs();
+        });
+    }
+
+    function updateQSOCounter(count) {
+        const el = document.getElementById('qso-counter');
+        el.textContent = count + '/10';
+        const ring = document.getElementById('activation-progress');
+        ring.className = 'progress-ring' + (count >= 10 ? ' valid' : '');
+    }
+
+    function renderQSOList(qsos) {
+        const list = document.getElementById('qso-list');
+        if (qsos.length === 0) {
+            list.innerHTML = '<div class="empty-state">No QSOs yet</div>';
+            return;
+        }
+        let html = '<table class="qso-table"><thead><tr>' +
+            '<th>#</th><th>' + T['time_utc'] + '</th><th>' + T['callsign'] + '</th>' +
+            '<th>' + T['frequency'] + '</th><th>' + T['band'] + '</th><th>' + T['mode'] + '</th>' +
+            '<th>RST</th><th>' + T['name'] + '</th><th>' + T['location'] + '</th><th>P2P</th><th></th></tr></thead><tbody>';
+        qsos.forEach((q, i) => {
+            html += '<tr style="cursor:pointer" onclick="openEditQSO(' + q.id + ')">' +
+                '<td>' + (qsos.length - i) + '</td>' +
+                '<td>' + q.time_on + '</td>' +
+                '<td class="call-col">' + q.call + '</td>' +
+                '<td>' + (q.freq ? q.freq.toFixed(4) : '') + '</td>' +
+                '<td>' + (q.band || '') + '</td>' +
+                '<td>' + (q.mode || '') + '</td>' +
+                '<td>' + (q.rst_sent || '') + '/' + (q.rst_rcvd || '') + '</td>' +
+                '<td>' + (q.name || '') + '</td>' +
+                '<td>' + ((q.state || '') + (q.country ? ', ' + q.country : '')) + '</td>' +
+                '<td>' + (q.sig_info ? '<span class="p2p-badge">' + q.sig_info + '</span>' : '') + '</td>' +
+                '<td><button class="btn-icon" onclick="deleteQSO(' + q.id + ')">x</button></td>' +
+                '</tr>';
+        });
+        html += '</tbody></table>';
+        list.innerHTML = html;
+    }
+
+    // === QSO Logging ===
+    let callSearchTimer = null;
+    let skipNextSearch = false;
+
+    function onCallsignInput(value) {
+        if (skipNextSearch) {
+            skipNextSearch = false;
+            return;
+        }
+        const call = value.toUpperCase().trim();
+        document.getElementById('qso-call').value = call;
+
+        if (callSearchTimer) clearTimeout(callSearchTimer);
+        if (call.length < 2) {
+            document.getElementById('call-dropdown').innerHTML = '';
+            document.getElementById('call-dropdown').style.display = 'none';
+            document.getElementById('call-info').style.display = 'none';
+            return;
+        }
+
+        // Duplicate check
+        if (currentSessionId && call.length >= 3) {
+            fetch('/api/duplicate-check?session_id=' + currentSessionId + '&call=' + call)
+                .then(r => r.json()).then(data => {
+                    document.getElementById('call-dup').style.display = data.duplicate ? 'inline' : 'none';
+                });
+        }
+
+        callSearchTimer = setTimeout(() => {
+            fetch('/api/callsign/search?q=' + call).then(r => r.json()).then(data => {
+                const dd = document.getElementById('call-dropdown');
+                if (data.results.length === 0) {
+                    dd.innerHTML = '';
+                    return;
+                }
+                dd.innerHTML = data.results.map(r =>
+                    '<div class="dd-item" onclick="selectCallsign(\'' + r.call + '\')">' +
+                    '<strong>' + r.call + '</strong> ' + (r.name || '') +
+                    ' <span class="dd-loc">' + (r.city || '') + ', ' + (r.state || '') + '</span></div>'
+                ).join('');
+                dd.style.display = 'block';
+            });
+
+            // Direct lookup
+            fetch('/api/callsign/' + call).then(r => {
+                if (r.ok) return r.json();
+                throw new Error('not found');
+            }).then(data => {
+                document.getElementById('call-info').style.display = 'flex';
+                document.getElementById('call-name').textContent = data.name || '';
+                document.getElementById('call-location').textContent =
+                    (data.city || '') + ', ' + (data.state || '') + ' ' + (data.country || '');
+                if (data.lat && data.lon) {
+                    fetch('/api/position').then(r => r.json()).then(pos => {
+                        if (pos.lat) {
+                            const R = 6371;
+                            const dLat = (data.lat - pos.lat) * Math.PI / 180;
+                            const dLon = (data.lon - pos.lon) * Math.PI / 180;
+                            const a = Math.sin(dLat/2)**2 + Math.cos(pos.lat*Math.PI/180) *
+                                      Math.cos(data.lat*Math.PI/180) * Math.sin(dLon/2)**2;
+                            const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                            document.getElementById('call-distance').textContent = Math.round(d) + ' km';
+                        }
+                    });
+                }
+            }).catch(() => {
+                document.getElementById('call-info').style.display = 'none';
+            });
+        }, 300);
+    }
+
+    function selectCallsign(call) {
+        // Close dropdown FIRST
+        const dd = document.getElementById('call-dropdown');
+        dd.innerHTML = '';
+        dd.style.display = 'none';
+        // Set value without triggering search
+        skipNextSearch = true;
+        document.getElementById('qso-call').value = call;
+        // Look up info without triggering dropdown again
+        fetch('/api/callsign/' + call).then(r => {
+            if (r.ok) return r.json();
+            throw new Error('not found');
+        }).then(data => {
+            document.getElementById('call-info').style.display = 'flex';
+            document.getElementById('call-name').textContent = data.name || '';
+            document.getElementById('call-location').textContent =
+                (data.city || '') + ', ' + (data.state || '') + ' ' + (data.country || '');
+        }).catch(() => {});
+        // Check duplicate
+        if (currentSessionId) {
+            fetch('/api/duplicate-check?session_id=' + currentSessionId + '&call=' + call)
+                .then(r => r.json()).then(data => {
+                    document.getElementById('call-dup').style.display = data.duplicate ? 'inline' : 'none';
+                });
+        }
+    }
+
+    // Close dropdown when clicking anywhere or on blur
+    document.addEventListener('click', function(e) {
+        const dd = document.getElementById('call-dropdown');
+        if (!e.target.closest('.form-group-call')) {
+            dd.innerHTML = '';
+            dd.style.display = 'none';
+        }
+    });
+
+    // Close on blur (tab key, etc.)
+    document.getElementById('qso-call').addEventListener('blur', function() {
+        setTimeout(() => {
+            const dd = document.getElementById('call-dropdown');
+            dd.innerHTML = '';
+            dd.style.display = 'none';
+        }, 200);  // Small delay so click on dropdown item registers first
+    });
+
+    function logQSO() {
+        const call = document.getElementById('qso-call').value.trim();
+        if (!call || !currentSessionId) return;
+
+        // Use current field values — no radio query
+        {
+            const rstSent = document.getElementById('qso-rst-sent-r').value +
+                            document.getElementById('qso-rst-sent-s').value;
+            const rstRcvd = document.getElementById('qso-rst-rcvd-r').value +
+                            document.getElementById('qso-rst-rcvd-s').value;
+
+            fetch('/api/qso', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    session_id: currentSessionId,
+                    call: call,
+                    freq: parseFloat(document.getElementById('qso-freq').value) || null,
+                    band: document.getElementById('qso-band').value,
+                    mode: document.getElementById('qso-mode').value,
+                    rst_sent: rstSent,
+                    rst_rcvd: rstRcvd,
+                    tx_pwr: parseFloat(document.getElementById('qso-power').value) || null,
+                    comment: document.getElementById('qso-comment').value,
+                    sig: selectedP2PParks.length > 0 ? 'POTA' : '',
+                    sig_info: selectedP2PParks.map(p => p.ref).join(','),
+                })
+            }).then(r => r.json()).then(data => {
+                if (data.success) {
+                    const p2pMsg = selectedP2PParks.length > 0 ?
+                        ' P2P: ' + selectedP2PParks.map(p => p.ref).join('+') : '';
+                    showToast('success', call + ' logged! (' + data.count + ' QSOs)' + p2pMsg);
+                    updateQSOCounter(data.count);
+                    loadSession(currentSessionId);
+                    // Remember power for next QSO
+                    lastPower = parseFloat(document.getElementById('qso-power').value) || 100;
+                    // Reset form but keep P2P enabled if it was
+                    document.getElementById('qso-call').value = '';
+                    resetRST();
+                    document.getElementById('qso-comment').value = '';
+                    document.getElementById('call-info').style.display = 'none';
+                    document.getElementById('call-dup').style.display = 'none';
+                    document.getElementById('call-dropdown').innerHTML = '';
+                    document.getElementById('call-dropdown').style.display = 'none';
+                    // Clear P2P parks for next QSO
+                    selectedP2PParks = [];
+                    renderSelectedParks();
+                    document.getElementById('qso-call').focus();
+                }
+            });
+        }
+    }
+
+    function deleteQSO(id) {
+        if (!confirm('Delete this QSO?')) return;
+        fetch('/api/qso/' + id, {method: 'DELETE'}).then(r => r.json()).then(() => {
+            loadSession(currentSessionId);
+        });
+    }
+
+    function deleteSession() {
+        if (!confirm('Delete this entire session and all QSOs?')) return;
+        fetch('/api/session/' + currentSessionId, {method: 'DELETE'}).then(() => {
+            location.reload();
+        });
+    }
+
+    function exportADIF() {
+        fetch('/api/export-save/' + currentSessionId, {method: 'POST'})
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', data.path + '/' + data.filename, 8000);
+                    // Open Documents folder
+                    fetch('/api/open-folder', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({path: data.path})
+                    });
+                } else {
+                    showToast('error', 'Export failed: ' + (data.error || 'unknown'));
+                }
+            });
+    }
+
+    // === Parks ===
+    function loadNearestParks() {
+        const maxKm = document.getElementById('parks-distance').value;
+        fetch('/api/parks/nearest?max_km=' + maxKm).then(r => r.json()).then(data => {
+            lastNearestParks = data.parks;
+            const list = document.getElementById('parks-list');
+            if (data.parks.length === 0) {
+                list.innerHTML = '<div class="empty-state">No parks found nearby.</div>';
+                return;
+            }
+            list.innerHTML = data.parks.map(p =>
+                '<div class="park-card">' +
+                '<div class="park-ref">' + p.reference + '</div>' +
+                '<div class="park-name">' + p.name + '</div>' +
+                '<div class="park-dist">' + p.distance + ' km</div>' +
+                '<div class="park-actions">' +
+                '<button class="btn-icon" title="Show on map" onclick="showParkOnMap(\'' +
+                    p.reference + '\', \'' + p.name.replace(/'/g, "\\'") + '\', ' +
+                    p.lat + ', ' + p.lon + ')">&#x1F5FA;</button>' +
+                '<button class="btn-icon" title="New session" onclick="selectPark(\'' +
+                    p.reference + '\', \'' + p.name.replace(/'/g, "\\'") + '\')">+</button>' +
+                '</div>' +
+                '</div>'
+            ).join('');
+        });
+    }
+
+    let lastNearestParks = [];
+
+    function showAllParksOnMap() {
+        if (lastNearestParks.length === 0) return;
+        skipMapFit = true;
+        showTab('map');
+        setTimeout(() => {
+            if (!qsoMap) initMap();
+            // Clear previous park markers
+            clearParkMarkers();
+
+            const bounds = [];
+            lastNearestParks.forEach(p => {
+                // Pushpin
+                const pin = L.circleMarker([p.lat, p.lon], {
+                    radius: 14, fillColor: '#fbbf24', color: '#fff',
+                    weight: 2, fillOpacity: 0.9
+                }).addTo(qsoMap);
+                pin.bindPopup('<b>' + p.reference + '</b><br>' + p.name + '<br>' + p.distance + ' km<br>' +
+                    '<button onclick="selectPark(\'' + p.reference + '\', \'' + p.name.replace(/'/g, "\\'") + '\')" ' +
+                    'style="margin-top:6px;padding:4px 12px;background:#FFA500;color:#1a1a1a;border:none;border-radius:4px;font-weight:600;cursor:pointer;">+ New Session</button>');
+                parkMarkers.push(pin);
+
+                // Label
+                const label = L.marker([p.lat, p.lon], {
+                    icon: L.divIcon({
+                        className: 'map-park-icon',
+                        html: '<span class="map-park-label">' + p.reference + '</span>',
+                        iconSize: [100, 20],
+                        iconAnchor: [50, 30]
+                    }),
+                    interactive: false
+                }).addTo(qsoMap);
+                parkMarkers.push(label);
+                bounds.push([p.lat, p.lon]);
+            });
+
+            // Add my position to bounds
+            fetch('/api/position').then(r => r.json()).then(data => {
+                if (data.lat) bounds.push([data.lat, data.lon]);
+                if (bounds.length > 0) {
+                    qsoMap.fitBounds(bounds, {padding: [40, 40], maxZoom: 14});
+                }
+                skipMapFit = false;
+            });
+        }, 200);
+    }
+
+    function selectPark(ref, name) {
+        if (qsoMap) clearParkMarkers();
+        showNewSessionModal();
+        addSessionPark(ref, name);
+    }
+
+    // === Toast ===
+    function showToast(type, msg, duration) {
+        const el = document.getElementById(type === 'error' ? 'error-alert' : 'success-alert');
+        el.textContent = msg;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), duration || 3000);
+    }
+
+    // === Keyboard shortcut ===
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && document.activeElement.id === 'qso-call') {
+            logQSO();
+        }
+    });
+
+    // === Update radio fields from data object ===
+    function applyRadioData(data) {
+        const badge = document.getElementById('radio-badge');
+        const freqField = document.getElementById('qso-freq');
+        if (data.connected) {
+            const freq = (data.freq / 1000000).toFixed(4);
+            badge.textContent = freq + ' ' + (data.band || '') + ' ' + (data.mode || '');
+            badge.className = 'badge badge-ok';
+            freqField.value = freq;
+            freqField.readOnly = true;
+            document.getElementById('qso-band').value = data.band || '';
+            document.getElementById('qso-band-display').textContent = data.band || '--';
+            document.getElementById('qso-band-display').dataset.locked = 'true';
+            if (data.mode) {
+                document.getElementById('qso-mode').value = data.mode;
+                document.getElementById('qso-mode-display').textContent = data.mode;
+            }
+            if (data.power) {
+                document.getElementById('qso-power').value = data.power;
+            }
+        } else {
+            badge.textContent = T['radio_disconnected'];
+            badge.className = 'badge badge-off';
+            freqField.readOnly = false;
+            document.getElementById('qso-band-display').dataset.locked = 'false';
+        }
+    }
+
+    // === Refresh radio info (on demand) ===
+    function refreshRadio() {
+        return fetch('/api/radio').then(r => r.json()).then(applyRadioData).catch(() => {
+            document.getElementById('qso-freq').readOnly = false;
+            document.getElementById('qso-band-display').dataset.locked = 'false';
+        });
+    }
+
+    // === Auto-QSY: SSE stream from rig polling ===
+    let radioSSE = null;
+    function startRadioStream() {
+        if (radioSSE) radioSSE.close();
+        radioSSE = new EventSource('/api/radio/stream');
+        radioSSE.onmessage = function(e) {
+            try {
+                applyRadioData(JSON.parse(e.data));
+            } catch(err) {}
+        };
+        radioSSE.onerror = function() {
+            // Reconnect handled automatically by EventSource
+        };
+    }
+    startRadioStream();
+
+    // === RST Picker ===
+    let rstPickerTarget = null; // 'rcvd' or 'sent'
+
+    function openRSTPicker(target) {
+        rstPickerTarget = target;
+        const curR = document.getElementById('qso-rst-' + target + '-r').value;
+        const curS = document.getElementById('qso-rst-' + target + '-s').value;
+        const title = target === 'rcvd' ? T['rst_rcvd'] : T['rst_sent'];
+        document.getElementById('rst-picker-title').textContent = title;
+
+        // Build R buttons (1-5)
+        let rHtml = '';
+        for (let i = 1; i <= 5; i++) {
+            rHtml += '<div class="rst-pick-btn' + (i == curR ? ' active' : '') +
+                '" onclick="pickRST(\'r\',' + i + ',this)">' + i + '</div>';
+        }
+        document.getElementById('rst-picker-r').innerHTML = rHtml;
+
+        // Build S buttons (1-9)
+        let sHtml = '';
+        for (let i = 1; i <= 9; i++) {
+            sHtml += '<div class="rst-pick-btn' + (i == curS ? ' active' : '') +
+                '" onclick="pickRST(\'s\',' + i + ',this)">' + i + '</div>';
+        }
+        document.getElementById('rst-picker-s').innerHTML = sHtml;
+
+        document.getElementById('rst-picker').classList.add('show');
+    }
+
+    function pickRST(type, value, btn) {
+        document.getElementById('qso-rst-' + rstPickerTarget + '-' + type).value = value;
+        btn.parentElement.querySelectorAll('.rst-pick-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateRSTDisplay(rstPickerTarget);
+        // Auto-close after strength is picked
+        if (type === 's') {
+            setTimeout(closeRSTPicker, 200);
+        }
+    }
+
+    function closeRSTPicker() {
+        document.getElementById('rst-picker').classList.remove('show');
+    }
+
+    function updateRSTDisplay(target) {
+        const r = document.getElementById('qso-rst-' + target + '-r').value;
+        const s = document.getElementById('qso-rst-' + target + '-s').value;
+        document.getElementById('rst-' + target + '-display').textContent = r + ' ' + s;
+    }
+
+    function resetRST() {
+        document.getElementById('qso-rst-rcvd-r').value = '5';
+        document.getElementById('qso-rst-rcvd-s').value = '9';
+        document.getElementById('qso-rst-sent-r').value = '5';
+        document.getElementById('qso-rst-sent-s').value = '9';
+        document.getElementById('rst-rcvd-display').textContent = '5 9';
+        document.getElementById('rst-sent-display').textContent = '5 9';
+    }
+
+    // === Band/Mode Picker ===
+    const BANDS = ['160m','80m','60m','40m','30m','20m','17m','15m','12m','10m','6m','2m','70cm'];
+    const MODES = ['SSB','CW','FM','FT8','FT4','DIG'];
+
+    function openPicker(type) {
+        // Don't open if radio is controlling it
+        if (type === 'band' && document.getElementById('qso-band-display').dataset.locked === 'true') return;
+
+        const title = type === 'band' ? T['band'] : T['mode'];
+        const items = type === 'band' ? BANDS : MODES;
+        const current = document.getElementById('qso-' + type).value;
+
+        document.getElementById('generic-picker-title').textContent = title;
+        const grid = document.getElementById('generic-picker-grid');
+        grid.className = 'rst-picker-grid' + (items.length > 5 ? ' cols-9' : '');
+        grid.innerHTML = items.map(item =>
+            '<div class="rst-pick-btn' + (item === current ? ' active' : '') +
+            '" onclick="pickGeneric(\'' + type + '\',\'' + item + '\')">' + item + '</div>'
+        ).join('');
+
+        document.getElementById('generic-picker').classList.add('show');
+    }
+
+    function pickGeneric(type, value) {
+        document.getElementById('qso-' + type).value = value;
+        document.getElementById('qso-' + type + '-display').textContent = value;
+        setTimeout(closeGenericPicker, 200);
+    }
+
+    function closeGenericPicker() {
+        document.getElementById('generic-picker').classList.remove('show');
+    }
+
+    // === Auto-detect band from frequency ===
+    function autoDetectBand() {
+        const freq = parseFloat(document.getElementById('qso-freq').value);
+        if (!freq || isNaN(freq)) return;
+        const bands = [
+            [1.8, 2.0, '160m'], [3.5, 4.0, '80m'], [5.3, 5.4, '60m'],
+            [7.0, 7.3, '40m'], [10.1, 10.15, '30m'], [14.0, 14.35, '20m'],
+            [18.068, 18.168, '17m'], [21.0, 21.45, '15m'],
+            [24.89, 24.99, '12m'], [28.0, 29.7, '10m'],
+            [50.0, 54.0, '6m'], [144.0, 148.0, '2m'], [420.0, 450.0, '70cm'],
+        ];
+        for (const [low, high, name] of bands) {
+            if (freq >= low && freq <= high) {
+                document.getElementById('qso-band').value = name;
+                document.getElementById('qso-band-display').textContent = name;
+                return;
+            }
+        }
+        document.getElementById('qso-band').value = '';
+        document.getElementById('qso-band-display').textContent = '--';
+    }
+
+    // === Edit QSO ===
+    let editP2PParks = [];
+    let editParkTimer = null;
+
+    function showEditTab(name) {
+        document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.modal-tab-content').forEach(tc => tc.classList.remove('active'));
+        document.querySelectorAll('.modal-tab').forEach(t => {
+            if (t.textContent.trim().toLowerCase() === name) t.classList.add('active');
+        });
+        document.getElementById('edit-tab-' + name).classList.add('active');
+    }
+
+    function openEditQSO(qsoId) {
+        fetch('/api/qso/' + qsoId).then(r => r.json()).then(q => {
+            document.getElementById('edit-qso-id').value = q.id;
+            document.getElementById('edit-qso-call').value = q.call || '';
+            document.getElementById('edit-qso-date').value = q.qso_date || '';
+            document.getElementById('edit-qso-time').value = q.time_on || '';
+            document.getElementById('edit-qso-freq').value = q.freq || '';
+            document.getElementById('edit-qso-band').value = q.band || '';
+            document.getElementById('edit-qso-mode').value = q.mode || '';
+            document.getElementById('edit-qso-rst-sent').value = q.rst_sent || '59';
+            document.getElementById('edit-qso-rst-rcvd').value = q.rst_rcvd || '59';
+            document.getElementById('edit-qso-power').value = q.tx_pwr || '';
+            document.getElementById('edit-qso-name').value = q.name || '';
+            document.getElementById('edit-qso-state').value = q.state || '';
+            document.getElementById('edit-qso-comment').value = q.comment || '';
+
+            // Load P2P parks
+            editP2PParks = [];
+            if (q.sig_info) {
+                q.sig_info.split(',').forEach(ref => {
+                    ref = ref.trim();
+                    if (ref) editP2PParks.push({ref: ref, name: ''});
+                });
+            }
+            renderEditP2PParks();
+
+            showEditTab('qso');
+            document.getElementById('edit-qso-modal').style.display = 'flex';
+        });
+    }
+
+    function onEditParkSearch(value) {
+        if (editParkTimer) clearTimeout(editParkTimer);
+        const q = value.trim();
+        if (q.length < 2) {
+            document.getElementById('edit-park-dropdown').style.display = 'none';
+            return;
+        }
+        editParkTimer = setTimeout(() => {
+            fetch('/api/parks/search?q=' + encodeURIComponent(q.toUpperCase())).then(r => r.json()).then(data => {
+                const dd = document.getElementById('edit-park-dropdown');
+                if (data.parks.length === 0) {
+                    dd.innerHTML = '<div class="dd-item" style="color:var(--text-muted)">No parks found</div>';
+                    dd.style.display = 'block';
+                    return;
+                }
+                dd.innerHTML = data.parks.slice(0, 15).map(p =>
+                    '<div class="dd-item" onclick="addEditP2PPark(\'' + p.reference + '\', \'' +
+                    p.name.replace(/'/g, "\\'") + '\')">' +
+                    '<strong>' + p.reference + '</strong> ' + p.name + '</div>'
+                ).join('');
+                dd.style.display = 'block';
+            });
+        }, 300);
+    }
+
+    function addEditP2PPark(ref, name) {
+        if (editP2PParks.find(p => p.ref === ref)) return;
+        editP2PParks.push({ref: ref, name: name});
+        document.getElementById('edit-park-dropdown').style.display = 'none';
+        document.getElementById('edit-p2p-park-search').value = '';
+        renderEditP2PParks();
+    }
+
+    function removeEditP2PPark(ref) {
+        editP2PParks = editP2PParks.filter(p => p.ref !== ref);
+        renderEditP2PParks();
+    }
+
+    function renderEditP2PParks() {
+        const container = document.getElementById('edit-p2p-selected-parks');
+        if (editP2PParks.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">No P2P parks</div>';
+            return;
+        }
+        container.innerHTML = editP2PParks.map(p =>
+            '<div class="p2p-park-tag">' +
+            '<span class="p2p-ref">' + p.ref + '</span> ' + (p.name || '') +
+            ' <button class="btn-icon" onclick="removeEditP2PPark(\'' + p.ref + '\')">&times;</button>' +
+            '</div>'
+        ).join('');
+    }
+
+    function closeEditQSO(e) {
+        if (e && e.target !== document.getElementById('edit-qso-modal')) return;
+        document.getElementById('edit-qso-modal').style.display = 'none';
+    }
+
+    function saveEditQSO() {
+        const id = document.getElementById('edit-qso-id').value;
+        fetch('/api/qso/' + id, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                call: document.getElementById('edit-qso-call').value.toUpperCase().trim(),
+                qso_date: document.getElementById('edit-qso-date').value,
+                time_on: document.getElementById('edit-qso-time').value,
+                freq: parseFloat(document.getElementById('edit-qso-freq').value) || null,
+                band: document.getElementById('edit-qso-band').value,
+                mode: document.getElementById('edit-qso-mode').value,
+                rst_sent: document.getElementById('edit-qso-rst-sent').value,
+                rst_rcvd: document.getElementById('edit-qso-rst-rcvd').value,
+                tx_pwr: parseFloat(document.getElementById('edit-qso-power').value) || null,
+                name: document.getElementById('edit-qso-name').value,
+                state: document.getElementById('edit-qso-state').value,
+                comment: document.getElementById('edit-qso-comment').value,
+                sig: editP2PParks.length > 0 ? 'POTA' : '',
+                sig_info: editP2PParks.map(p => p.ref).join(','),
+            })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                closeEditQSO();
+                loadSession(currentSessionId);
+                showToast('success', 'QSO updated');
+            }
+        });
+    }
+
+    function deleteQSOFromEdit() {
+        const id = document.getElementById('edit-qso-id').value;
+        if (!confirm('Delete this QSO?')) return;
+        fetch('/api/qso/' + id, {method: 'DELETE'}).then(r => r.json()).then(() => {
+            closeEditQSO();
+            loadSession(currentSessionId);
+            showToast('success', 'QSO deleted');
+        });
+    }
+
+    // === Park-to-Park ===
+    let selectedP2PParks = [];
+    let parkSearchTimer = null;
+
+    function toggleP2P() {
+        const enabled = document.getElementById('p2p-enabled').checked;
+        document.getElementById('p2p-fields').style.display = enabled ? 'block' : 'none';
+        if (!enabled) {
+            selectedP2PParks = [];
+            renderSelectedParks();
+        } else {
+            // Auto-prefix park search based on the callsign's country
+            const call = document.getElementById('qso-call').value.toUpperCase();
+            const searchField = document.getElementById('p2p-park-search');
+            if (call.match(/^(VA|VE|VO|VY|CF|CG|CH|CI)/)) {
+                searchField.value = 'CA-';
+            } else if (call.match(/^[AKNW]/)) {
+                searchField.value = 'US-';
+            }
+            searchField.focus();
+        }
+    }
+
+    function onParkSearchInput(value) {
+        if (parkSearchTimer) clearTimeout(parkSearchTimer);
+        const q = value.trim();
+        if (q.length < 2) {
+            document.getElementById('park-dropdown').style.display = 'none';
+            return;
+        }
+        parkSearchTimer = setTimeout(() => {
+            fetch('/api/parks/search?q=' + encodeURIComponent(q)).then(r => r.json()).then(data => {
+                const dd = document.getElementById('park-dropdown');
+                if (data.parks.length === 0) {
+                    dd.innerHTML = '<div class="dd-item" style="color:var(--text-muted)">No parks found</div>';
+                    dd.style.display = 'block';
+                    return;
+                }
+                dd.innerHTML = data.parks.slice(0, 15).map(p =>
+                    '<div class="dd-item" onclick="addP2PPark(\'' + p.reference + '\', \'' +
+                    p.name.replace(/'/g, "\\'") + '\')">' +
+                    '<strong>' + p.reference + '</strong> ' + p.name +
+                    (p.distance ? ' <span class="dd-loc">' + p.distance + ' km</span>' : '') +
+                    '</div>'
+                ).join('');
+                dd.style.display = 'block';
+            });
+        }, 300);
+    }
+
+    function addP2PPark(ref, name) {
+        // Don't add duplicates
+        if (selectedP2PParks.find(p => p.ref === ref)) return;
+        selectedP2PParks.push({ref: ref, name: name});
+        document.getElementById('park-dropdown').style.display = 'none';
+        document.getElementById('park-dropdown').innerHTML = '';
+        document.getElementById('p2p-park-search').value = '';
+        renderSelectedParks();
+    }
+
+    function removeP2PPark(ref) {
+        selectedP2PParks = selectedP2PParks.filter(p => p.ref !== ref);
+        renderSelectedParks();
+    }
+
+    function renderSelectedParks() {
+        const container = document.getElementById('p2p-selected-parks');
+        if (selectedP2PParks.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        container.innerHTML = selectedP2PParks.map(p =>
+            '<div class="p2p-park-tag">' +
+            '<span class="p2p-ref">' + p.ref + '</span> ' + p.name +
+            ' <button class="btn-icon" onclick="removeP2PPark(\'' + p.ref + '\')">&times;</button>' +
+            '</div>'
+        ).join('');
+    }
+
+    // Close park dropdown on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.form-group-wide') || !e.target.closest('#p2p-fields')) {
+            const dd = document.getElementById('park-dropdown');
+            if (dd) { dd.style.display = 'none'; }
+        }
+    });
+
+    // === Map ===
+    let qsoMap = null;
+    let mapMarkers = [];
+    let mapLines = [];
+    let parkMarkers = [];
+    let skipMapFit = false;
+
+    function showParkOnMap(ref, name, lat, lon) {
+        skipMapFit = true;
+        showTab('map');
+        setTimeout(() => {
+            if (!qsoMap) initMap();
+
+            // Pushpin marker
+            const pin = L.circleMarker([lat, lon], {
+                radius: 14, fillColor: '#fbbf24', color: '#fff',
+                weight: 2, fillOpacity: 0.9
+            }).addTo(qsoMap);
+            pin.bindPopup('<b>' + ref + '</b><br>' + name + '<br>' +
+                '<button onclick="selectPark(\'' + ref + '\', \'' + name.replace(/'/g, "\\'") + '\')" ' +
+                'style="margin-top:6px;padding:4px 12px;background:#FFA500;color:#1a1a1a;border:none;border-radius:4px;font-weight:600;cursor:pointer;">+ New Session</button>');
+            parkMarkers.push(pin);
+
+            // Label above pushpin
+            const label = L.marker([lat, lon], {
+                icon: L.divIcon({
+                    className: 'map-park-icon',
+                    html: '<span class="map-park-label">' + ref + '</span>',
+                    iconSize: [100, 20],
+                    iconAnchor: [50, 30]
+                }),
+                interactive: false
+            }).addTo(qsoMap);
+            parkMarkers.push(label);
+
+            // Zoom to max available and prevent auto-fit
+            skipMapFit = true;
+            qsoMap.setView([lat, lon], qsoMap.getMaxZoom() || 18);
+            setTimeout(() => { skipMapFit = false; }, 10000);
+        }, 200);
+    }
+
+    function clearParkMarkers() {
+        parkMarkers.forEach(m => qsoMap.removeLayer(m));
+        parkMarkers = [];
+    }
+
+    function initMap() {
+        if (qsoMap) {
+            qsoMap.invalidateSize();
+            if (currentSessionId && !skipMapFit) loadMapQSOs();
+            return;
+        }
+
+        // Default center (will be updated with position)
+        let center = [45.5, -73.5];
+        let zoom = 5;
+
+        qsoMap = L.map('qso-map').setView(center, zoom);
+
+        // Try local mbtileserver first, fallback to OSM online
+        L.tileLayer('http://localhost:1982/services/tt-world/tiles/{z}/{x}/{y}.png', {
+            attribution: 'EmComm-Tools',
+            maxZoom: 14
+        }).on('tileerror', function() {
+            // Fallback to OSM online if mbtileserver not running
+            if (!qsoMap._fallbackAdded) {
+                qsoMap._fallbackAdded = true;
+                L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap',
+                    maxZoom: 19
+                }).addTo(qsoMap);
+            }
+        }).addTo(qsoMap);
+
+        // Get position and center map
+        fetch('/api/position').then(r => r.json()).then(data => {
+            if (data.lat) {
+                if (!skipMapFit) qsoMap.setView([data.lat, data.lon], 6);
+                // Add my station marker
+                L.circleMarker([data.lat, data.lon], {
+                    radius: 10, fillColor: '#FFA500', color: '#fff',
+                    weight: 2, fillOpacity: 0.9
+                }).addTo(qsoMap).bindPopup('<b>My Station</b><br>' + (data.grid || ''));
+            }
+        });
+
+        if (currentSessionId && !skipMapFit) loadMapQSOs();
+    }
+
+    function loadMapQSOs() {
+        if (!qsoMap || !currentSessionId) return;
+
+        // Clear existing markers and lines
+        mapMarkers.forEach(m => qsoMap.removeLayer(m));
+        mapLines.forEach(l => qsoMap.removeLayer(l));
+        mapMarkers = [];
+        mapLines = [];
+
+        fetch('/api/session/' + currentSessionId).then(r => r.json()).then(data => {
+            const myLat = data.session.my_lat;
+            const myLon = data.session.my_lon;
+            const bounds = [];
+
+            if (myLat && myLon) bounds.push([myLat, myLon]);
+
+            data.qsos.forEach(q => {
+                if (!q.qso_lat || !q.qso_lon) return;
+
+                // QSO marker
+                const marker = L.circleMarker([q.qso_lat, q.qso_lon], {
+                    radius: 7, fillColor: '#4ade80', color: '#1a3a1a',
+                    weight: 2, fillOpacity: 0.8
+                }).addTo(qsoMap);
+
+                // Callsign label above dot
+                const label = L.marker([q.qso_lat, q.qso_lon], {
+                    icon: L.divIcon({
+                        className: 'map-call-label',
+                        html: '<span>' + q.call + '</span>',
+                        iconSize: [80, 20],
+                        iconAnchor: [40, 30]
+                    }),
+                    interactive: false
+                }).addTo(qsoMap);
+                mapMarkers.push(label);
+
+                let distStr = '';
+                if (myLat && myLon && q.qso_lat && q.qso_lon) {
+                    const R = 6371;
+                    const dLat = (q.qso_lat - myLat) * Math.PI / 180;
+                    const dLon = (q.qso_lon - myLon) * Math.PI / 180;
+                    const a = Math.sin(dLat/2)**2 + Math.cos(myLat*Math.PI/180) *
+                              Math.cos(q.qso_lat*Math.PI/180) * Math.sin(dLon/2)**2;
+                    distStr = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))) + ' km';
+                }
+                marker.bindPopup(
+                    '<b>' + q.call + '</b><br>' +
+                    (q.name || '') + '<br>' +
+                    (q.state || '') + ' ' + (q.country || '') + '<br>' +
+                    q.band + ' ' + q.mode + ' ' + q.time_on + ' UTC' +
+                    (distStr ? '<br><b>' + distStr + '</b>' : '')
+                );
+                mapMarkers.push(marker);
+                bounds.push([q.qso_lat, q.qso_lon]);
+
+                // Line from my station to QSO
+                if (myLat && myLon) {
+                    const line = L.polyline(
+                        [[myLat, myLon], [q.qso_lat, q.qso_lon]],
+                        {color: '#FFA500', weight: 3, opacity: 0.7}
+                    ).addTo(qsoMap);
+                    mapLines.push(line);
+                }
+            });
+
+            // Fit map to show all QSOs
+            if (bounds.length > 1) {
+                if (!skipMapFit) qsoMap.fitBounds(bounds, {padding: [30, 30]});
+            }
+        });
+    }
+
+    // === Init ===
+    // Check GPS on load (radio only on session open or manual refresh)
+    fetch('/api/position').then(r => r.json()).then(data => {
+        const badge = document.getElementById('gps-badge');
+        if (data.lat) {
+            badge.textContent = data.grid + ' (' + data.source + ')';
+            badge.className = 'badge badge-ok';
+        } else {
+            badge.textContent = 'No GPS';
+            badge.className = 'badge badge-off';
+        }
+    }).catch(() => {});
+</script>
+{% endblock %}

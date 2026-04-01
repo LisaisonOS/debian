@@ -36,6 +36,21 @@
             </div>
 
             <div class="form-group">
+                <label>📍 {{ t['coordinates'] }}</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="latitude" name="latitude"
+                           value="{{ config.get('latitude', '') if config.get('latitude', '') != '' else '' }}"
+                           placeholder="{{ t['latitude_placeholder'] }}"
+                           style="flex: 1;">
+                    <input type="text" id="longitude" name="longitude"
+                           value="{{ config.get('longitude', '') if config.get('longitude', '') != '' else '' }}"
+                           placeholder="{{ t['longitude_placeholder'] }}"
+                           style="flex: 1;">
+                </div>
+                <div class="hint">{{ t['coordinates_hint'] }}</div>
+            </div>
+
+            <div class="form-group">
                 <label for="name">😊 {{ t['name'] }}</label>
                 <input type="text" id="name" name="name"
                        value="{{ config.name or '' }}"
@@ -92,6 +107,8 @@
 async function saveConfig() {
     const callsign = document.getElementById('callsign').value.trim().toUpperCase();
     const grid = document.getElementById('grid').value.trim().toUpperCase();
+    const latitude = document.getElementById('latitude').value.trim();
+    const longitude = document.getElementById('longitude').value.trim();
     const name = document.getElementById('name').value.trim();
     const password = document.getElementById('password').value;
 
@@ -111,6 +128,8 @@ async function saveConfig() {
             body: JSON.stringify({
                 callsign: callsign,
                 grid_square: grid,
+                latitude: latitude,
+                longitude: longitude,
                 name: name,
                 password: password
             })
@@ -152,9 +171,33 @@ document.getElementById('callsign').addEventListener('input', function() {
     this.value = this.value.toUpperCase();
 });
 
-// Auto-uppercase grid
+// Auto-uppercase grid + auto-fill lat/lon
+function gridToLatLon(grid) {
+    grid = grid.trim().toUpperCase();
+    if (grid.length < 4) return null;
+    var a = grid.charCodeAt(0), b = grid.charCodeAt(1);
+    var A = 'A'.charCodeAt(0);
+    if (a < A || a > A+17 || b < A || b > A+17) return null;
+    if (!/\d/.test(grid[2]) || !/\d/.test(grid[3])) return null;
+    var lon = (a - A) * 20 - 180 + parseInt(grid[2]) * 2;
+    var lat = (b - A) * 10 - 90  + parseInt(grid[3]);
+    if (grid.length >= 6) {
+        var slon = grid.charCodeAt(4) - A, slat = grid.charCodeAt(5) - A;
+        if (slon >= 0 && slon < 24 && slat >= 0 && slat < 24) {
+            lon += slon * (2.0/24) + 1.0/24;
+            lat += slat * (1.0/24) + 0.5/24;
+        } else { lon += 1; lat += 0.5; }
+    } else { lon += 1; lat += 0.5; }
+    return [Math.round(lat*1e6)/1e6, Math.round(lon*1e6)/1e6];
+}
+
 document.getElementById('grid').addEventListener('input', function() {
     this.value = this.value.toUpperCase();
+    var coords = gridToLatLon(this.value);
+    if (coords) {
+        document.getElementById('latitude').value = coords[0];
+        document.getElementById('longitude').value = coords[1];
+    }
 });
 </script>
 {% endblock %}

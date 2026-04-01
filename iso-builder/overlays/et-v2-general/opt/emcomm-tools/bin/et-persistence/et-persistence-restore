@@ -441,6 +441,18 @@ else
     log "⏭ Skip: Custom radio configs (none saved)"
 fi
 
+# --- Repeater Directory Data ---
+REPEATER_USB="${PERSISTENCE_PATH}/configs/repeaters"
+REPEATER_DIR="${HOME}/.config/emcomm-tools/repeaters"
+if [[ -d "$REPEATER_USB" ]] && [[ -n "$(ls -A "$REPEATER_USB" 2>/dev/null)" ]]; then
+    mkdir -p "$REPEATER_DIR"
+    cp -f "$REPEATER_USB"/*.json "$REPEATER_DIR/" 2>/dev/null || true
+    log "✓ Restored: Repeater directory data"
+    ((RESTORED++)) || true
+else
+    log "⏭ Skip: Repeater directory (none saved)"
+fi
+
 # --- Active Radio (restore symlink) ---
 # Uses et-data group permissions (NO sudo needed - same as et-radio Flask app)
 log "Restoring active radio..."

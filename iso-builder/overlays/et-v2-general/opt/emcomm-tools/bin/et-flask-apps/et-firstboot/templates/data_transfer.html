@@ -200,30 +200,35 @@ function skipCopy() {
     });
 }
 
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+let progressTimer = null;
+let lastResultCount = 0;
+
 function startCopy() {
     if (copyRunning) return;
-    
-    // Get selected categories
+
     const checkboxes = document.querySelectorAll('input[name="category"]:checked');
     const categories = Array.from(checkboxes).map(cb => cb.value);
-    
+
     if (categories.length === 0) {
-        // Nothing selected, go to complete
         window.location.href = '/complete';
         return;
     }
-    
+
     copyRunning = true;
-    
-    // Disable buttons
+
     document.getElementById('btn-copy').disabled = true;
     document.getElementById('btn-skip').style.pointerEvents = 'none';
     document.getElementById('btn-skip').style.opacity = '0.5';
-    
-    // Disable checkboxes
     document.querySelectorAll('input[name="category"]').forEach(cb => cb.disabled = true);
-    
-    // Show progress and scroll it into view (important on small screens)
+
     document.getElementById('progress-container').style.display = 'block';
     document.getElementById('progress-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -231,8 +236,10 @@ function startCopy() {
     const progressBar = document.getElementById('progress-bar');
     const progressPercent = document.getElementById('progress-percent');
     const progressTitle = document.getElementById('progress-title');
-    
-    // Start copy
+
+    progressTitle.textContent = '{{ t("copying") }}...';
+    lastResultCount = 0;
+
     fetch('/api/data_transfer/copy', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -240,39 +247,10 @@ function startCopy() {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            // Show results
-            let progress = 0;
-            const step = 100 / data.results.length;
-            
-            data.results.forEach((result, i) => {
-                setTimeout(() => {
-                    const item = document.createElement('div');
-                    item.className = 'log-item';
-                    if (result.includes('✓')) item.className += ' success';
-                    else if (result.includes('⏭')) item.className += ' skip';
-                    else if (result.includes('✗')) item.className += ' error';
-                    item.textContent = result;
-                    logDiv.appendChild(item);
-                    logDiv.scrollTop = logDiv.scrollHeight;
-                    
-                    progress += step;
-                    progressBar.style.width = Math.min(progress, 100) + '%';
-                    progressPercent.textContent = Math.round(Math.min(progress, 100)) + '%';
-                    
-                    if (i === data.results.length - 1) {
-                        progressTitle.textContent = '{{ t("copy_complete") }}';
-                        progressBar.style.width = '100%';
-                        progressPercent.textContent = '100%';
-                        
-                        setTimeout(() => {
-                            window.location.href = '/complete';
-                        }, 1500);
-                    }
-                }, i * 300);
-            });
+        if (data.started) {
+            pollCopyProgress();
         } else {
-            progressTitle.textContent = '{{ t("error") }}: ' + data.error;
+            progressTitle.textContent = '{{ t("error") }}: ' + (data.error || 'Unknown');
             progressTitle.style.color = '#f44336';
         }
     })
@@ -280,6 +258,69 @@ function startCopy() {
         progressTitle.textContent = '{{ t("error") }}: ' + error;
         progressTitle.style.color = '#f44336';
     });
+}
+
+function pollCopyProgress() {
+    const logDiv = document.getElementById('progress-log');
+    const progressBar = document.getElementById('progress-bar');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressTitle = document.getElementById('progress-title');
+
+    progressTimer = setInterval(() => {
+        fetch('/api/data_transfer/progress')
+            .then(r => r.json())
+            .then(data => {
+                // Update progress bar
+                progressBar.style.width = data.percent + '%';
+                progressPercent.textContent = data.percent + '%';
+
+                // Update title with current file and speed info
+                if (data.current_file) {
+                    let info = data.current_file;
+                    if (data.file_size > 0) {
+                        info += ' — ' + formatBytes(data.current_bytes) + ' / ' + formatBytes(data.file_size);
+                    }
+                    if (data.files_total > 0) {
+                        info += '  (' + data.files_done + '/' + data.files_total + ' files)';
+                    }
+                    progressTitle.textContent = info;
+                }
+
+                // Append new log results
+                if (data.results && data.results.length > lastResultCount) {
+                    for (let i = lastResultCount; i < data.results.length; i++) {
+                        const item = document.createElement('div');
+                        item.className = 'log-item';
+                        if (data.results[i].includes('✓')) item.className += ' success';
+                        else if (data.results[i].includes('⏭')) item.className += ' skip';
+                        else if (data.results[i].includes('✗')) item.className += ' error';
+                        item.textContent = data.results[i];
+                        logDiv.appendChild(item);
+                        logDiv.scrollTop = logDiv.scrollHeight;
+                    }
+                    lastResultCount = data.results.length;
+                }
+
+                // Done
+                if (data.done) {
+                    clearInterval(progressTimer);
+                    progressTimer = null;
+                    progressBar.style.width = '100%';
+                    progressPercent.textContent = '100%';
+
+                    if (data.error) {
+                        progressTitle.textContent = '{{ t("error") }}: ' + data.error;
+                        progressTitle.style.color = '#f44336';
+                    } else {
+                        let total = formatBytes(data.bytes_done);
+                        progressTitle.textContent = '{{ t("copy_complete") }} — ' + total;
+                        setTimeout(() => {
+                            window.location.href = '/complete';
+                        }, 2000);
+                    }
+                }
+            });
+    }, 500);
 }
 </script>
 {% endblock %}

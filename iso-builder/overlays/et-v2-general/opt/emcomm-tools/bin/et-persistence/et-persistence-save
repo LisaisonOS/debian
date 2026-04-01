@@ -494,6 +494,16 @@ if [[ -d "$USER_RADIOS" ]] && [[ -n "$(ls -A "$USER_RADIOS" 2>/dev/null)" ]]; th
     log "✓ Saved: Custom radio configs ($RADIO_COUNT files)"
 fi
 
+# --- Repeater Directory Data ---
+REPEATER_DIR="${HOME}/.config/emcomm-tools/repeaters"
+if [[ -d "$REPEATER_DIR" ]] && [[ -n "$(ls -A "$REPEATER_DIR" 2>/dev/null)" ]]; then
+    mkdir -p "${PERSISTENCE_PATH}/configs/repeaters"
+    cp -f "$REPEATER_DIR"/*.json "${PERSISTENCE_PATH}/configs/repeaters/" 2>/dev/null || true
+    log "✓ Saved: Repeater directory data"
+else
+    log "⏭ Skip: Repeater directory (no data)"
+fi
+
 # --- VarAC License (IMPORTANT!) ---
 save_file "${HOME}/.config/emcomm-tools/varac/license.flag" "${PERSISTENCE_PATH}/varac/license.flag" "VarAC license"
 save_file "${HOME}/.config/emcomm-tools/varac/license-audit.log" "${PERSISTENCE_PATH}/varac/license-audit.log" "VarAC audit log"

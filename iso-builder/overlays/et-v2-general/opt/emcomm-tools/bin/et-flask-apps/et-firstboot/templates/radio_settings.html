@@ -31,7 +31,7 @@
         
         {% if saved_file %}
         <div class="dest-info" style="margin-top: 10px; flex-shrink: 0;">
-            <span class="label">📄 {{ 'Saved to' if lang == 'en' else 'Sauvegardé dans' }}:</span>
+            <span class="label">📄 {{ t('saved_to') }}:</span>
             <span class="path">{{ saved_file }}</span>
         </div>
         {% endif %}

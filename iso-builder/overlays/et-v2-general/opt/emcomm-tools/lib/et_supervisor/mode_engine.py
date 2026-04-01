@@ -22,6 +22,7 @@ from . import config_templater
 from . import device_checker
 from .health_monitor import wait_for_port
 from .process_manager import ProcessInfo, ProcessManager
+from .rig_client import rig
 
 log = logging.getLogger("et-supervisor.mode")
 
@@ -341,6 +342,10 @@ class ModeEngine:
                 if not wait_for_port(health_port, timeout=health_timeout):
                     self._pm.stop_all()
                     return False, _t("not_healthy", name, health_port)
+                # Disable ongoing port monitoring if requested
+                # (some apps like ardopcf treat health probes as sessions)
+                if not health_spec.get("monitor", True):
+                    proc_info.health_port = None
 
             log.info("Chain step %s started and healthy", name)
 
@@ -714,6 +719,10 @@ class ModeEngine:
         elif action_type == "rfcomm-bind":
             if not self._bind_rfcomm():
                 return False
+        elif action_type == "qsy-band":
+            self._qsy_to_band_freq(action.get("frequencies", {}))
+        elif action_type == "wait-audio":
+            self._wait_for_audio(action.get("seconds", 3))
         else:
             log.warning("Unknown action: %s", action_type)
 
@@ -933,35 +942,43 @@ class ModeEngine:
         log.warning("No browser found to open %s", url)
 
     def _get_band_from_radio(self):
-        """Query rigctld for current frequency and convert to band name."""
-        try:
-            result = subprocess.run(
-                ["rigctl", "-m", "2", "f"],
-                capture_output=True, text=True, timeout=5
-            )
-            if result.returncode != 0:
-                return ""
-            # tail -1 to skip header line
-            freq_str = result.stdout.strip().splitlines()[-1].strip()
-            freq = int(freq_str)
-            mhz = freq // 1_000_000
-        except (FileNotFoundError, subprocess.TimeoutExpired,
-                ValueError, IndexError):
+        """Query rigctld for current frequency and return band name."""
+        if not rig.refresh():
             return ""
+        return rig.band or ""
 
-        band_map = {
-            1: "160m", 3: "80m", 4: "80m", 5: "60m", 7: "40m",
-            10: "30m", 14: "20m", 18: "17m", 21: "15m", 24: "12m",
-            28: "10m", 29: "10m",
-        }
-        # VHF/UHF ranges
-        if 50 <= mhz <= 54:
-            return "6m"
-        if 144 <= mhz <= 148:
-            return "2m"
-        if 430 <= mhz <= 440:
-            return "70cm"
-        return band_map.get(mhz, "")
+    def _wait_for_audio(self, seconds=3):
+        """Wait for audio device to be released by PulseAudio."""
+        import time
+        log.info("wait-audio: waiting %d seconds for audio device", seconds)
+        time.sleep(seconds)
+
+    def _qsy_to_band_freq(self, frequencies):
+        """QSY radio to the standard frequency for the detected band.
+
+        Args:
+            frequencies: dict mapping band names to dial frequencies in Hz,
+                         e.g. {"20m": 14078000, "40m": 7078000}
+        """
+        if not frequencies:
+            log.warning("qsy-band: no frequencies defined")
+            return
+
+        band = self._get_band_from_radio()
+        if not band:
+            log.warning("qsy-band: could not detect current band")
+            return
+
+        freq_hz = frequencies.get(band)
+        if not freq_hz:
+            log.info("qsy-band: no frequency defined for band %s", band)
+            return
+
+        log.info("qsy-band: detected %s, setting frequency to %d Hz", band, freq_hz)
+        if rig.set_freq(freq_hz):
+            log.info("qsy-band: QSY to %d Hz successful", freq_hz)
+        else:
+            log.warning("qsy-band: QSY failed")
 
     @staticmethod
     def _band_to_category(band):
@@ -988,37 +1005,28 @@ class ModeEngine:
         Some radios (FT-891, FT-991A) default to 500Hz filter width which
         limits VARA HF performance. This sets the passband width to the
         specified value (e.g. 2750 for full VARA HF support).
-        Uses rigctl 'M' command to set current mode with new passband.
         """
-        try:
-            # First get current mode
-            result = subprocess.run(
-                ["rigctl", "-m", "2", "m"],
-                timeout=10, capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                # Output is "MODE\nPASSBAND\n", e.g. "USB\n2400\n"
-                current_mode = result.stdout.strip().split('\n')[0]
-                log.info("Setting radio width: mode=%s width=%s",
-                         current_mode, width)
-                subprocess.run(
-                    ["rigctl", "-m", "2", "M", current_mode, str(width)],
-                    timeout=10, capture_output=True
-                )
-            else:
-                log.warning("Could not read current mode from rigctld")
-        except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-            log.warning("Failed to set radio width: %s", e)
+        rig.refresh()
+        if not rig.mode_raw:
+            log.warning("Could not read current mode from rigctld")
+            return
+        log.info("Setting radio width: mode=%s width=%s", rig.mode_raw, width)
+        rig.set_mode(rig.mode_raw, int(width))
 
     def _prime_rigctld(self):
-        """Prime rig control connection (for radios that need warmup)."""
-        try:
-            subprocess.run(
-                ["rigctl", "-m", "2", "f"],
-                timeout=10, capture_output=True
-            )
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
+        """Prime rig control connection (for radios that need warmup).
+
+        After kill-all restarts rigctld, the serial port may not be ready.
+        Close any stale connection and retry until we get a valid frequency.
+        """
+        rig.close()
+        for attempt in range(5):
+            time.sleep(1)
+            if rig.refresh() and rig.freq and rig.freq > 100000:
+                log.info("prime-rigctld: radio ready (attempt %d)", attempt + 1)
+                return
+            log.debug("prime-rigctld: not ready, retrying (%d/5)", attempt + 1)
+        log.warning("prime-rigctld: radio did not respond after 5 attempts")
 
     def _is_wineserver_running(self):
         """Check if Wine server is currently running."""
@@ -1076,6 +1084,7 @@ class ModeEngine:
     def _stop_rigctld(self):
         """Stop rigctld by killing the process directly (not systemctl)."""
         log.info("Stopping rigctld process...")
+        rig.close()
         try:
             subprocess.run(
                 ["sudo", "killall", "rigctld"],
@@ -1088,6 +1097,8 @@ class ModeEngine:
     def _restart_rigctld(self):
         """Restart rigctld: kill existing process, then start via systemd."""
         log.info("Restarting rigctld...")
+        # Drop rig client's stale TCP connection first
+        rig.close()
         # Kill existing process directly (systemctl restart hangs
         # when rigctld won't release the serial port gracefully)
         try:

@@ -22,7 +22,7 @@
                 <label>{{ t('grid_square') }} 
                     <a href="https://www.levinecentral.com/ham/grid_square.php" target="_blank" 
                        style="font-size: 0.85rem; color: #FFA500; margin-left: 8px;">
-                        {{ "Find my grid" if lang == 'en' else "Trouver mon grid" }} ↗
+                        {{ t('find_my_grid') }} ↗
                     </a>
                 </label>
                 <input type="text" name="grid" value="{{ config.get('grid', '') }}"
@@ -32,10 +32,26 @@
             </div>
             
             <div class="form-group">
+                <label>{{ t('coordinates') }}
+                    <span style="font-size: 0.85rem; color: #888; margin-left: 8px;">
+                        {{ t('coordinates_optional') }}
+                    </span>
+                </label>
+                <div style="display: flex; gap: 12px;">
+                    <input type="text" name="latitude" value="{{ config.get('latitude', '') }}"
+                           placeholder="{{ t('latitude_placeholder') }}"
+                           style="flex: 1;">
+                    <input type="text" name="longitude" value="{{ config.get('longitude', '') }}"
+                           placeholder="{{ t('longitude_placeholder') }}"
+                           style="flex: 1;">
+                </div>
+            </div>
+
+            <div class="form-group">
                 <label>{{ t('winlink_password') }}
                     <a href="https://winlink.org/user" target="_blank" 
                        style="font-size: 0.85rem; color: #FFA500; margin-left: 8px;">
-                        {{ "Create account / Reset password" if lang == 'en' else "Créer un compte / Réinitialiser" }} ↗
+                        {{ t('create_account') }} ↗
                     </a>
                 </label>
                 <div style="position: relative;">
@@ -46,7 +62,7 @@
                 </div>
                 <label style="font-size: 0.85rem; margin-top: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="show-password" style="width: auto; margin: 0;">
-                    <span>{{ 'Show password' if lang == 'en' else 'Afficher le mot de passe' }}</span>
+                    <span>{{ t('show_password') }}</span>
                 </label>
             </div>
         </div>
@@ -64,6 +80,41 @@
     document.getElementById('show-password').addEventListener('change', function() {
         const pwdField = document.getElementById('password-field');
         pwdField.type = this.checked ? 'text' : 'password';
+    });
+
+    // Auto-fill lat/lon from grid square (Maidenhead conversion)
+    function gridToLatLon(grid) {
+        grid = grid.trim().toUpperCase();
+        if (grid.length < 4) return null;
+        var a = grid.charCodeAt(0), b = grid.charCodeAt(1);
+        var A = 'A'.charCodeAt(0);
+        if (a < A || a > A+17 || b < A || b > A+17) return null;
+        if (!/\d/.test(grid[2]) || !/\d/.test(grid[3])) return null;
+
+        var lon = (a - A) * 20 - 180 + parseInt(grid[2]) * 2;
+        var lat = (b - A) * 10 - 90  + parseInt(grid[3]);
+
+        if (grid.length >= 6) {
+            var slon = grid.charCodeAt(4) - A;
+            var slat = grid.charCodeAt(5) - A;
+            if (slon >= 0 && slon < 24 && slat >= 0 && slat < 24) {
+                lon += slon * (2.0/24) + 1.0/24;
+                lat += slat * (1.0/24) + 0.5/24;
+            } else {
+                lon += 1; lat += 0.5;
+            }
+        } else {
+            lon += 1; lat += 0.5;
+        }
+        return [Math.round(lat*1e6)/1e6, Math.round(lon*1e6)/1e6];
+    }
+
+    document.querySelector('input[name="grid"]').addEventListener('input', function() {
+        var coords = gridToLatLon(this.value);
+        if (coords) {
+            document.querySelector('input[name="latitude"]').value = coords[0];
+            document.querySelector('input[name="longitude"]').value = coords[1];
+        }
     });
 </script>
 {% endblock %}

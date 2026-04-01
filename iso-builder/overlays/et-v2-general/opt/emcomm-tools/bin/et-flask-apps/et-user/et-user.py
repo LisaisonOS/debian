@@ -118,6 +118,10 @@ TRANSLATIONS = {
         'grid_square': 'Grid Square',
         'grid_square_hint': 'Maidenhead locator (e.g., FN35at)',
         'grid_lookup': 'Find',
+        'coordinates': 'Station Coordinates',
+        'coordinates_hint': 'Optional — overrides grid square',
+        'latitude_placeholder': 'e.g., 45.5017',
+        'longitude_placeholder': 'e.g., -73.5673',
         'name': 'Name',
         'name_hint': 'Your name (optional)',
         'winlink_password': 'Winlink Password',
@@ -140,6 +144,10 @@ TRANSLATIONS = {
         'grid_square': 'Grille',
         'grid_square_hint': 'Localisateur Maidenhead (ex: FN35at)',
         'grid_lookup': 'Trouver',
+        'coordinates': 'Coordonnées de la station',
+        'coordinates_hint': 'Optionnel — remplace le carré de grille',
+        'latitude_placeholder': 'ex: 45.5017',
+        'longitude_placeholder': 'ex: -73.5673',
         'name': 'Nom',
         'name_hint': 'Votre nom (optionnel)',
         'winlink_password': 'Mot de passe Winlink',
@@ -220,6 +228,22 @@ def save():
         config['callsign'] = callsign
         config['grid'] = grid_square  # Use 'grid' to match original user.json
         config['name'] = name
+
+        # Update lat/lon (store as float if valid, else clear)
+        lat_str = data.get('latitude', '').strip()
+        lon_str = data.get('longitude', '').strip()
+        config['latitude'] = ''
+        config['longitude'] = ''
+        if lat_str:
+            try:
+                config['latitude'] = float(lat_str)
+            except ValueError:
+                pass
+        if lon_str:
+            try:
+                config['longitude'] = float(lon_str)
+            except ValueError:
+                pass
         
         # Only update password if provided
         if password:

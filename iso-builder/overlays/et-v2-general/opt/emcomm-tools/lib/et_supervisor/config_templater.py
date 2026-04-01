@@ -74,6 +74,30 @@ def resolve_var(var_spec, user_config=None):
     if source == "detect-portaudio":
         return _detect_portaudio(var_spec.get("field", "device"))
 
+    if source == "detect-position":
+        field = var_spec.get("field")  # "latitude" or "longitude"
+        value = user_config.get(field, "")
+        if value and isinstance(value, (int, float)):
+            return str(value)
+        # Fallback: convert grid square
+        grid = user_config.get("grid", "")
+        if grid:
+            from et_supervisor.grid_utils import grid_to_latlon
+            coords = grid_to_latlon(grid)
+            if coords:
+                return str(coords[0] if field == "latitude" else coords[1])
+        log.warning("No %s available (no coordinates or grid in user.json)", field)
+        return None
+
+    if source == "detect-savedir":
+        # Build save directory path from $HOME + app-specific suffix
+        # Usage: {"source": "detect-savedir", "field": "JS8Call/save"}
+        suffix = var_spec.get("field", var_spec.get("key", ""))
+        home = os.path.expanduser("~")
+        path = os.path.join(home, ".local/share", suffix)
+        os.makedirs(path, exist_ok=True)
+        return path
+
     log.warning("Unknown variable source: %s", source)
     return None
 
@@ -279,6 +303,8 @@ def _resolve_update_value(update_spec, user_config=None):
                                              "plughw:{card},{device}")
     elif source == "detect-portaudio":
         var_spec["field"] = update_spec.get("field", "device")
+    elif source == "detect-savedir":
+        var_spec["field"] = update_spec.get("field", "")
 
     return resolve_var(var_spec, user_config)
 

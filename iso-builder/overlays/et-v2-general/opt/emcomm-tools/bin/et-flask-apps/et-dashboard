@@ -27,6 +27,43 @@ from pathlib import Path
 
 SUPERVISOR_SOCK = f"/run/user/{os.getuid()}/et-supervisor.sock"
 
+# User config
+ET_CONFIG_DIR = Path.home() / ".config" / "emcomm-tools"
+ET_CONFIG_FILE = ET_CONFIG_DIR / "user.json"
+
+
+def latlon_to_grid(lat, lon):
+    """Convert latitude/longitude to 6-char Maidenhead grid square."""
+    lon = lon + 180
+    lat = lat + 90
+    field_lon = int(lon / 20)
+    field_lat = int(lat / 10)
+    square_lon = int((lon - field_lon * 20) / 2)
+    square_lat = int((lat - field_lat * 10) / 1)
+    sub_lon = int((lon - field_lon * 20 - square_lon * 2) / (2 / 24))
+    sub_lat = int((lat - field_lat * 10 - square_lat * 1) / (1 / 24))
+    return (chr(ord('A') + field_lon) + chr(ord('A') + field_lat) +
+            str(square_lon) + str(square_lat) +
+            chr(ord('a') + sub_lon) + chr(ord('a') + sub_lat))
+
+
+def read_gps_position():
+    """Read current GPS position from gpsd via gpspipe. Returns (lat, lon) or (None, None)."""
+    try:
+        result = subprocess.run(
+            ['gpspipe', '-w', '-n', '5'],
+            capture_output=True, text=True, timeout=5)
+        for line in result.stdout.strip().split('\n'):
+            if '"lat"' in line and '"lon"' in line:
+                data = json.loads(line)
+                lat = data.get('lat')
+                lon = data.get('lon')
+                if lat is not None and lon is not None:
+                    return float(lat), float(lon)
+    except Exception:
+        pass
+    return None, None
+
 
 class SupervisorClient:
     """IPC client for et-supervisor daemon."""
@@ -202,6 +239,16 @@ MODE_CATEGORIES = {
             {'id': 'chat-chattervox-bt', 'name': 'Chattervox (BT)'},
         ]
     },
+    'aprs': {
+        'icon': '📍',
+        'label': 'APRS',
+        'label_fr': 'APRS',
+        'modes': [
+            {'id': 'aprs-client', 'name': 'APRS (YAAC)'},
+            {'id': 'aprs-client-bt', 'name': 'APRS (YAAC BT)'},
+            {'id': 'aprs-digipeater', 'name': 'APRS Digipeater'},
+        ]
+    },
     'packet': {
         'icon': '📡',
         'label': 'Packet/BBS',
@@ -210,8 +257,7 @@ MODE_CATEGORIES = {
             {'id': 'bbs-client-paracon', 'name': 'BBS Client (Paracon)'},
             {'id': 'bbs-client-qttermtcp', 'name': 'BBS Client (QtTermTCP)'},
             {'id': 'bbs-server', 'name': 'BBS Server (LinBPQ)'},
-            {'id': 'aprs-client', 'name': 'APRS (YAAC)'},
-            {'id': 'aprs-client-bt', 'name': 'APRS (YAAC BT)'},
+            {'id': 'packet-digipeater', 'name': 'Packet Digipeater'},
         ]
     },
     'others': {
@@ -248,6 +294,10 @@ class EmCommDashboard(Gtk.Window):
 
         # Track expanded categories
         self.expanded_categories = {}
+
+        # GPS tracking state
+        self._tracking_grid = ''
+        self._tracking_stop = threading.Event()
 
         # Track running Flask apps (prevent double-launch)
         self.running_apps = {}
@@ -734,6 +784,24 @@ class EmCommDashboard(Gtk.Window):
             font-family: monospace;
             font-size: {font_version}px;
         }}
+        .track-btn {{
+            padding: 2px 8px;
+            font-size: 10px;
+            background: #333333;
+            border: 1px solid #555555;
+            border-radius: 4px;
+            color: #888888;
+            min-height: 20px;
+        }}
+        .track-btn:hover {{
+            background: #404040;
+            border-color: #FFA500;
+        }}
+        .track-active {{
+            background: #1a3a1a;
+            border-color: #00CC00;
+            color: #00CC00;
+        }}
         """
         
         css = css_template.format(
@@ -795,6 +863,16 @@ class EmCommDashboard(Gtk.Window):
         self.gps_label = Gtk.Label()
         self.gps_label.get_style_context().add_class("info-label")
         time_box.pack_end(self.gps_label, False, False, 0)
+
+        # GPS Tracking toggle button
+        self.tracking_active = False
+        self.tracking_thread = None
+        self.track_btn = Gtk.ToggleButton(label="Track")
+        self.track_btn.set_size_request(50, 24)
+        self.track_btn.get_style_context().add_class("track-btn")
+        self.track_btn.set_sensitive(False)  # Disabled until GPS detected
+        self.track_btn.connect("toggled", self.on_track_toggled)
+        time_box.pack_end(self.track_btn, False, False, 0)
         
         self.main_box.pack_start(time_box, False, False, 0)
         self.main_box.pack_start(self.create_separator(), False, False, 5)
@@ -1355,10 +1433,18 @@ class EmCommDashboard(Gtk.Window):
         ACTIVE_RADIO = "/opt/emcomm-tools/conf/radios.d/active-radio.json"
 
         # GPS Status
-        if os.path.exists("/tmp/et-gps-connected"):
-            self.gps_label.set_markup("<span foreground='#00CC00'>GPS: ✓</span>")
+        gps_connected = os.path.exists("/tmp/et-gps-connected")
+        if gps_connected:
+            if self.tracking_active:
+                self.gps_label.set_markup(f"<span foreground='#00CC00'>GPS: ✓ {self._tracking_grid}</span>")
+            else:
+                self.gps_label.set_markup("<span foreground='#00CC00'>GPS: ✓</span>")
+            self.track_btn.set_sensitive(True)
         else:
             self.gps_label.set_markup("<span foreground='#CC0000'>GPS: ✗</span>")
+            self.track_btn.set_sensitive(False)
+            if self.tracking_active:
+                self.track_btn.set_active(False)
 
         # Radio — read active-radio.json directly instead of shelling out to jq
         not_cfg = "Non configuré" if self.language == 'fr' else "Not configured"
@@ -1566,6 +1652,65 @@ class EmCommDashboard(Gtk.Window):
     def on_radio_clicked(self, widget):
         self.launch_flask_app('et-radio')
     
+    def on_track_toggled(self, button):
+        """Toggle GPS tracking mode."""
+        if button.get_active():
+            # Start tracking
+            if not os.path.exists("/tmp/et-gps-connected"):
+                button.set_active(False)
+                return
+            self.tracking_active = True
+            self._tracking_stop.clear()
+            # Write flag file for other apps (et-repeater)
+            try:
+                with open('/tmp/et-gps-tracking', 'w') as f:
+                    f.write('1')
+            except Exception:
+                pass
+            self.tracking_thread = threading.Thread(
+                target=self._tracking_worker, daemon=True)
+            self.tracking_thread.start()
+            button.get_style_context().add_class("track-active")
+        else:
+            # Stop tracking
+            self.tracking_active = False
+            self._tracking_stop.set()
+            self._tracking_grid = ''
+            # Remove flag file
+            try:
+                os.remove('/tmp/et-gps-tracking')
+            except Exception:
+                pass
+            button.get_style_context().remove_class("track-active")
+
+    def _tracking_worker(self):
+        """Background thread: read GPS, update grid in user.json."""
+        last_grid = ''
+        while not self._tracking_stop.is_set():
+            lat, lon = read_gps_position()
+            if lat is not None and lon is not None:
+                grid = latlon_to_grid(lat, lon)
+                self._tracking_grid = grid
+
+                # Only write to user.json if grid changed
+                if grid != last_grid:
+                    last_grid = grid
+                    try:
+                        config = {}
+                        if ET_CONFIG_FILE.exists():
+                            with open(ET_CONFIG_FILE, 'r') as f:
+                                config = json.load(f)
+                        config['grid'] = grid
+                        config['latitude'] = str(round(lat, 6))
+                        config['longitude'] = str(round(lon, 6))
+                        ET_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+                        with open(ET_CONFIG_FILE, 'w') as f:
+                            json.dump(config, f, indent=2)
+                    except Exception as e:
+                        print(f"[TRACK] Error updating user.json: {e}")
+
+            self._tracking_stop.wait(15)  # Update every 15 seconds
+
     def on_user_clicked(self, widget):
         self.launch_flask_app('et-user')
 

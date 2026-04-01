@@ -6,6 +6,7 @@
         "fr": "Winlink Paquet VHF/UHF"
     },
     "category": "winlink",
+    "requires_bands": ["VHF", "UHF"],
     "requires": {
         "devices": ["et-audio", "et-cat"],
         "services": ["rigctld"]
@@ -47,7 +48,7 @@
         }
     ],
     "post_start": [
-        {"action": "open-browser", "url": "http://localhost:8080/ui?mode=packet&band={auto-band}#"}
+        {"action": "open-browser", "url": "http://localhost:8080"}
     ],
     "kill_all_first": true
 }

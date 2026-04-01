@@ -22,7 +22,13 @@
             "target": "conf/packet/direwolf.conf",
             "vars": {
                 "ET_CALLSIGN": {"source": "user.json", "key": "callsign"},
-                "ET_AUDIO_DEVICE": {"source": "detect-audio", "format": "plughw:{card},{device}"}
+                "ET_AUDIO_DEVICE": {"source": "detect-audio", "format": "plughw:{card},{device}"},
+                "ET_LAT_DECIMAL": {"source": "detect-position", "field": "latitude"},
+                "ET_LON_DECIMAL": {"source": "detect-position", "field": "longitude"},
+                "ET_DIGI_POWER": {"source": "literal", "value": "20"},
+                "ET_DIGI_HEIGHT": {"source": "literal", "value": "16"},
+                "ET_DIGI_GAIN": {"source": "literal", "value": "6"},
+                "ET_DIGI_COMMENT": {"source": "literal", "value": "https://emcomm-tools.ca"}
             }
         }
     ],

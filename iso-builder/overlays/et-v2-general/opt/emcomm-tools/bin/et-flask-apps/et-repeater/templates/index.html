@@ -1,0 +1,978 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Drawer overlay -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer()" style="display:none;"></div>
+
+<!-- Left drawer -->
+<div class="drawer" id="drawer">
+    <div class="drawer-header">
+        <h3>{{ t['title'] }}</h3>
+        <button class="drawer-close" onclick="toggleDrawer()">&times;</button>
+    </div>
+
+    <!-- Import / Clear -->
+    <div class="drawer-section">
+        <label class="btn btn-primary import-btn drawer-btn" id="import-btn">
+            {{ t['import_csv'] }}
+            <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="importCSV(this)">
+        </label>
+        {% if has_data %}
+        <button class="btn btn-secondary drawer-btn" onclick="clearData()">{{ t['clear_data'] }}</button>
+        {% endif %}
+    </div>
+
+    {% if has_data %}
+    <!-- Filters -->
+    <div class="drawer-section">
+        <label class="drawer-label">{{ t['band'] }}</label>
+        <select id="band-filter" onchange="applyFilters()" class="drawer-select">
+            <option value="all">{{ t['all_bands'] }}</option>
+            <option value="10m">10m</option>
+            <option value="6m">6m</option>
+            <option value="2m">2m</option>
+            <option value="1.25m">1.25m</option>
+            <option value="70cm">70cm</option>
+        </select>
+
+        <label class="drawer-label">{{ t['mode'] }}</label>
+        <select id="mode-filter" onchange="applyFilters()" class="drawer-select">
+            <option value="all">{{ t['all_modes'] }}</option>
+            <option value="fm">FM</option>
+            <option value="dmr">DMR</option>
+            <option value="dstar">D-STAR</option>
+            <option value="ysf">YSF</option>
+            <option value="p25">P25</option>
+            <option value="nxdn">NXDN</option>
+        </select>
+
+        {% if has_position %}
+        <label class="drawer-label">{{ t['max_distance'] }}</label>
+        <select id="max-distance" onchange="applyFilters()" class="drawer-select">
+            <option value="5">5 km</option>
+            <option value="10">10 km</option>
+            <option value="15">15 km</option>
+            <option value="25">25 km</option>
+            <option value="50" selected>50 km</option>
+            <option value="75">75 km</option>
+            <option value="100">100 km</option>
+            <option value="150">150 km</option>
+            <option value="200">200 km</option>
+            <option value="">{{ t['all_bands'] }}</option>
+        </select>
+        {% endif %}
+
+        <div class="drawer-toggle-row">
+            <span class="drawer-toggle-label">{{ t['show_favorites'] }}</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="fav-filter" onchange="applySearch()">
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Info -->
+    <div class="drawer-section drawer-info">
+        <span>{{ t['data_info'].replace('{count}', total_count|string) }}</span>
+        {% if last_updated %}<br><span>{{ t['last_updated'] }}: {{ last_updated }}</span>{% endif %}
+        <br><span id="filter-count"></span>
+    </div>
+    {% endif %}
+
+    {% if not has_data %}
+    <div class="drawer-section">
+        <p><strong>{{ t['how_to'] }}:</strong></p>
+        <p>{{ t['how_to_1'] }}</p>
+        <p>{{ t['how_to_2'] }}</p>
+        <p>{{ t['how_to_3'] }}</p>
+        <p>{{ t['how_to_4'] }}</p>
+        <p style="margin-top:8px; color: var(--accent-primary);">{{ t['import_multiple'] }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card-header">
+    <div class="header-row">
+        <button class="hamburger-btn" onclick="toggleDrawer()">&#9776;</button>
+        <div>
+            <h1>{{ t['title'] }}</h1>
+        </div>
+        {% if user_grid %}
+        <div class="user-grid-badge" id="user-grid-badge">{{ user_grid }}</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card-body">
+    <!-- Search bar always visible -->
+    {% if has_data %}
+    <div class="search-bar" id="filter-row">
+        <input type="text" id="search-input" placeholder="{{ t['search_placeholder'] }}" oninput="applySearch()">
+    </div>
+    {% endif %}
+
+    <!-- Import progress bar -->
+    <div class="progress-bar-container" id="progress-container" style="display:none;">
+        <div class="progress-bar-label" id="progress-label"></div>
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+        <div class="progress-bar-pct" id="progress-pct">0%</div>
+    </div>
+
+    <!-- Status messages -->
+    <div class="alert alert-error" id="error-alert"></div>
+    <div class="alert alert-success" id="success-alert"></div>
+
+    <!-- Repeater table -->
+    <div id="repeater-container" style="display:none;">
+        <div class="table-wrapper">
+            <table class="repeater-table" id="repeater-table">
+                <thead>
+                    <tr>
+                        <th class="col-fav">&#9733;</th>
+                        <th class="col-call sortable" data-sort="callsign" onclick="sortBy('callsign')">{{ t['callsign'] }} <span class="sort-arrow"></span></th>
+                        <th class="col-freq sortable" data-sort="frequency" onclick="sortBy('frequency')">{{ t['frequency'] }} <span class="sort-arrow"></span></th>
+                        <th class="col-offset sortable" data-sort="offset" onclick="sortBy('offset')">{{ t['offset'] }} <span class="sort-arrow"></span></th>
+                        <th class="col-tone sortable" data-sort="tone" onclick="sortBy('tone')">{{ t['tone'] }} <span class="sort-arrow"></span></th>
+                        <th class="col-modes sortable" data-sort="modes" onclick="sortBy('modes')">{{ t['modes'] }} <span class="sort-arrow"></span></th>
+                        <th class="col-loc sortable" data-sort="location" onclick="sortBy('location')">{{ t['location'] }} <span class="sort-arrow"></span></th>
+                        <th class="col-grid sortable" data-sort="grid" onclick="sortBy('grid')">{{ t['grid'] }} <span class="sort-arrow"></span></th>
+                        {% if has_position %}
+                        <th class="col-dist sortable" data-sort="distance" onclick="sortBy('distance')">{{ t['distance'] }} <span class="sort-arrow"></span></th>
+                        {% endif %}
+                        <th class="col-action">{{ t['action'] }}</th>
+                    </tr>
+                </thead>
+                <tbody id="repeater-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="no-data-msg" class="empty-state" {% if has_data %}style="display:none;"{% endif %}>
+        <p>{{ t['no_data'] }}</p>
+    </div>
+    <div id="no-results-msg" class="empty-state" style="display:none;">
+        <p>{{ t['no_results'] }}</p>
+    </div>
+</div>
+
+<!-- Long-press Action Popup -->
+<div class="modal-overlay" id="row-action-popup" style="display:none;" onclick="closeRowPopup()">
+    <div class="row-action-content" onclick="event.stopPropagation()">
+        <div class="row-action-info" id="row-action-info"></div>
+        <button class="row-action-btn btn-primary" onclick="popupSetRadio()">{{ t['set_radio'] }}</button>
+        <button class="row-action-btn btn-fav" onclick="popupToggleFav()">{{ t['favorites'] }}</button>
+        <button class="row-action-btn btn-secondary" onclick="popupEdit()">{{ t['edit'] }}</button>
+        <button class="row-action-btn btn-cancel" onclick="closeRowPopup()">{{ t['cancel'] }}</button>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="edit-modal" style="display:none;" onclick="closeEditModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <h3>{{ t['edit_repeater'] }}</h3>
+        <input type="hidden" id="edit-old-call">
+        <input type="hidden" id="edit-old-freq">
+        <div class="edit-grid">
+            <div class="edit-field">
+                <label>{{ t['callsign'] }}</label>
+                <input type="text" id="edit-callsign">
+            </div>
+            <div class="edit-field">
+                <label>{{ t['frequency'] }} (MHz)</label>
+                <input type="text" id="edit-frequency">
+            </div>
+            <div class="edit-field">
+                <label>{{ t['offset'] }} (MHz)</label>
+                <input type="text" id="edit-offset">
+            </div>
+            <div class="edit-field">
+                <label>{{ t['tone'] }} (Hz)</label>
+                <input type="text" id="edit-tone">
+            </div>
+            <div class="edit-field">
+                <label>{{ t['location'] }}</label>
+                <input type="text" id="edit-location">
+            </div>
+            <div class="edit-field">
+                <label>{{ t['modes'] }}</label>
+                <input type="text" id="edit-modes">
+            </div>
+            <div class="edit-field">
+                <label>{{ t['grid'] }}</label>
+                <input type="text" id="edit-grid" maxlength="6" placeholder="FN35xl">
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="deleteRepeater()">{{ t['delete'] }}</button>
+            <div class="modal-buttons-right">
+                <button class="btn btn-secondary" onclick="closeEditModal()">{{ t['cancel'] }}</button>
+                <button class="btn btn-primary" onclick="saveEdit()">{{ t['save'] }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleDrawer() {
+        const drawer = document.getElementById('drawer');
+        const overlay = document.getElementById('drawer-overlay');
+        const isOpen = drawer.classList.contains('drawer-open');
+        if (isOpen) {
+            drawer.classList.remove('drawer-open');
+            overlay.style.display = 'none';
+        } else {
+            drawer.classList.add('drawer-open');
+            overlay.style.display = 'block';
+        }
+    }
+
+    const T = {{ t | tojson }};
+    let hasData = {{ 'true' if has_data else 'false' }};
+    let currentRepeaters = [];
+    let hasPosition = {{ 'true' if has_position else 'false' }};
+    let currentSort = { key: hasPosition ? 'distance' : 'frequency', dir: 'asc' };
+    let activeFrequency = null;
+    const savedFilters = {{ saved_filters | tojson }};
+
+    function restoreFilters() {
+        if (!savedFilters || !hasData) return;
+        const band = document.getElementById('band-filter');
+        const mode = document.getElementById('mode-filter');
+        const dist = document.getElementById('max-distance');
+        const fav = document.getElementById('fav-filter');
+        const search = document.getElementById('search-input');
+        if (savedFilters.band && band) band.value = savedFilters.band;
+        if (savedFilters.mode && mode) mode.value = savedFilters.mode;
+        if (savedFilters.max_distance && dist) dist.value = savedFilters.max_distance;
+        if (savedFilters.favorites && fav) fav.checked = true;
+        if (savedFilters.search && search) search.value = savedFilters.search;
+        if (savedFilters.sort_key) currentSort.key = savedFilters.sort_key;
+        if (savedFilters.sort_dir) currentSort.dir = savedFilters.sort_dir;
+    }
+
+    function saveFilters() {
+        const filters = {
+            band: (document.getElementById('band-filter') || {}).value || 'all',
+            mode: (document.getElementById('mode-filter') || {}).value || 'all',
+            max_distance: (document.getElementById('max-distance') || {}).value || '50',
+            favorites: (document.getElementById('fav-filter') || {}).checked || false,
+            search: (document.getElementById('search-input') || {}).value || '',
+            sort_key: currentSort.key,
+            sort_dir: currentSort.dir,
+        };
+        fetch('/api/filters', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(filters)
+        }).catch(() => {});
+    }
+
+    function setLanguage(lang) {
+        fetch('/set-language', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({language: lang})
+        }).then(() => location.reload());
+    }
+
+    let progressTimer = null;
+
+    function importCSV(input) {
+        if (!input.files || !input.files[0]) return;
+
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const btn = document.getElementById('import-btn');
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.5';
+
+        hideAlerts();
+        document.getElementById('progress-container').style.display = 'block';
+        document.getElementById('progress-label').textContent = T['parsing'];
+        document.getElementById('progress-fill').style.width = '5%';
+        document.getElementById('progress-pct').textContent = '5%';
+
+        fetch('/api/import', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            input.value = '';
+            if (data.started) {
+                pollProgress();
+            } else if (!data.success) {
+                hideProgress();
+                btn.style.pointerEvents = '';
+                btn.style.opacity = '';
+                showAlert('error', T['import_error'].replace('{error}', data.error));
+            }
+        })
+        .catch(err => {
+            input.value = '';
+            hideProgress();
+            btn.style.pointerEvents = '';
+            btn.style.opacity = '';
+            showAlert('error', T['import_error'].replace('{error}', err.message));
+        });
+    }
+
+    function pollProgress() {
+        progressTimer = setInterval(() => {
+            fetch('/api/import-progress')
+                .then(r => r.json())
+                .then(data => {
+                    const fill = document.getElementById('progress-fill');
+                    const pct = document.getElementById('progress-pct');
+                    const label = document.getElementById('progress-label');
+
+                    fill.style.width = data.percent + '%';
+                    pct.textContent = data.percent + '%';
+
+                    if (data.phase === 'parsing') {
+                        label.textContent = T['parsing'];
+                    } else if (data.phase === 'geocoding') {
+                        label.textContent = T['geocoding']
+                            .replace('{location}', data.current_location)
+                            .replace('{current}', data.current)
+                            .replace('{total}', data.total);
+                    } else if (data.phase === 'saving') {
+                        label.textContent = T['saving'];
+                    }
+
+                    if (data.phase === 'done') {
+                        clearInterval(progressTimer);
+                        progressTimer = null;
+
+                        if (data.result && data.result.success) {
+                            fill.style.width = '100%';
+                            pct.textContent = '100%';
+                            showAlert('success',
+                                T['import_success']
+                                    .replace('{count}', data.result.count)
+                                    .replace('{new}', data.result.new)
+                                    .replace('{geocoded}', data.result.geocoded || 0));
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            hideProgress();
+                            const btn = document.getElementById('import-btn');
+                            btn.style.pointerEvents = '';
+                            btn.style.opacity = '';
+                            showAlert('error', T['import_error'].replace('{error}',
+                                (data.result && data.result.error) || 'Unknown error'));
+                        }
+                    }
+                });
+        }, 500);
+    }
+
+    function hideProgress() {
+        document.getElementById('progress-container').style.display = 'none';
+        if (progressTimer) {
+            clearInterval(progressTimer);
+            progressTimer = null;
+        }
+    }
+
+    function clearData() {
+        if (!confirm(T['clear_confirm'])) return;
+
+        fetch('/api/clear', { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+    }
+
+    function applyFilters() {
+        saveFilters();
+        const band = document.getElementById('band-filter').value;
+        const mode = document.getElementById('mode-filter').value;
+
+        const maxDistEl = document.getElementById('max-distance');
+        const maxDist = maxDistEl ? maxDistEl.value : '';
+        const params = new URLSearchParams({ band: band, mode: mode, max_distance: maxDist });
+
+        fetch('/api/repeaters?' + params.toString())
+            .then(r => r.json())
+            .then(data => {
+                currentRepeaters = data.repeaters;
+                sortRepeaters();
+                renderTable(currentRepeaters);
+
+                // Update count
+                const info = document.getElementById('filter-count');
+                if (info) {
+                    info.textContent = data.count + ' / ' + data.total;
+                }
+
+                // Show/hide containers
+                const container = document.getElementById('repeater-container');
+                const noData = document.getElementById('no-data-msg');
+                const noResults = document.getElementById('no-results-msg');
+
+                if (data.repeaters.length > 0) {
+                    container.style.display = 'block';
+                    noData.style.display = 'none';
+                    noResults.style.display = 'none';
+                } else if (data.total > 0) {
+                    container.style.display = 'none';
+                    noData.style.display = 'none';
+                    noResults.style.display = 'block';
+                } else {
+                    container.style.display = 'none';
+                    noData.style.display = 'block';
+                    noResults.style.display = 'none';
+                }
+            });
+    }
+
+    function renderTable(repeaters) {
+        const tbody = document.getElementById('repeater-tbody');
+        tbody.innerHTML = '';
+
+        repeaters.forEach(r => {
+            // Skip entries with no callsign, no grid, or no distance
+            if (!r.callsign || !r.grid || !r.distance) return;
+
+            const tr = document.createElement('tr');
+
+            // Highlight if this is the active frequency on the radio
+            if (activeFrequency && r.frequency === activeFrequency) {
+                tr.classList.add('row-active');
+            }
+
+            // Favorite star
+            const favTd = document.createElement('td');
+            favTd.className = 'col-fav';
+            const star = document.createElement('span');
+            star.className = 'fav-star' + (r.favorite ? ' active' : '');
+            star.textContent = r.favorite ? '\u2605' : '\u2606';
+            star.onclick = function() { toggleFav(r, star); };
+            favTd.appendChild(star);
+            tr.appendChild(favTd);
+
+            // Callsign (tap to open action popup)
+            const callTd = document.createElement('td');
+            callTd.className = 'col-call col-call-tap';
+            callTd.textContent = r.callsign;
+            callTd.onclick = function(e) {
+                e.stopPropagation();
+                showRowActionPopup(r);
+            };
+            tr.appendChild(callTd);
+
+            // Frequency
+            const freqTd = document.createElement('td');
+            freqTd.className = 'col-freq';
+            freqTd.textContent = r.frequency.toFixed(4);
+            tr.appendChild(freqTd);
+
+            // Offset
+            const offTd = document.createElement('td');
+            offTd.className = 'col-offset';
+            offTd.textContent = r.offset || '--';
+            tr.appendChild(offTd);
+
+            // Tone
+            const toneTd = document.createElement('td');
+            toneTd.className = 'col-tone';
+            toneTd.textContent = r.tone || '--';
+            tr.appendChild(toneTd);
+
+            // Modes
+            const modesTd = document.createElement('td');
+            modesTd.className = 'col-modes';
+            modesTd.textContent = r.modes || '';
+            tr.appendChild(modesTd);
+
+            // Location
+            const locTd = document.createElement('td');
+            locTd.className = 'col-loc';
+            let loc = r.location || '';
+            if (r.state) {
+                loc += (loc ? ', ' : '') + r.state;
+            }
+            locTd.textContent = loc;
+            tr.appendChild(locTd);
+
+            // Grid
+            const gridTd = document.createElement('td');
+            gridTd.className = 'col-grid';
+            gridTd.textContent = r.grid || '--';
+            tr.appendChild(gridTd);
+
+            // Distance
+            if (hasPosition) {
+                const distTd = document.createElement('td');
+                distTd.className = 'col-dist';
+                distTd.textContent = r.distance !== null ? r.distance + ' km' : '--';
+                tr.appendChild(distTd);
+            }
+
+            // Action buttons (desktop)
+            const actTd = document.createElement('td');
+            actTd.className = 'col-action';
+            const setBtn = document.createElement('button');
+            setBtn.className = 'btn btn-sm btn-primary';
+            setBtn.textContent = T['set_radio'];
+            setBtn.onclick = function(e) { e.stopPropagation(); setRadio(r, setBtn); };
+            actTd.appendChild(setBtn);
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-sm btn-secondary';
+            editBtn.textContent = T['edit'];
+            editBtn.onclick = function(e) { e.stopPropagation(); openEditModal(r); };
+            actTd.appendChild(editBtn);
+            tr.appendChild(actTd);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    function setRadio(repeater, btn) {
+        const origText = btn.textContent;
+        btn.textContent = '...';
+        btn.disabled = true;
+
+        hideAlerts();
+
+        fetch('/api/set-radio', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                frequency: repeater.frequency,
+                offset: repeater.offset,
+                tone: repeater.tone,
+                callsign: repeater.callsign
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.textContent = origText;
+            btn.disabled = false;
+
+            if (data.success) {
+                activeFrequency = repeater.frequency;
+                showAlert('success',
+                    T['radio_set']
+                        .replace('{freq}', data.frequency)
+                        .replace('{call}', data.callsign));
+                // Re-render to highlight the active row
+                applySearch();
+            } else {
+                showAlert('error', T['radio_error'].replace('{error}', data.error));
+            }
+        })
+        .catch(err => {
+            btn.textContent = origText;
+            btn.disabled = false;
+            showAlert('error', T['radio_error'].replace('{error}', err.message));
+        });
+    }
+
+    function applySearch() {
+        saveFilters();
+        const query = document.getElementById('search-input').value.toLowerCase().trim();
+        const favFilterEl = document.getElementById('fav-filter');
+        const favOnly = favFilterEl ? favFilterEl.checked : false;
+
+        // Favorites overrides all other filters — fetch all repeaters unfiltered
+        if (favOnly) {
+            fetch('/api/repeaters?band=all&mode=all&max_distance=')
+                .then(r => r.json())
+                .then(data => {
+                    let filtered = data.repeaters.filter(r => r.favorite);
+
+                    if (query) {
+                        filtered = filtered.filter(r => {
+                            const call = (r.callsign || '').toLowerCase();
+                            const freq = String(r.frequency || '');
+                            const loc = (r.location || '').toLowerCase();
+                            const state = (r.state || '').toLowerCase();
+                            const county = (r.county || '').toLowerCase();
+                            const grid = (r.grid || '').toLowerCase();
+                            return call.includes(query) || freq.includes(query) ||
+                                   loc.includes(query) || state.includes(query) ||
+                                   county.includes(query) || grid.includes(query);
+                        });
+                    }
+
+                    renderTable(filtered);
+                    updateFilterCount(filtered.length);
+
+                    const container = document.getElementById('repeater-container');
+                    const noResults = document.getElementById('no-results-msg');
+                    if (filtered.length > 0) {
+                        container.style.display = 'block';
+                        noResults.style.display = 'none';
+                    } else {
+                        container.style.display = 'none';
+                        noResults.style.display = 'block';
+                    }
+                });
+            return;
+        }
+
+        let filtered = currentRepeaters;
+
+        if (query) {
+            filtered = filtered.filter(r => {
+                const call = (r.callsign || '').toLowerCase();
+                const freq = String(r.frequency || '');
+                const loc = (r.location || '').toLowerCase();
+                const state = (r.state || '').toLowerCase();
+                const county = (r.county || '').toLowerCase();
+                const grid = (r.grid || '').toLowerCase();
+                return call.includes(query) || freq.includes(query) ||
+                       loc.includes(query) || state.includes(query) ||
+                       county.includes(query) || grid.includes(query);
+            });
+        }
+
+        renderTable(filtered);
+        updateFilterCount(filtered.length);
+    }
+
+    function toggleFav(repeater, starEl) {
+        fetch('/api/toggle-favorite', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                callsign: repeater.callsign,
+                frequency: repeater.frequency
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                repeater.favorite = data.favorite;
+                starEl.className = 'fav-star' + (data.favorite ? ' active' : '');
+                starEl.textContent = data.favorite ? '\u2605' : '\u2606';
+            }
+        });
+    }
+
+    function updateFilterCount(count) {
+        const info = document.getElementById('filter-count');
+        if (info) {
+            info.textContent = count + ' / ' + currentRepeaters.length;
+        }
+    }
+
+    function sortBy(key) {
+        if (currentSort.key === key) {
+            currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.key = key;
+            currentSort.dir = 'asc';
+        }
+        sortRepeaters();
+        renderTable(currentRepeaters);
+        updateSortArrows();
+        saveFilters();
+    }
+
+    function sortRepeaters() {
+        const key = currentSort.key;
+        const dir = currentSort.dir === 'asc' ? 1 : -1;
+
+        currentRepeaters.sort((a, b) => {
+            let va = a[key] || '';
+            let vb = b[key] || '';
+
+            // Numeric sort for distance, frequency, tone
+            if (key === 'distance') {
+                va = (va === null || va === undefined) ? 99999 : Number(va);
+                vb = (vb === null || vb === undefined) ? 99999 : Number(vb);
+                return (va - vb) * dir;
+            }
+            if (key === 'frequency') {
+                return (Number(va) - Number(vb)) * dir;
+            }
+            if (key === 'tone') {
+                va = parseFloat(va) || 0;
+                vb = parseFloat(vb) || 0;
+                return (va - vb) * dir;
+            }
+            if (key === 'offset') {
+                va = parseFloat(va) || 0;
+                vb = parseFloat(vb) || 0;
+                return (va - vb) * dir;
+            }
+
+            // String sort
+            va = String(va).toLowerCase();
+            vb = String(vb).toLowerCase();
+            if (va < vb) return -1 * dir;
+            if (va > vb) return 1 * dir;
+            return 0;
+        });
+    }
+
+    function updateSortArrows() {
+        document.querySelectorAll('.sortable').forEach(th => {
+            const arrow = th.querySelector('.sort-arrow');
+            if (th.dataset.sort === currentSort.key) {
+                arrow.textContent = currentSort.dir === 'asc' ? ' ▲' : ' ▼';
+            } else {
+                arrow.textContent = '';
+            }
+        });
+    }
+
+    function openEditModal(r) {
+        document.getElementById('edit-old-call').value = r.callsign;
+        document.getElementById('edit-old-freq').value = r.frequency;
+        document.getElementById('edit-callsign').value = r.callsign || '';
+        document.getElementById('edit-frequency').value = r.frequency || '';
+        document.getElementById('edit-offset').value = r.offset || '';
+        document.getElementById('edit-tone').value = r.tone || '';
+        document.getElementById('edit-location').value = r.location || '';
+        document.getElementById('edit-modes').value = r.modes || '';
+        document.getElementById('edit-grid').value = r.grid || '';
+        document.getElementById('edit-modal').style.display = 'flex';
+    }
+
+    function closeEditModal(event) {
+        if (event && event.target !== document.getElementById('edit-modal')) return;
+        document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    function saveEdit() {
+        const oldCall = document.getElementById('edit-old-call').value;
+        const oldFreq = document.getElementById('edit-old-freq').value;
+
+        const updates = {
+            callsign: document.getElementById('edit-callsign').value.trim(),
+            frequency: document.getElementById('edit-frequency').value.trim(),
+            offset: document.getElementById('edit-offset').value.trim(),
+            tone: document.getElementById('edit-tone').value.trim(),
+            location: document.getElementById('edit-location').value.trim(),
+            modes: document.getElementById('edit-modes').value.trim(),
+            grid: document.getElementById('edit-grid').value.trim(),
+        };
+
+        fetch('/api/update-repeater', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                old_callsign: oldCall,
+                old_frequency: oldFreq,
+                updates: updates
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('edit-modal').style.display = 'none';
+                showAlert('success', T['edit_success']);
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.value = '';
+                applyFilters();
+            } else {
+                showAlert('error', T['edit_error']);
+            }
+        });
+    }
+
+    // --- Long-press action popup for touch ---
+    let activePopupRepeater = null;
+
+    function showRowActionPopup(r) {
+        activePopupRepeater = r;
+        const popup = document.getElementById('row-action-popup');
+        const info = document.getElementById('row-action-info');
+        info.textContent = r.callsign + '  ' + r.frequency.toFixed(4) + ' MHz';
+        if (r.location) info.textContent += '  —  ' + r.location;
+        popup.style.display = 'flex';
+    }
+
+    function closeRowPopup() {
+        document.getElementById('row-action-popup').style.display = 'none';
+        activePopupRepeater = null;
+    }
+
+    function popupSetRadio() {
+        if (!activePopupRepeater) return;
+        const r = activePopupRepeater;
+        closeRowPopup();
+
+        fetch('/api/set-radio', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                frequency: r.frequency,
+                offset: r.offset,
+                tone: r.tone,
+                callsign: r.callsign
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                activeFrequency = r.frequency;
+                showAlert('success',
+                    T['radio_set']
+                        .replace('{freq}', data.frequency)
+                        .replace('{call}', data.callsign));
+                applySearch();
+            } else {
+                showAlert('error', T['radio_error'].replace('{error}', data.error));
+            }
+        })
+        .catch(err => {
+            showAlert('error', T['radio_error'].replace('{error}', err.message));
+        });
+    }
+
+    function popupToggleFav() {
+        if (!activePopupRepeater) return;
+        const r = activePopupRepeater;
+        fetch('/api/toggle-favorite', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ callsign: r.callsign, frequency: r.frequency })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                r.favorite = data.favorite;
+                closeRowPopup();
+                applyFilters();
+            }
+        });
+    }
+
+    function popupEdit() {
+        if (!activePopupRepeater) return;
+        closeRowPopup();
+        openEditModal(activePopupRepeater);
+    }
+
+    function deleteRepeater() {
+        if (!confirm(T['delete_confirm'])) return;
+
+        const oldCall = document.getElementById('edit-old-call').value;
+        const oldFreq = document.getElementById('edit-old-freq').value;
+
+        fetch('/api/delete-repeater', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ callsign: oldCall, frequency: oldFreq })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('edit-modal').style.display = 'none';
+                showAlert('success', T['delete_success']);
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.value = '';
+                applyFilters();
+            }
+        });
+    }
+
+    function showAlert(type, msg) {
+        hideAlerts();
+        const el = document.getElementById(type === 'error' ? 'error-alert' : 'success-alert');
+        el.textContent = msg;
+        el.classList.add('show');
+        if (type === 'success') {
+            setTimeout(() => el.classList.remove('show'), 4000);
+        }
+    }
+
+    function hideAlerts() {
+        document.querySelectorAll('.alert').forEach(el => el.classList.remove('show'));
+    }
+
+    // Load data on page load if we have cached data
+    // --- GPS Tracking auto-refresh ---
+    let trackingTimer = null;
+    let trackingActive = false;
+
+    function checkTracking() {
+        fetch('/api/tracking-status')
+            .then(r => r.json())
+            .then(data => {
+                if (data.tracking && !trackingActive) {
+                    // Tracking just started
+                    trackingActive = true;
+                    hasPosition = true;
+                    startTrackingRefresh();
+                    showTrackingBanner(true, data.grid);
+                } else if (!data.tracking && trackingActive) {
+                    // Tracking stopped
+                    trackingActive = false;
+                    stopTrackingRefresh();
+                    showTrackingBanner(false, '');
+                } else if (data.tracking && trackingActive) {
+                    showTrackingBanner(true, data.grid);
+                }
+                // Update grid badge if tracking
+                if (data.grid) {
+                    const badge = document.getElementById('user-grid-badge');
+                    if (badge) badge.textContent = data.grid;
+                }
+            })
+            .catch(() => {});
+    }
+
+    function startTrackingRefresh() {
+        if (trackingTimer) return;
+        trackingTimer = setInterval(() => {
+            if (hasData) applyFilters();
+        }, 15000);
+        // Refresh now too
+        if (hasData) applyFilters();
+    }
+
+    function stopTrackingRefresh() {
+        if (trackingTimer) {
+            clearInterval(trackingTimer);
+            trackingTimer = null;
+        }
+    }
+
+    function showTrackingBanner(active, grid) {
+        let banner = document.getElementById('tracking-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'tracking-banner';
+            banner.style.cssText = 'padding:4px 12px;font-size:0.8rem;border-radius:4px;margin-bottom:6px;text-align:center;';
+            const filterRow = document.getElementById('filter-row');
+            if (filterRow) {
+                filterRow.parentNode.insertBefore(banner, filterRow);
+            }
+        }
+        if (active) {
+            banner.style.display = 'block';
+            banner.style.background = 'rgba(0,204,0,0.15)';
+            banner.style.border = '1px solid rgba(0,204,0,0.3)';
+            banner.style.color = '#00CC00';
+            banner.textContent = 'GPS Tracking — ' + grid + ' — auto-refresh 15s';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    // Check tracking status every 10 seconds
+    setInterval(checkTracking, 10000);
+    checkTracking();
+
+    if (hasData) {
+        restoreFilters();
+        applyFilters();
+    }
+</script>
+{% endblock %}

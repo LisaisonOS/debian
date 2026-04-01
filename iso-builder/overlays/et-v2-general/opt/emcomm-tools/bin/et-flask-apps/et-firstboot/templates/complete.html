@@ -10,17 +10,17 @@
         <div class="step-indicator">{{ t('step') }} 8 {{ t('of') }} 8</div>
         {% endif %}
     </div>
-    
+
     <div class="card" style="text-align: center;">
         <div class="success-icon">✓</div>
         <h2>{{ t('complete_msg') }}</h2>
-        
+
         {% if restored %}
         <div style="margin-top: 20px; background: rgba(76, 175, 80, 0.1); border: 1px solid rgba(76, 175, 80, 0.3); border-radius: 8px; padding: 15px;">
             <span style="color: #4CAF50;">✅ {{ t('config_restored') }}</span>
         </div>
         {% endif %}
-        
+
         {% if persistence_saved %}
         <div style="margin-top: 20px; background: rgba(33, 150, 243, 0.1); border: 1px solid rgba(33, 150, 243, 0.3); border-radius: 8px; padding: 15px;">
             <span style="color: #2196F3;">💾 {{ t('config_saved') }}</span>
@@ -29,11 +29,11 @@
 
         {% if radio_doc %}
         <div style="margin-top: 20px; background: rgba(255, 152, 0, 0.1); border: 1px solid rgba(255, 152, 0, 0.3); border-radius: 8px; padding: 15px;">
-            <span style="color: #FF9800;">📻 {{ 'Radio configuration saved to' if lang == 'en' else 'Configuration radio sauvegardée dans' }}:<br>
+            <span style="color: #FF9800;">📻 {{ t('radio_config_saved_to') }}:<br>
             <code style="font-size: 0.85rem;">~/Documents/emcomm-tools-radio-config.txt</code></span>
         </div>
         {% endif %}
-        
+
         {% if symlinks %}
         <div style="margin-top: 20px; text-align: left;">
             <h3 style="color: #FFA500; margin-bottom: 10px;">{{ t('creating_symlinks') }}</h3>
@@ -47,48 +47,38 @@
             </div>
         </div>
         {% endif %}
-        
+
         {% if has_hw_configs %}
         <div style="margin-top: 20px; background: rgba(103, 58, 183, 0.1); border: 1px solid rgba(103, 58, 183, 0.3); border-radius: 8px; padding: 15px; text-align: left;">
-            <strong style="color: #9C7CDB;">&#x1f4f6; {{ 'WiFi &amp; Bluetooth' }}</strong><br><br>
+            <strong style="color: #9C7CDB;">&#x1f4f6; WiFi &amp; Bluetooth</strong><br><br>
             <span style="font-size: 0.9rem; color: #ccc;">
-                {% if lang == 'en' %}
-                WiFi and Bluetooth configs were found on your USB drive but require administrator access to restore.
-                {% else %}
-                Des configurations WiFi et Bluetooth ont été trouvées sur votre clé USB mais nécessitent un accès administrateur.
-                {% endif %}
+                {{ t('hw_restore_title') }}
+                {{ t('hw_restore_desc') }}
                 <br><br>
                 <code style="background: rgba(0,0,0,0.3); padding: 8px; display: block; border-radius: 4px; margin: 10px 0;">sudo et-restore-hw</code>
             </span>
             <button class="btn btn-primary" style="margin-top: 10px; font-size: 0.85rem;"
-                onclick="fetch('/api/run_restore_hw', {method: 'POST'}); this.textContent='{{ 'Launched...' if lang == 'en' else 'Lancé...' }}'; this.disabled=true;">
-                {{ 'Restore WiFi & Bluetooth' if lang == 'en' else 'Restaurer WiFi et Bluetooth' }}
+                onclick="fetch('/api/run_restore_hw', {method: 'POST'}); this.textContent='{{ t('restore_wifi_bt_launched') }}'; this.disabled=true;">
+                {{ t('restore_wifi_bt') }}
             </button>
         </div>
         {% endif %}
 
         {% if has_osm_maps %}
         <div style="margin-top: 20px; background: rgba(255, 200, 0, 0.1); border: 1px solid rgba(255, 200, 0, 0.3); border-radius: 8px; padding: 15px; text-align: left;">
-            <strong style="color: #ffc800;">🗺️ {{ 'Navit Maps (Optional)' if lang == 'en' else 'Cartes Navit (Optionnel)' }}</strong><br><br>
+            <strong style="color: #ffc800;">🗺️ {{ t('navit_maps_optional') }}</strong><br><br>
             <span style="font-size: 0.9rem; color: #ccc;">
-                {% if lang == 'en' %}
-                To use your maps with Navit (GPS navigation), open a terminal and run:<br><br>
+                {{ t('navit_maps_desc') }}<br><br>
                 <code style="background: rgba(0,0,0,0.3); padding: 8px; display: block; border-radius: 4px; margin: 10px 0;">et-navit-maps</code>
-                This may take several minutes per map.
-                {% else %}
-                Pour utiliser vos cartes avec Navit (navigation GPS), ouvrez un terminal et exécutez:<br><br>
-                <code style="background: rgba(0,0,0,0.3); padding: 8px; display: block; border-radius: 4px; margin: 10px 0;">et-navit-maps</code>
-                Cela peut prendre plusieurs minutes par carte.
-                {% endif %}
             </span>
         </div>
         {% endif %}
-        
+
         <div class="info-box" style="margin-top: 20px;">
             {{ t('restart_note') }}
         </div>
     </div>
-    
+
     <div class="buttons">
         <button class="btn btn-primary" onclick="fetch('/api/quit', {method: 'POST'});">{{ t('finish') }}</button>
     </div>

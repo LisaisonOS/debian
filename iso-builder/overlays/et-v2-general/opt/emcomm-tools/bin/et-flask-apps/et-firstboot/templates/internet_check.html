@@ -1,41 +1,41 @@
 {% extends "base.html" %}
 
-{% block title %}{{ 'Internet Check' if lang == 'en' else 'Vérification Internet' }} - EmComm-Tools{% endblock %}
+{% block title %}{{ t('internet_check') }} - EmComm-Tools{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>{{ 'Download Maps & Files' if lang == 'en' else 'Télécharger cartes et fichiers' }}</h1>
+        <h1>{{ t('download_maps_files') }}</h1>
         <div class="step-indicator">{{ t('step') }} 3 {{ t('of') }} 8</div>
     </div>
-    
+
     <div class="card">
         {% if has_internet %}
         <div style="text-align: center; padding: 20px;">
             <div style="font-size: 3rem; margin-bottom: 15px;">🌐</div>
-            <h2 style="color: #FFA500;">{{ 'Internet Connected' if lang == 'en' else 'Internet connecté' }}</h2>
+            <h2 style="color: #FFA500;">{{ t('internet_connected') }}</h2>
             <p style="color: #ccc; margin-top: 10px;">
-                {{ 'You can now download offline maps and Wikipedia files.' if lang == 'en' else 'Vous pouvez maintenant télécharger les cartes et fichiers Wikipedia hors-ligne.' }}
+                {{ t('internet_connected_msg') }}
             </p>
         </div>
         {% else %}
         <div style="text-align: center; padding: 20px;">
             <div style="font-size: 3rem; margin-bottom: 15px;">📡</div>
-            <h2 style="color: #ff6b6b;">{{ 'No Internet Connection' if lang == 'en' else 'Pas de connexion Internet' }}</h2>
+            <h2 style="color: #ff6b6b;">{{ t('no_internet') }}</h2>
             <p style="color: #ccc; margin-top: 10px;">
-                {{ 'Connect to the internet to download maps and files, or skip this step.' if lang == 'en' else 'Connectez-vous à Internet pour télécharger les cartes et fichiers, ou passez cette étape.' }}
+                {{ t('no_internet_msg') }}
             </p>
         </div>
         {% endif %}
     </div>
-    
+
     <div class="buttons">
         <a href="{{ url_for('radio_setup') }}" class="btn btn-secondary">{{ t('back') }}</a>
         {% if has_internet %}
         <a href="{{ url_for('drive_setup') }}" class="btn btn-primary">{{ t('next') }}</a>
         {% else %}
         <a href="{{ url_for('complete') }}" class="btn btn-secondary">{{ t('skip') }} →</a>
-        <a href="{{ url_for('internet_check') }}" class="btn btn-primary">{{ 'Retry' if lang == 'en' else 'Réessayer' }}</a>
+        <a href="{{ url_for('internet_check') }}" class="btn btn-primary">{{ t('retry') }}</a>
         {% endif %}
     </div>
 </div>

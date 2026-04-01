@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Power Manager
+Exec=xfce4-power-manager
+Hidden=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

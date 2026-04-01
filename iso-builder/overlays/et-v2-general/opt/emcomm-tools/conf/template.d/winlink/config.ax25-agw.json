@@ -13,7 +13,7 @@
   "connect_aliases": {
     "telnet": "telnet://{mycall}:CMSTelnet@cms.winlink.org:8772/wl2k"
   },
-  "listen": [ "ax25" ],
+  "listen": [],
   "hamlib_rigs": {
     "et-rig": {
       "address": "localhost:4532", 
@@ -22,6 +22,7 @@
   },
   "ax25": {
     "engine": "agwpe",
+    "rig": "et-rig",
     "beacon": {
       "every": 3600,
       "message": "Winlink P2P",
