@@ -1,7 +1,5 @@
 #!/bin/bash
 set -e
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 echo "Installing LinBPQ..."
 
@@ -18,19 +16,8 @@ mkdir -p ${INSTALL_BIN_DIR}
 
 # Download HTML web interface
 HTML_ZIP="HTMLPages.zip"
-HTML_URL="http://www.cantab.net/users/john.wiseman/Downloads/Beta/${HTML_ZIP}"
-HTML_FALLBACK="${REPO_ROOT}/downloads/${HTML_ZIP}"
-
-echo "Downloading LinBPQ web interface from ${HTML_URL}..."
-if curl -s -L -o "/tmp/${HTML_ZIP}" --fail --retry 3 --retry-delay 5 "${HTML_URL}"; then
-    echo "Download successful."
-elif [ -f "${HTML_FALLBACK}" ]; then
-    echo "Download failed. Using local fallback: ${HTML_FALLBACK}"
-    cp "${HTML_FALLBACK}" "/tmp/${HTML_ZIP}"
-else
-    echo "ERROR: LinBPQ HTML download failed and no local fallback at ${HTML_FALLBACK}"
-    exit 1
-fi
+echo "Downloading LinBPQ web interface from local cache..."
+curl -s -o "/tmp/${HTML_ZIP}" --fail "http://127.0.0.1/${HTML_ZIP}"
 
 cd ${BBS_HOME}
 unzip -o "/tmp/${HTML_ZIP}"
@@ -38,19 +25,8 @@ rm -f "/tmp/${HTML_ZIP}"
 
 # Download LinBPQ binary
 BIN_FILE="linbpq"
-BIN_URL="https://www.cantab.net/users/john.wiseman/Downloads/${BIN_FILE}"
-BIN_FALLBACK="${REPO_ROOT}/downloads/${BIN_FILE}"
-
-echo "Downloading LinBPQ binary from ${BIN_URL}..."
-if curl -s -L -o "/tmp/${BIN_FILE}" --fail --retry 3 --retry-delay 5 "${BIN_URL}"; then
-    echo "Download successful."
-elif [ -f "${BIN_FALLBACK}" ]; then
-    echo "Download failed. Using local fallback: ${BIN_FALLBACK}"
-    cp "${BIN_FALLBACK}" "/tmp/${BIN_FILE}"
-else
-    echo "ERROR: LinBPQ binary download failed and no local fallback at ${BIN_FALLBACK}"
-    exit 1
-fi
+echo "Downloading LinBPQ binary from local cache..."
+curl -s -o "/tmp/${BIN_FILE}" --fail "http://127.0.0.1/${BIN_FILE}"
 
 cp "/tmp/${BIN_FILE}" "${INSTALL_BIN_DIR}/${BIN_FILE}"
 chmod 755 ${INSTALL_BIN_DIR}/${BIN_FILE}

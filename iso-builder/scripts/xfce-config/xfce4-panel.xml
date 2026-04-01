@@ -16,9 +16,11 @@
         <value type="int" value="3"/>
         <value type="int" value="4"/>
         <value type="int" value="5"/>
+        <value type="int" value="27"/>
         <value type="int" value="24"/>
         <value type="int" value="25"/>
         <value type="int" value="26"/>
+        <value type="int" value="28"/>
         <value type="int" value="6"/>
         <value type="int" value="7"/>
         <value type="int" value="8"/>
@@ -45,6 +47,11 @@
         <value type="string" value="xfce4-terminal.desktop"/>
       </property>
     </property>
+    <property name="plugin-27" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="et-repeater.desktop"/>
+      </property>
+    </property>
     <property name="plugin-24" type="string" value="launcher">
       <property name="items" type="array">
         <value type="string" value="navit.desktop"/>
@@ -58,6 +65,11 @@
     <property name="plugin-26" type="string" value="launcher">
       <property name="items" type="array">
         <value type="string" value="et-crypto.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-28" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="et-logger.desktop"/>
       </property>
     </property>
     <property name="plugin-6" type="string" value="separator"/>

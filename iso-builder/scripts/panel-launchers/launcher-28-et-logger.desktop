@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Field Logger
+Exec=python3 /opt/emcomm-tools/bin/et-flask-apps/et-logger/et-logger.py
+Icon=accessories-text-editor
+Terminal=false

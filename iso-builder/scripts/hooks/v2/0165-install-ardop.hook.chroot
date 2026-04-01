@@ -1,7 +1,5 @@
 #!/bin/bash
 set -e
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 echo "Installing ARDOP modem..."
 
@@ -11,23 +9,12 @@ DOWNLOAD_FILE="ardopcf_amd64_Linux_64"
 INSTALL_DIR="/opt/ardop-${VERSION}"
 INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
 LINK_PATH="/opt/ardop"
-LOCAL_FALLBACK="${REPO_ROOT}/downloads/${DOWNLOAD_FILE}"
-
-URL="https://github.com/pflarue/ardop/releases/download/${VERSION}/${DOWNLOAD_FILE}"
 
 rm -rf ${INSTALL_DIR}
 mkdir -p ${INSTALL_BIN_DIR}
 
-echo "Downloading ARDOP from ${URL}..."
-if curl -s -L -o "/tmp/${DOWNLOAD_FILE}" --fail --retry 3 --retry-delay 5 "${URL}"; then
-    echo "Download successful."
-elif [ -f "${LOCAL_FALLBACK}" ]; then
-    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
-    cp "${LOCAL_FALLBACK}" "/tmp/${DOWNLOAD_FILE}"
-else
-    echo "ERROR: ARDOP download failed and no local fallback at ${LOCAL_FALLBACK}"
-    exit 1
-fi
+echo "Downloading ARDOP from local cache..."
+curl -s -o "/tmp/${DOWNLOAD_FILE}" --fail "http://127.0.0.1/${DOWNLOAD_FILE}"
 
 cp "/tmp/${DOWNLOAD_FILE}" "${INSTALL_BIN_DIR}/${BIN_FILE}"
 chmod 755 ${INSTALL_BIN_DIR}/${BIN_FILE}

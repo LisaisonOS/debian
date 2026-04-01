@@ -1,7 +1,5 @@
 #!/bin/bash
 set -e
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 echo "Installing Paracon BBS client..."
 
@@ -12,23 +10,12 @@ PYZ_FILE="paracon.pyz"
 INSTALL_DIR="/opt/${APP}-${VERSION}"
 INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
 LINK_PATH="/opt/${APP}"
-LOCAL_FALLBACK="${REPO_ROOT}/downloads/${DOWNLOAD_FILE}"
-
-URL="https://github.com/mfncooper/paracon/releases/download/v${VERSION}/${DOWNLOAD_FILE}"
 
 rm -rf ${INSTALL_DIR}
 mkdir -p ${INSTALL_BIN_DIR}
 
-echo "Downloading Paracon v${VERSION} from ${URL}..."
-if curl -s -L -o "/tmp/${DOWNLOAD_FILE}" --fail --retry 3 --retry-delay 5 "${URL}"; then
-    echo "Download successful."
-elif [ -f "${LOCAL_FALLBACK}" ]; then
-    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
-    cp "${LOCAL_FALLBACK}" "/tmp/${DOWNLOAD_FILE}"
-else
-    echo "ERROR: Paracon download failed and no local fallback at ${LOCAL_FALLBACK}"
-    exit 1
-fi
+echo "Downloading Paracon v${VERSION} from local cache..."
+curl -s -o "/tmp/${DOWNLOAD_FILE}" --fail "http://127.0.0.1/${DOWNLOAD_FILE}"
 
 # Install as paracon.pyz (consistent name for wrapper script)
 cp "/tmp/${DOWNLOAD_FILE}" "${INSTALL_BIN_DIR}/${PYZ_FILE}"

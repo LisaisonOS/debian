@@ -1,23 +1,14 @@
 #!/bin/bash
 set -e
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 echo "Installing Min browser..."
 
 MIN_VERSION="1.34.1"
 MIN_DEB="min-${MIN_VERSION}-amd64.deb"
-MIN_URL="https://github.com/minbrowser/min/releases/download/v${MIN_VERSION}/${MIN_DEB}"
-LOCAL_FALLBACK="${REPO_ROOT}/downloads/${MIN_DEB}"
 
-echo "Downloading Min browser from ${MIN_URL}..."
-if curl -s -L -o "/tmp/${MIN_DEB}" --fail --retry 3 --retry-delay 5 "${MIN_URL}"; then
-    echo "Download successful."
-elif [ -f "${LOCAL_FALLBACK}" ]; then
-    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
-    cp "${LOCAL_FALLBACK}" "/tmp/${MIN_DEB}"
-else
-    echo "Warning: Min browser download failed - will use firefox-esr as fallback"
+echo "Downloading Min browser from local cache..."
+if ! curl -s -o "/tmp/${MIN_DEB}" --fail "http://127.0.0.1/${MIN_DEB}"; then
+    echo "Warning: Min browser not available in local cache - will use firefox-esr as fallback"
     exit 0
 fi
 

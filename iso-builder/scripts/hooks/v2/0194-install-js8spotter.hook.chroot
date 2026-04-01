@@ -34,20 +34,8 @@ apt-get install -y \
     python3-requests
 
 # Download source-only version (for Linux)
-URL="https://kf7mix.com/files/js8spotter/${DOWNLOAD_FILE}"
-
-LOCAL_FALLBACK="${REPO_ROOT}/downloads/${DOWNLOAD_FILE}"
-
-echo "Downloading JS8Spotter v${VERSION} from ${URL}..."
-if curl -s -L -o "/tmp/${DOWNLOAD_FILE}" --fail --retry 3 --retry-delay 5 "${URL}"; then
-    echo "Download successful."
-elif [ -f "${LOCAL_FALLBACK}" ]; then
-    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
-    cp "${LOCAL_FALLBACK}" "/tmp/${DOWNLOAD_FILE}"
-else
-    echo "ERROR: JS8Spotter download failed and no local fallback at ${LOCAL_FALLBACK}"
-    exit 1
-fi
+echo "Downloading JS8Spotter v${VERSION} from local cache..."
+curl -s -o "/tmp/${DOWNLOAD_FILE}" --fail "http://127.0.0.1/${DOWNLOAD_FILE}"
 cd /tmp
 
 # Extract and install (clean first to avoid stale chroot data)

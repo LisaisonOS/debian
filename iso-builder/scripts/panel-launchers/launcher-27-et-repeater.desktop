@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Repeater Directory
+Exec=python3 /opt/emcomm-tools/bin/et-flask-apps/et-repeater/et-repeater.py
+Icon=network-wireless
+Terminal=false

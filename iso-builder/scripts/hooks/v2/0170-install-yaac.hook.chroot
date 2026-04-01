@@ -5,14 +5,11 @@
 # https://www.ka2ddo.org/ka2ddo/YAAC.html
 #
 # Modified : Sylvain Deguire (VA2OPS)
-# Date     : 15 February 2026
-# Changes  : Try web download first, fall back to local copy in
-#             ${REPO_ROOT}/downloads/ if download fails for any reason.
+# Date     : 18 March 2026
+# Changes  : Download from local Apache cache (http://127.0.0.1/)
 # =============================================================================
 
 set -e
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
 echo "=== Installing YAAC ==="
 
@@ -20,21 +17,9 @@ VERSION="latest"
 ZIP_FILE="YAAC.zip"
 INSTALL_DIR="/opt/yaac-${VERSION}"
 LINK_PATH="/opt/yaac"
-LOCAL_FALLBACK="${REPO_ROOT}/downloads/${ZIP_FILE}"
 
-# 1) Try download from original source first (always get latest)
-URL="https://www.ka2ddo.org/ka2ddo/${ZIP_FILE}"
-echo "Downloading YAAC from ${URL}..."
-if curl -s -L -o "/tmp/${ZIP_FILE}" --fail --retry 3 --retry-delay 5 "${URL}"; then
-    echo "Download successful."
-elif [ -f "${LOCAL_FALLBACK}" ]; then
-    # 2) Download failed — use local fallback
-    echo "Download failed. Using local fallback: ${LOCAL_FALLBACK}"
-    cp "${LOCAL_FALLBACK}" "/tmp/${ZIP_FILE}"
-else
-    echo "ERROR: Download failed and no local fallback at ${LOCAL_FALLBACK}"
-    exit 1
-fi
+echo "Downloading YAAC from local cache..."
+curl -s -o "/tmp/${ZIP_FILE}" --fail "http://127.0.0.1/${ZIP_FILE}"
 
 # Clean stale chroot data and extract
 echo "Extracting YAAC to ${INSTALL_DIR}..."
@@ -56,26 +41,14 @@ rm -f "/tmp/${ZIP_FILE}"
 rm -rf "${LINK_PATH}"
 ln -s "${INSTALL_DIR}" "${LINK_PATH}"
 
-# Install PNGTileLayer plugin (download first, local fallback)
+# Install PNGTileLayer plugin
 PLUGIN_FILE="PNGTileLayer.jar"
-PLUGIN_URL="https://github.com/emcomm-tools/pngtilelayer/releases/download/v1.2/${PLUGIN_FILE}"
-PLUGIN_FALLBACK="${REPO_ROOT}/downloads/${PLUGIN_FILE}"
+echo "Downloading PNGTileLayer plugin from local cache..."
+curl -s -o "/tmp/${PLUGIN_FILE}" --fail "http://127.0.0.1/${PLUGIN_FILE}"
 
-echo "Downloading PNGTileLayer plugin from ${PLUGIN_URL}..."
-if curl -s -L -o "/tmp/${PLUGIN_FILE}" --fail --retry 3 --retry-delay 5 "${PLUGIN_URL}"; then
-    echo "Download successful."
-    mkdir -p "${INSTALL_DIR}/plugins"
-    cp "/tmp/${PLUGIN_FILE}" "${INSTALL_DIR}/plugins/"
-    rm -f "/tmp/${PLUGIN_FILE}"
-    echo "Installed PNGTileLayer.jar plugin"
-elif [ -f "${PLUGIN_FALLBACK}" ]; then
-    echo "Download failed. Using local fallback: ${PLUGIN_FALLBACK}"
-    mkdir -p "${INSTALL_DIR}/plugins"
-    cp "${PLUGIN_FALLBACK}" "${INSTALL_DIR}/plugins/"
-    echo "Installed PNGTileLayer.jar plugin (from fallback)"
-else
-    echo "ERROR: PNGTileLayer download failed and no local fallback at ${PLUGIN_FALLBACK}"
-    exit 1
-fi
+mkdir -p "${INSTALL_DIR}/plugins"
+cp "/tmp/${PLUGIN_FILE}" "${INSTALL_DIR}/plugins/"
+rm -f "/tmp/${PLUGIN_FILE}"
+echo "Installed PNGTileLayer.jar plugin"
 
 echo "=== YAAC installation complete ==="

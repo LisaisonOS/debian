@@ -1,6 +1,10 @@
 # Desktop Environment
 task-xfce-desktop
 lightdm
+xfce4-power-manager-plugins
+onboard
+python3-tksnack
+libsnack-alsa
 
 # Live system (CRITICAL!)
 live-boot

@@ -1,8 +1,5 @@
 #!/bin/bash
 set -e
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-
 # Configure apt to retry on failure (network hiccups, rate-limits)
 cat > /etc/apt/apt.conf.d/99-retry <<'APTCONF'
 Acquire::Retries "5";
@@ -87,17 +84,6 @@ apt-get install -y \
   libasound2-dev:i386 \
   zlib1g:i386
 
-WINETRICKS_URL="https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks"
-WINETRICKS_FALLBACK="${REPO_ROOT}/downloads/winetricks"
-
-echo "Downloading winetricks..."
-if curl -s -L -o /usr/local/bin/winetricks --fail --retry 3 --retry-delay 5 "${WINETRICKS_URL}"; then
-    echo "Download successful."
-elif [ -f "${WINETRICKS_FALLBACK}" ]; then
-    echo "Download failed. Using local fallback: ${WINETRICKS_FALLBACK}"
-    cp "${WINETRICKS_FALLBACK}" /usr/local/bin/winetricks
-else
-    echo "ERROR: winetricks download failed and no local fallback at ${WINETRICKS_FALLBACK}"
-    exit 1
-fi
+echo "Downloading winetricks from local cache..."
+curl -s -o /usr/local/bin/winetricks --fail "http://127.0.0.1/winetricks"
 chmod +x /usr/local/bin/winetricks

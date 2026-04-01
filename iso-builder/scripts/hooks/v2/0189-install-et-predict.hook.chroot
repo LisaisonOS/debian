@@ -6,22 +6,9 @@ echo "Installing ET-Predict..."
 APP="et-predict-app"
 VERSION="1.5.4"
 DOWNLOAD_FILE="${APP}_${VERSION}_amd64.deb"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-LOCAL_FALLBACK="${REPO_ROOT}/downloads/${DOWNLOAD_FILE}"
 
-URL="https://github.com/emcomm-tools/${APP}/releases/download/${VERSION}/${DOWNLOAD_FILE}"
-
-echo "Downloading ET-Predict from ${URL}..."
-if curl -s -L -o "/tmp/${DOWNLOAD_FILE}" --fail --retry 3 --retry-delay 5 "${URL}"; then
-    echo "Download successful."
-elif [ -f "${LOCAL_FALLBACK}" ]; then
-    echo "GitHub download failed. Using local fallback: ${LOCAL_FALLBACK}"
-    cp "${LOCAL_FALLBACK}" "/tmp/${DOWNLOAD_FILE}"
-else
-    echo "ERROR: ET-Predict download failed and no local fallback at ${LOCAL_FALLBACK}"
-    exit 1
-fi
+echo "Downloading ET-Predict from local cache..."
+curl -s -o "/tmp/${DOWNLOAD_FILE}" --fail "http://127.0.0.1/${DOWNLOAD_FILE}"
 
 echo "Installing ${DOWNLOAD_FILE}..."
 DEBIAN_FRONTEND=noninteractive dpkg -i "/tmp/${DOWNLOAD_FILE}"
