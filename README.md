@@ -8,7 +8,7 @@
   <a href="https://sourceforge.net/projects/emcomm-tools/"><img src="https://img.shields.io/badge/Version-2.1.8-f59e0b?style=for-the-badge" alt="Version 2.1.8"></a>
   <a href="https://sourceforge.net/projects/emcomm-tools/files/ISO/"><img src="https://img.shields.io/badge/Download-ISO-22c55e?style=for-the-badge&logo=sourceforge" alt="Download ISO"></a>
   <a href="https://opensource.org/licenses/MS-PL"><img src="https://img.shields.io/badge/License-Ms--PL-3b82f6?style=for-the-badge" alt="License Ms-PL"></a>
-  <a href="https://va2ops.ca"><img src="https://img.shields.io/badge/VA2OPS-va2ops.ca-8b5cf6?style=for-the-badge" alt="AUTHOR"></a>
+  <a href="https://va2ops.ca"><img src="https://img.shields.io/badge/Author-va2ops.ca-8b5cf6?style=for-the-badge" alt="Author"></a>
 </p>
 
 <p align="center">
