@@ -1,6 +1,6 @@
 # EmComm-Tools OS - Debian Edition
 
-🇫🇷 **Français** | 🇬🇧 **English**
+**Français** | **English**
 
 ---
 
