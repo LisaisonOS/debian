@@ -10,7 +10,7 @@ Distribution Linux EmComm bilingue (FR/EN) basée sur Debian pour radioamateurs.
 
 Fork d'EmComm-Tools OS Community par TheTechPrepper (KT7RUN).
 
-**Mainteneur :** Sylvain Deguire (VA2OPS)
+**Mainteneur :** [Sylvain Deguire (VA2OPS)](https://va2ops.ca)
 
 📖 [Documentation](FUTURES_fr.md)
 
@@ -32,7 +32,7 @@ Bilingual (FR/EN) Debian-based EmComm Linux for Ham Radio.
 
 Fork of EmComm-Tools OS Community by TheTechPrepper (KT7RUN).
 
-**Maintainer:** Sylvain Deguire (VA2OPS)
+**Maintainer:** [Sylvain Deguire (VA2OPS)](https://va2ops.ca)
 
 📖 [Documentation](FUTURES.md)
 
