@@ -1,9 +1,4 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/emcomm-tools/media/main/screenshots/2.1.3/edit_radio.png" alt="EmComm-Tools OS" width="600">
-</p>
-
 <h1 align="center">EmComm-Tools OS — Debian Edition</h1>
-
 <p align="center">
   <em>Explore. Connect. Respond.</em><br>
   <em>Explorer. Connecter. Répondre.</em>
