@@ -24,30 +24,34 @@
 <tr>
 <td width="50%" valign="top">
 
-### Français
+<h3>Français</h3>
 
-Distribution Linux EmComm bilingue (FR/EN) basée sur Debian pour radioamateurs.
+<p>Distribution Linux EmComm bilingue (FR/EN) basée sur Debian pour radioamateurs.</p>
 
-**Mainteneur :** [Sylvain Deguire (VA2OPS)](https://va2ops.ca/fr/)
+<p><strong>Mainteneur :</strong> <a href="https://va2ops.ca/fr/">Sylvain Deguire (VA2OPS)</a></p>
 
-📖 [Documentation](FUTURES_fr.md)
-💾 [Téléchargements ISO](https://sourceforge.net/projects/emcomm-tools/files/ISO/)
-☕ [Offrez-moi un café](https://buymeacoffee.com/emcommtools)
-⚠️ [Avis de non-responsabilité](DISCLAIMER.md)
+<p>
+📖 <a href="FUTURES_fr.md">Documentation</a><br>
+💾 <a href="https://sourceforge.net/projects/emcomm-tools/files/ISO/">Téléchargements ISO</a><br>
+☕ <a href="https://buymeacoffee.com/emcommtools">Offrez-moi un café</a><br>
+⚠️ <a href="DISCLAIMER.md">Avis de non-responsabilité</a>
+</p>
 
 </td>
 <td width="50%" valign="top">
 
-### English
+<h3>English</h3>
 
-Bilingual (FR/EN) Debian-based EmComm Linux for Ham Radio.
+<p>Bilingual (FR/EN) Debian-based EmComm Linux for Ham Radio.</p>
 
-**Maintainer:** [Sylvain Deguire (VA2OPS)](https://va2ops.ca)
+<p><strong>Maintainer:</strong> <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a></p>
 
-📖 [Documentation](FUTURES.md)
-💾 [ISO Downloads](https://sourceforge.net/projects/emcomm-tools/files/ISO/)
-☕ [Buy Me a Coffee](https://buymeacoffee.com/emcommtools)
-⚠️ [Disclaimer](DISCLAIMER.md)
+<p>
+📖 <a href="FUTURES.md">Documentation</a><br>
+💾 <a href="https://sourceforge.net/projects/emcomm-tools/files/ISO/">ISO Downloads</a><br>
+☕ <a href="https://buymeacoffee.com/emcommtools">Buy Me a Coffee</a><br>
+⚠️ <a href="DISCLAIMER.md">Disclaimer</a>
+</p>
 
 </td>
 </tr>
@@ -164,7 +168,7 @@ The dashboard provides **16 one-click operational modes:**
 | 🐙 **GitHub** | [emcomm-tools/debian](https://github.com/emcomm-tools/debian/) |
 | 👤 **Maintainer** | [va2ops.ca](https://va2ops.ca) |
 | ☕ **Support** | [Buy Me a Coffee](https://buymeacoffee.com/emcommtools) |
-| 📧 **Contact** | info@emcomm-tools.ca |
+| 📧 **Contact** | <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c5acaba3aa85a0a8a6aaa8a8e8b1aaaaa9b6eba6a4">[email&#160;protected]</a> |
 
 ---
 
@@ -185,11 +189,4 @@ The dashboard provides **16 one-click operational modes:**
 
 ## 📄 License
 
-This project is a derivative work of EmComm-Tools OS Community, licensed under the **[Microsoft Public License (Ms-PL)](https://opensource.org/licenses/MS-PL)**. In compliance with Ms-PL Section 3(C), we retain all copyright, patent, trademark, and attribution notices from the original software.
-
----
-
-<p align="center">
-  <em>73 de VA2OPS</em><br>
-  <em>Share the knowledge. Build the community.</em>
-</p>
+This project is a derivative work of EmComm-Tools OS Community, licensed under the **[Microsoft Public License (Ms-PL)](https://opensource.org/licenses/MS-PL)**. In compliance with Ms-PL Section 3(C), we retain all copyright, patent, trademark, and attribution notices from the origina
