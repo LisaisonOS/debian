@@ -8,8 +8,6 @@
 
 Distribution Linux EmComm bilingue (FR/EN) basée sur Debian pour radioamateurs.
 
-Fork d'EmComm-Tools OS Community par TheTechPrepper (KT7RUN).
-
 **Mainteneur :** [Sylvain Deguire (VA2OPS)](https://va2ops.ca/fr/)
 
 📖 [Documentation](FUTURES_fr.md)
@@ -24,13 +22,13 @@ Fork d'EmComm-Tools OS Community par TheTechPrepper (KT7RUN).
 
 ⚠️ [Avis de non-responsabilité](DISCLAIMER.md)
 
+Fork d'EmComm-Tools OS Community par TheTechPrepper (KT7RUN).
+
 ---
 
 ## English
 
 Bilingual (FR/EN) Debian-based EmComm Linux for Ham Radio.
-
-Fork of EmComm-Tools OS Community by TheTechPrepper (KT7RUN).
 
 **Maintainer:** [Sylvain Deguire (VA2OPS)](https://va2ops.ca)
 
@@ -45,6 +43,8 @@ Fork of EmComm-Tools OS Community by TheTechPrepper (KT7RUN).
 ☕ [Buy Me a Coffee](https://buymeacoffee.com/emcommtools)
 
 ⚠️ [Disclaimer](DISCLAIMER.md)
+
+Fork of EmComm-Tools OS Community by TheTechPrepper (KT7RUN).
 
 ---
 
