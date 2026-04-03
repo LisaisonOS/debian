@@ -107,14 +107,6 @@ All radio communication now goes through a single persistent TCP connection to r
 
 ---
 
-## 🖥️ Screenshots
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/emcomm-tools/media/main/screenshots/2.1.3/edit_radio.png" alt="EmComm-Tools Dashboard" width="700">
-</p>
-
----
-
 ## 📥 Quick Start
 
 1. **Download** the ISO from [SourceForge](https://sourceforge.net/projects/emcomm-tools/files/ISO/)
