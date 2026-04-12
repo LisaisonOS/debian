@@ -44,9 +44,11 @@ thunderbird
 thunderbird-l10n-fr
 
 #Python depencencies
-python3-flask 
+python3-flask
 python3-werkzeug
 python3-webview
+python3-pip
+chirp
 
 # Runtime audio libraries (dev packages installed by hooks when compiling)
 libportaudio2

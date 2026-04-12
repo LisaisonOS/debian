@@ -1,0 +1,3 @@
+#!/bin/bash
+# Recompile gsettings schemas after overlay overrides are applied
+glib-compile-schemas /usr/share/glib-2.0/schemas/ 2>/dev/null || true

@@ -21,7 +21,9 @@
         <value type="int" value="25"/>
         <value type="int" value="26"/>
         <value type="int" value="28"/>
+        <value type="int" value="30"/>
         <value type="int" value="6"/>
+        <value type="int" value="29"/>
         <value type="int" value="7"/>
         <value type="int" value="8"/>
         <value type="int" value="9"/>
@@ -72,9 +74,23 @@
         <value type="string" value="et-logger.desktop"/>
       </property>
     </property>
+    <property name="plugin-30" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="onboard.desktop"/>
+      </property>
+    </property>
     <property name="plugin-6" type="string" value="separator"/>
-    <property name="plugin-7" type="string" value="systray"/>
-    <property name="plugin-8" type="string" value="clock"/>
-    <property name="plugin-9" type="string" value="actions"/>
+    <property name="plugin-29" type="string" value="power-manager-plugin"/>
+    <property name="plugin-7" type="string" value="systray">
+      <property name="icon-size" type="int" value="32"/>
+    </property>
+    <property name="plugin-8" type="string" value="clock">
+      <property name="mode" type="uint" value="4"/>
+      <property name="show-date" type="bool" value="false"/>
+      <property name="timezone" type="string" value="UTC"/>
+    </property>
+    <property name="plugin-9" type="string" value="actions">
+      <property name="button-title" type="uint" value="1"/>
+    </property>
   </property>
 </channel>
