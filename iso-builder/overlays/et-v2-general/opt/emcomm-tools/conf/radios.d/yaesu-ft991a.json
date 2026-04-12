@@ -13,11 +13,13 @@
     "ptt": "RIG"
   },
   "varafm": {
-    "pttPort": "COM5",
+    "rig": "132",
+    "pttPort": "COM10",
+    "catPort": "COM10",
     "pttVia": "1",
     "baud": "38400",
     "dtr": "0",
-    "rts": "0"
+    "rts": "1"
   },
   "notes": [
     "031 CAT RATE = 38400bps",

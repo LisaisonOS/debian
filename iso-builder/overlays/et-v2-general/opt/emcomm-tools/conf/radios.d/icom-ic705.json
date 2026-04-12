@@ -13,7 +13,9 @@
     "ptt": "RIG"
   },
   "varafm": {
+    "rig": "135",
     "pttPort": "COM5",
+    "catPort": "COM5",
     "pttVia": "1",
     "baud": "19200",
     "dtr": "0",

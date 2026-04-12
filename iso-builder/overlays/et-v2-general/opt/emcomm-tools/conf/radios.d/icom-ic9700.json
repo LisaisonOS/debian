@@ -13,7 +13,9 @@
     "conf": "rts_state=OFF,dtr_state=OFF"
   },
   "varafm": {
+    "rig": "134",
     "pttPort": "COM5",
+    "catPort": "COM5",
     "pttVia": "2",
     "rts": "1",
     "dtr": "0"

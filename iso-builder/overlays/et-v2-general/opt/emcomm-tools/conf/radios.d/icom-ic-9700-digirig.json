@@ -12,7 +12,9 @@
     "baud": "19200"
   },
   "varafm": {
+    "rig": "134",
     "pttPort": "COM5",
+    "catPort": "COM5",
     "pttVia": "2",
     "dtr": "0",
     "rts": "1"

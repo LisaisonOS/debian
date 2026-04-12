@@ -621,8 +621,9 @@ if [[ -d "$WIFI_SRC" ]]; then
         [[ ! -f "$wifi_file" ]] && continue
         filename=$(basename "$wifi_file")
         
-        # Skip files with spaces (NM-created duplicates)
-        if [[ "$filename" == *" "* ]]; then
+        # Skip NM-created numbered duplicates (e.g. "MyWifi 1.nmconnection")
+        # but keep SSIDs that naturally contain spaces (e.g. "BELL R2B2.nmconnection")
+        if [[ "$filename" =~ \ [0-9]+\.nmconnection$ ]]; then
             log "⏭ Skipping duplicate: $filename"
             continue
         fi

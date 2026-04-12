@@ -396,6 +396,46 @@ body {
     text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 0.95rem;
 }
 
+/* Voice Keyer */
+.vk-section { padding: 8px 0; }
+.vk-record-section {
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; margin-bottom: 16px;
+}
+.vk-status { color: var(--danger); font-size: 0.9rem; margin-top: 8px; display: none; }
+.vk-recording { animation: vk-pulse 1s ease-in-out infinite; }
+@keyframes vk-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+.vk-msg-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 8px;
+}
+.vk-msg-row:hover { border-color: var(--accent); }
+.vk-msg-info { display: flex; flex-direction: column; gap: 2px; min-width: 140px; }
+.vk-msg-title { color: var(--accent); font-size: 0.95rem; }
+.vk-msg-meta { color: var(--text-secondary); font-size: 0.8rem; }
+.vk-msg-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+.vk-repeat-label {
+    display: flex; align-items: center; gap: 4px;
+    color: var(--text-secondary); font-size: 0.8rem; cursor: pointer;
+}
+.vk-delay-input {
+    width: 48px; padding: 3px 6px; font-size: 0.8rem;
+    background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border);
+    border-radius: 4px; text-align: center;
+}
+.vk-delay-unit { color: var(--text-secondary); font-size: 0.8rem; }
+.vk-device-status { margin-top: 16px; text-align: right; }
+.btn-icon-danger:hover { color: var(--danger); }
+.vk-msg-row-stacked { flex-direction: column; align-items: stretch; gap: 8px; }
+.vk-msg-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.vk-audio-player { width: 100%; height: 36px; outline: none; }
+.vk-audio-player::-webkit-media-controls-panel { background-color: var(--bg-input); }
+
 /* Responsive */
 @media (max-width: 600px) {
     .form-row { flex-direction: column; }

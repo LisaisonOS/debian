@@ -13,11 +13,13 @@
     "ptt": "RIG"
   },
   "varafm": {
+    "rig": "124",
     "pttPort": "COM5",
+    "catPort": "COM5",
     "pttVia": "1",
     "baud": "19200",
     "dtr": "0",
-    "rts": "1"
+    "rts": "0"
   },
   "notes": [
     "TODO: Add notes"

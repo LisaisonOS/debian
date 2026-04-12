@@ -13,7 +13,9 @@
     "ptt": "RTS"
   },
   "varafm": {
+    "rig": "52",
     "pttPort": "COM10",
+    "catPort": "COM10",
     "pttVia": "1",
     "baud": "38400",
     "dtr": "1",

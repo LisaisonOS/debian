@@ -36,11 +36,8 @@ SUBSYSTEM=="tty", ENV{ET_DEVICE}=="FT-710", \
     ENV{ET_SUBDEVICE}="CAT", GROUP="dialout", MODE="0660", SYMLINK+="et-cat", \
     RUN+="/usr/bin/systemctl start rigctld"
 
-# Audio device — FT-710 has a built-in USB audio codec.
-# The USB audio IDs below are best-effort (08bb:29b3 = Texas Instruments PCM2900-series).
-# If audio does not work, identify the correct IDs with:
-#   udevadm info -a -n /dev/snd/pcmC*D*p | grep -E 'idVendor|idProduct'
-SUBSYSTEM=="sound", ATTRS{idVendor}=="08bb", ATTRS{idProduct}=="29b3", \
+# Audio device — FT-710 uses C-Media USB audio codec (0d8c:0013).
+SUBSYSTEM=="sound", ATTRS{idVendor}=="0d8c", ATTRS{idProduct}=="0013", \
     PROGRAM="/opt/emcomm-tools/sbin/udev-tester.sh yaesu-ft710", \
     ACTION=="add", \
     ENV{ET_DEVICE}="FT-710", \

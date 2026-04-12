@@ -14,6 +14,6 @@ SUBSYSTEM=="tty", ENV{ET_SUBDEVICE}=="CAT", \
   RUN+="/opt/emcomm-tools/sbin/wrapper-rigctld.sh stop"
 
 
-SUBSYSTEM=="sound",ENV{ET_SUBDEVICE}=="AUDIO", \
-  ACTION=="remove", \
-  RUN+="/opt/emcomm-tools/sbin/wrapper-rigctld.sh stop"
+# Note: Audio remove no longer stops rigctld — USB audio can briefly
+# disconnect during Wine mode switches, causing a rigctld kill loop.
+# Only CAT serial removal should stop rigctld.

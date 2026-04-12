@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Onboard Virtual Keyboard
+Exec=onboard --start-minimized
+Hidden=false
+X-GNOME-Autostart-enabled=true

@@ -25,6 +25,8 @@
     <button class="tab" onclick="showTab('logger')">{{ t['log'] }}</button>
     <button class="tab" onclick="showTab('map')">{{ t['map'] }}</button>
     <button class="tab" onclick="showTab('parks')">{{ t['nearest_parks'] }}</button>
+    <button class="tab" onclick="showTab('voicekeyer')">{{ t['voice_keyer'] }}</button>
+    <button class="tab" onclick="showTab('airrecorder')">{{ t['air_recorder'] }}</button>
 </div>
 
 <!-- Sessions Tab -->
@@ -208,6 +210,77 @@
     </div>
 </div>
 
+<!-- Voice Keyer Tab -->
+<div class="tab-content" id="tab-voicekeyer">
+    <div class="vk-section">
+        <!-- Record controls -->
+        <div class="vk-record-section">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>{{ t['input_device'] }}</label>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <select id="vk-device" class="input"></select>
+                        <button class="refresh-btn" onclick="vkLoadDevices()" title="Refresh">&#x21BB;</button>
+                    </div>
+                </div>
+                <div class="form-group" style="flex:2;">
+                    <label>{{ t['message_name'] }}</label>
+                    <input type="text" id="vk-filename" placeholder="full_cq_pota_CA-2010" class="input">
+                </div>
+                <div class="form-group" style="flex:0; align-self:flex-end;">
+                    <button id="vk-record-btn" class="btn btn-danger" onclick="vkToggleRecord()">
+                        &#x23FA; {{ t['record'] }}
+                    </button>
+                </div>
+            </div>
+            <div id="vk-record-status" class="vk-status"></div>
+        </div>
+
+        <!-- Messages list -->
+        <div id="vk-messages-list">
+            <div class="empty-state">{{ t['no_messages'] }}</div>
+        </div>
+
+        <!-- Audio device status -->
+        <div class="vk-device-status">
+            <span class="badge" id="vk-audio-badge">ET_AUDIO: --</span>
+            <button class="refresh-btn" onclick="vkCheckAudio(); vkLoadDevices();" title="Refresh">&#x21BB;</button>
+        </div>
+    </div>
+</div>
+
+<!-- Air Recorder Tab -->
+<div class="tab-content" id="tab-airrecorder">
+    <div class="vk-section">
+        <!-- Record controls -->
+        <div class="vk-record-section">
+            <div class="form-row">
+                <div class="form-group" style="flex:2;">
+                    <label>{{ t['air_rec_name'] }}</label>
+                    <input type="text" id="ar-filename" placeholder="qso_session_20m" class="input">
+                </div>
+                <div class="form-group" style="flex:0; align-self:flex-end;">
+                    <button id="ar-record-btn" class="btn btn-danger" onclick="arToggleRecord()">
+                        &#x23FA; {{ t['air_record'] }}
+                    </button>
+                </div>
+            </div>
+            <div id="ar-record-status" class="vk-status"></div>
+        </div>
+
+        <!-- Recordings list -->
+        <div id="ar-messages-list">
+            <div class="empty-state">{{ t['no_air_recordings'] }}</div>
+        </div>
+
+        <!-- Audio device status -->
+        <div class="vk-device-status">
+            <span class="badge" id="ar-audio-badge">ET_AUDIO: --</span>
+            <button class="refresh-btn" onclick="arCheckAudio()" title="Refresh">&#x21BB;</button>
+        </div>
+    </div>
+</div>
+
 <!-- New Session Modal -->
 <div class="modal-overlay" id="new-session-modal" style="display:none;" onclick="closeNewSessionModal(event)">
     <div class="modal-content" onclick="event.stopPropagation()">
@@ -376,7 +449,9 @@
                 'sessions': T['sessions'],
                 'logger': T['log'],
                 'map': T['map'],
-                'parks': T['nearest_parks']
+                'parks': T['nearest_parks'],
+                'voicekeyer': T['voice_keyer'],
+                'airrecorder': T['air_recorder']
             }[name]);
         });
         document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
@@ -385,6 +460,8 @@
         if (name === 'sessions') loadSessions();
         if (name === 'parks') loadNearestParks();
         if (name === 'map') initMap();
+        if (name === 'voicekeyer') vkInit();
+        if (name === 'airrecorder') arInit();
     }
 
     // (radio polling removed — radio info fetched on demand)
@@ -1470,5 +1547,353 @@
             badge.className = 'badge badge-off';
         }
     }).catch(() => {});
+
+    // =========================================================================
+    // Voice Keyer
+    // =========================================================================
+
+    let vkState = 'idle';
+    let vkRecordingFile = null;
+    let vkRecordTimer = null;
+    let vkRecordSeconds = 0;
+    let vkPreviewAudio = null;
+    let vkPollTimer = null;
+    let vkActiveFile = null;
+
+    function vkInit() {
+        vkLoadDevices();
+        vkLoadMessages();
+        vkCheckAudio();
+    }
+
+    function vkLoadDevices() {
+        fetch('/api/voicekeyer/devices').then(r => r.json()).then(data => {
+            const sel = document.getElementById('vk-device');
+            sel.innerHTML = '';
+            if (data.devices.length === 0) {
+                sel.innerHTML = '<option value="default">Default</option>';
+                return;
+            }
+            data.devices.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.name;
+                sel.appendChild(opt);
+            });
+        }).catch(() => {});
+    }
+
+    function vkLoadMessages() {
+        fetch('/api/voicekeyer/messages').then(r => r.json()).then(data => {
+            vkState = data.state;
+            const container = document.getElementById('vk-messages-list');
+            if (data.messages.length === 0) {
+                container.innerHTML = '<div class="empty-state">' + T['no_messages'] + '</div>';
+                return;
+            }
+            let html = '';
+            data.messages.forEach(m => {
+                html += `
+                <div class="vk-msg-row" id="vk-row-${m.filename}">
+                    <div class="vk-msg-info">
+                        <strong class="vk-msg-title">${m.title}</strong>
+                        <span class="vk-msg-meta">${m.duration}s</span>
+                    </div>
+                    <div class="vk-msg-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="vkPreview('${m.filename}')" title="${T['preview']}">
+                            &#x25B6; ${T['preview']}
+                        </button>
+                        <button class="btn btn-primary btn-sm vk-play-btn" onclick="vkPlayOnAir('${m.filename}')" title="${T['play_air']}">
+                            &#x1F4E1; ${T['play_air']}
+                        </button>
+                        <button class="btn btn-danger btn-sm vk-stop-btn" onclick="vkStopPlay()" style="display:none;" title="${T['stop_play']}">
+                            &#x23F9; ${T['stop_play']}
+                        </button>
+                        <label class="vk-repeat-label">
+                            <input type="checkbox" class="vk-repeat-cb" data-file="${m.filename}">
+                            ${T['repeat']}
+                        </label>
+                        <input type="number" class="vk-delay-input" data-file="${m.filename}" value="3" min="1" max="30" title="${T['delay_seconds']}">
+                        <span class="vk-delay-unit">s</span>
+                        <button class="btn-icon" onclick="vkRename('${m.filename}')" title="${T['rename']}">&#x270F;</button>
+                        <button class="btn-icon btn-icon-danger" onclick="vkDelete('${m.filename}')" title="${T['delete']}">&#x1F5D1;</button>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }).catch(() => {});
+    }
+
+    function vkToggleRecord() {
+        if (vkState === 'recording') {
+            vkStopRecord();
+        } else {
+            vkStartRecord();
+        }
+    }
+
+    function vkStartRecord() {
+        if (vkState !== 'idle') return;
+        const filename = document.getElementById('vk-filename').value.trim() || 'message';
+        const device = document.getElementById('vk-device').value;
+        fetch('/api/voicekeyer/record', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({filename: filename, device: device})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                vkState = 'recording';
+                vkRecordingFile = data.filename;
+                vkRecordSeconds = 0;
+                const btn = document.getElementById('vk-record-btn');
+                btn.innerHTML = '&#x23F9; ' + T['stop_rec'];
+                btn.classList.add('vk-recording');
+                const status = document.getElementById('vk-record-status');
+                status.textContent = T['recording'] + ' 0s';
+                status.style.display = 'block';
+                vkRecordTimer = setInterval(() => {
+                    vkRecordSeconds++;
+                    status.textContent = T['recording'] + ' ' + vkRecordSeconds + 's';
+                }, 1000);
+            } else {
+                showToast('error', data.error || 'Record failed');
+            }
+        }).catch(() => showToast('error', 'Record failed'));
+    }
+
+    function vkStopRecord() {
+        fetch('/api/voicekeyer/record', {method: 'DELETE'}).then(r => r.json()).then(data => {
+            vkState = 'idle';
+            vkRecordingFile = null;
+            clearInterval(vkRecordTimer);
+            const btn = document.getElementById('vk-record-btn');
+            btn.innerHTML = '&#x23FA; ' + T['record'];
+            btn.classList.remove('vk-recording');
+            document.getElementById('vk-record-status').style.display = 'none';
+            vkLoadMessages();
+        }).catch(() => {});
+    }
+
+    function vkPreview(filename) {
+        if (vkPreviewAudio) {
+            vkPreviewAudio.pause();
+            vkPreviewAudio = null;
+        }
+        vkPreviewAudio = new Audio('/api/voicekeyer/preview/' + filename);
+        vkPreviewAudio.play();
+    }
+
+    function vkPlayOnAir(filename) {
+        if (vkState !== 'idle') return;
+        const row = document.getElementById('vk-row-' + filename);
+        const repeatCb = row ? row.querySelector('.vk-repeat-cb') : null;
+        const delaySel = row ? row.querySelector('.vk-delay-input') : null;
+        const repeat = repeatCb ? repeatCb.checked : false;
+        const delay = delaySel ? parseFloat(delaySel.value) : 3;
+
+        fetch('/api/voicekeyer/play', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({filename: filename, repeat: repeat, delay: delay})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                vkState = 'playing';
+                vkActiveFile = filename;
+                // Hide all play buttons, show stop only on active row
+                document.querySelectorAll('.vk-play-btn').forEach(b => b.style.display = 'none');
+                const activeRow = document.getElementById('vk-row-' + filename);
+                if (activeRow) activeRow.querySelector('.vk-stop-btn').style.display = '';
+                // Poll for state changes
+                vkPollTimer = setInterval(() => {
+                    fetch('/api/voicekeyer/messages').then(r => r.json()).then(d => {
+                        if (d.state === 'idle') {
+                            vkOnPlayStopped();
+                        }
+                    });
+                }, 1000);
+            } else {
+                showToast('error', data.error || 'Play failed');
+            }
+        }).catch(() => showToast('error', 'Play failed'));
+    }
+
+    function vkStopPlay() {
+        fetch('/api/voicekeyer/play', {method: 'DELETE'}).then(() => {
+            vkOnPlayStopped();
+        }).catch(() => {});
+    }
+
+    function vkOnPlayStopped() {
+        vkState = 'idle';
+        vkActiveFile = null;
+        clearInterval(vkPollTimer);
+        document.querySelectorAll('.vk-play-btn').forEach(b => b.style.display = '');
+        document.querySelectorAll('.vk-stop-btn').forEach(b => b.style.display = 'none');
+    }
+
+    function vkDelete(filename) {
+        if (!confirm(T['confirm_delete_msg'])) return;
+        fetch('/api/voicekeyer/message/' + filename, {method: 'DELETE'})
+            .then(r => r.json()).then(() => vkLoadMessages())
+            .catch(() => {});
+    }
+
+    function vkRename(filename) {
+        const newName = prompt(T['rename'], filename.replace('.wav', ''));
+        if (!newName || newName.trim() === '') return;
+        fetch('/api/voicekeyer/message/' + filename, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({new_name: newName.trim()})
+        }).then(r => r.json()).then(data => {
+            if (data.success) vkLoadMessages();
+            else showToast('error', data.error || 'Rename failed');
+        }).catch(() => {});
+    }
+
+    function vkCheckAudio() {
+        fetch('/api/airrecorder/device').then(r => r.json()).then(data => {
+            const badge = document.getElementById('vk-audio-badge');
+            if (data.available) {
+                badge.textContent = 'ET_AUDIO: OK';
+                badge.className = 'badge badge-ok';
+            } else {
+                badge.textContent = T['audio_device_missing'];
+                badge.className = 'badge badge-off';
+            }
+        }).catch(() => {});
+    }
+
+    // =========================================================================
+    // Air Recorder
+    // =========================================================================
+
+    let arState = 'idle';
+    let arRecordTimer = null;
+    let arRecordSeconds = 0;
+    let arPreviewAudio = null;
+
+    function arInit() {
+        arLoadMessages();
+        arCheckAudio();
+    }
+
+    function arLoadMessages() {
+        fetch('/api/airrecorder/messages').then(r => r.json()).then(data => {
+            arState = data.state;
+            const container = document.getElementById('ar-messages-list');
+            if (data.recordings.length === 0) {
+                container.innerHTML = '<div class="empty-state">' + T['no_air_recordings'] + '</div>';
+                return;
+            }
+            let html = '';
+            data.recordings.forEach(m => {
+                html += `
+                <div class="vk-msg-row vk-msg-row-stacked" id="ar-row-${m.filename}">
+                    <div class="vk-msg-top">
+                        <div class="vk-msg-info">
+                            <strong class="vk-msg-title">${m.title}</strong>
+                            <span class="vk-msg-meta">${m.duration}s &mdash; ${(m.size / 1024).toFixed(0)} KB</span>
+                        </div>
+                        <div class="vk-msg-actions">
+                            <button class="btn-icon" onclick="arRename('${m.filename}')" title="${T['rename']}">&#x270F;</button>
+                            <button class="btn-icon btn-icon-danger" onclick="arDelete('${m.filename}')" title="${T['delete']}">&#x1F5D1;</button>
+                        </div>
+                    </div>
+                    <audio class="vk-audio-player" controls preload="none" src="/api/airrecorder/preview/${m.filename}"></audio>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }).catch(() => {});
+    }
+
+    function arToggleRecord() {
+        if (arState === 'recording') {
+            arStopRecord();
+        } else {
+            arStartRecord();
+        }
+    }
+
+    function arStartRecord() {
+        if (arState !== 'idle') return;
+        const filename = document.getElementById('ar-filename').value.trim();
+        fetch('/api/airrecorder/record', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({filename: filename})
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                arState = 'recording';
+                arRecordSeconds = 0;
+                const btn = document.getElementById('ar-record-btn');
+                btn.innerHTML = '&#x23F9; ' + T['air_stop'];
+                btn.classList.add('vk-recording');
+                const status = document.getElementById('ar-record-status');
+                status.textContent = T['air_recording'] + ' 0s';
+                status.style.display = 'block';
+                arRecordTimer = setInterval(() => {
+                    arRecordSeconds++;
+                    status.textContent = T['air_recording'] + ' ' + arRecordSeconds + 's';
+                }, 1000);
+            } else {
+                showToast('error', data.error || 'Record failed');
+            }
+        }).catch(() => showToast('error', 'Record failed'));
+    }
+
+    function arStopRecord() {
+        fetch('/api/airrecorder/record', {method: 'DELETE'}).then(r => r.json()).then(data => {
+            arState = 'idle';
+            clearInterval(arRecordTimer);
+            const btn = document.getElementById('ar-record-btn');
+            btn.innerHTML = '&#x23FA; ' + T['air_record'];
+            btn.classList.remove('vk-recording');
+            document.getElementById('ar-record-status').style.display = 'none';
+            arLoadMessages();
+        }).catch(() => {});
+    }
+
+    function arPreview(filename) {
+        if (arPreviewAudio) {
+            arPreviewAudio.pause();
+            arPreviewAudio = null;
+        }
+        arPreviewAudio = new Audio('/api/airrecorder/preview/' + filename);
+        arPreviewAudio.play();
+    }
+
+    function arDelete(filename) {
+        if (!confirm(T['confirm_delete_msg'])) return;
+        fetch('/api/airrecorder/message/' + filename, {method: 'DELETE'})
+            .then(r => r.json()).then(() => arLoadMessages())
+            .catch(() => {});
+    }
+
+    function arRename(filename) {
+        const newName = prompt(T['rename'], filename.replace('.wav', ''));
+        if (!newName || newName.trim() === '') return;
+        fetch('/api/airrecorder/message/' + filename, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({new_name: newName.trim()})
+        }).then(r => r.json()).then(data => {
+            if (data.success) arLoadMessages();
+            else showToast('error', data.error || 'Rename failed');
+        }).catch(() => {});
+    }
+
+    function arCheckAudio() {
+        fetch('/api/airrecorder/device').then(r => r.json()).then(data => {
+            const badge = document.getElementById('ar-audio-badge');
+            if (data.available) {
+                badge.textContent = 'ET_AUDIO: OK';
+                badge.className = 'badge badge-ok';
+            } else {
+                badge.textContent = T['audio_device_missing'];
+                badge.className = 'badge badge-off';
+            }
+        }).catch(() => {});
+    }
 </script>
 {% endblock %}

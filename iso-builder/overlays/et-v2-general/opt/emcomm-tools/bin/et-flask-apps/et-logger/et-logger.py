@@ -18,8 +18,11 @@ import sys
 import csv
 import io
 import json
+import re
+import signal
 import sqlite3
 import subprocess
+import wave
 import webbrowser
 import threading
 import time
@@ -27,7 +30,7 @@ import logging
 import math
 from pathlib import Path
 from datetime import datetime, timezone
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, send_file
 
 # Suppress Flask dev server warning
 log = logging.getLogger('werkzeug')
@@ -406,6 +409,20 @@ def _get_parks_db():
     return conn
 
 
+def lookup_park_location(park_ref):
+    """Look up a POTA park's lat/lon by reference (e.g. 'K-1234')."""
+    conn = _get_parks_db()
+    if not conn or not park_ref:
+        return None, None
+    row = conn.execute(
+        "SELECT latitude, longitude FROM parks WHERE reference = ?",
+        (park_ref.strip().upper(),)).fetchone()
+    conn.close()
+    if row and row['latitude'] and row['longitude']:
+        return row['latitude'], row['longitude']
+    return None, None
+
+
 def load_pota_parks():
     """Load all active POTA parks."""
     conn = _get_parks_db()
@@ -576,6 +593,28 @@ TRANSLATIONS = {
         'distance': 'Distance',
         'time_utc': 'Time (UTC)',
         'date': 'Date',
+        'voice_keyer': 'Voice Keyer',
+        'record': 'Record',
+        'stop_rec': 'Stop',
+        'play_air': 'Play on Air',
+        'preview': 'Preview',
+        'repeat': 'Repeat',
+        'delay_seconds': 'Delay (s)',
+        'recording': 'Recording...',
+        'playing': 'Playing...',
+        'no_messages': 'No voice messages recorded yet.',
+        'rename': 'Rename',
+        'confirm_delete_msg': 'Delete this message?',
+        'audio_device_missing': 'ET_AUDIO device not found',
+        'input_device': 'Input Device',
+        'message_name': 'Message Name',
+        'stop_play': 'Stop',
+        'air_recorder': 'Air Recorder',
+        'air_record': 'Record Air',
+        'air_stop': 'Stop',
+        'air_recording': 'Recording air...',
+        'no_air_recordings': 'No air recordings yet.',
+        'air_rec_name': 'Recording Name',
     },
     'fr': {
         'title': 'Journal de Terrain',
@@ -619,6 +658,28 @@ TRANSLATIONS = {
         'distance': 'Distance',
         'time_utc': 'Heure (UTC)',
         'date': 'Date',
+        'voice_keyer': 'Clé vocale',
+        'record': 'Enregistrer',
+        'stop_rec': 'Arrêter',
+        'play_air': 'Jouer sur l\'air',
+        'preview': 'Aperçu',
+        'repeat': 'Répéter',
+        'delay_seconds': 'Délai (s)',
+        'recording': 'Enregistrement...',
+        'playing': 'En cours...',
+        'no_messages': 'Aucun message vocal enregistré.',
+        'rename': 'Renommer',
+        'confirm_delete_msg': 'Supprimer ce message?',
+        'audio_device_missing': 'Périphérique ET_AUDIO introuvable',
+        'input_device': 'Source audio',
+        'message_name': 'Nom du message',
+        'stop_play': 'Arrêter',
+        'air_recorder': 'Enregistreur d\'air',
+        'air_record': 'Enregistrer l\'air',
+        'air_stop': 'Arrêter',
+        'air_recording': 'Enregistrement en cours...',
+        'no_air_recordings': 'Aucun enregistrement d\'air.',
+        'air_rec_name': 'Nom de l\'enregistrement',
     }
 }
 
@@ -856,6 +917,21 @@ def api_delete_session(session_id):
     return jsonify({'success': True})
 
 
+def _p2p_or_callsign_location(sig_info, call_info):
+    """Return (lat, lon) — park location if P2P, otherwise callsign home QTH."""
+    if sig_info:
+        # Use first P2P park reference
+        first_park = sig_info.split(',')[0].strip()
+        if first_park:
+            lat, lon = lookup_park_location(first_park)
+            if lat is not None:
+                return lat, lon
+    # Fallback to callsign lookup location
+    if call_info:
+        return call_info.get('lat'), call_info.get('lon')
+    return None, None
+
+
 @app.route('/api/qso', methods=['POST'])
 def api_log_qso():
     """Log a new QSO."""
@@ -869,6 +945,8 @@ def api_log_qso():
 
     # Lookup callsign for name/location
     call_info = lookup_callsign(data.get('call', ''))
+    # P2P: use park location, otherwise callsign home QTH
+    qso_lat, qso_lon = _p2p_or_callsign_location(data.get('sig_info', ''), call_info)
 
     conn = get_db()
     cursor = conn.execute("""
@@ -895,8 +973,8 @@ def api_log_qso():
         data.get('sig', ''),
         data.get('sig_info', ''),
         data.get('comment', ''),
-        call_info.get('lat') if call_info else None,
-        call_info.get('lon') if call_info else None,
+        qso_lat,
+        qso_lon,
     ))
     conn.commit()
     qso_id = cursor.lastrowid
@@ -1087,6 +1165,386 @@ def api_duplicate_check():
     if existing:
         return jsonify({'duplicate': True, 'time': existing['time_on']})
     return jsonify({'duplicate': False})
+
+
+# ============================================================================
+# Voice Keyer
+# ============================================================================
+
+_vk_record_proc = None
+_vk_play_proc = None
+_vk_play_thread = None
+_vk_stop_event = threading.Event()
+_vk_state = 'idle'  # idle, recording, playing
+
+
+def get_cq_msg_dir():
+    """Get CQ message storage directory. Prefers USB persistence if mounted."""
+    try:
+        for user_dir in Path("/media").iterdir():
+            emcomm = user_dir / "EMCOMM-DATA"
+            if emcomm.exists():
+                usb = emcomm / "CQ-MSG"
+                usb.mkdir(parents=True, exist_ok=True)
+                return usb
+    except (PermissionError, OSError):
+        pass
+    d = LOGGER_DIR / "cq-messages"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _safe_filename(name):
+    """Sanitize filename — alphanumeric, hyphens, underscores only."""
+    name = re.sub(r'[^\w\-]', '_', name.strip())
+    return name[:100] if name else 'message'
+
+
+def _get_wav_duration(filepath):
+    """Get WAV file duration in seconds."""
+    try:
+        with wave.open(str(filepath), 'r') as wf:
+            frames = wf.getnframes()
+            rate = wf.getframerate()
+            if rate > 0:
+                return round(frames / rate, 1)
+    except Exception:
+        pass
+    return 0
+
+
+def _list_capture_devices():
+    """List available ALSA capture devices via arecord -l.
+    Excludes ET_AUDIO (radio USB audio) — that's for playback to radio only."""
+    devices = []
+    try:
+        result = subprocess.run(['arecord', '-l'], capture_output=True,
+                                text=True, timeout=5)
+        for line in result.stdout.split('\n'):
+            m = re.match(r'^card (\d+): (\w+) \[(.+?)\], device (\d+): (.+)', line)
+            if m:
+                card_num, card_id, card_name, dev_num, dev_name = m.groups()
+                if card_id == 'ET_AUDIO':
+                    continue
+                devices.append({
+                    'id': f'plughw:{card_num},{dev_num}',
+                    'name': f'{card_name} - {dev_name.strip()}',
+                    'card': card_id,
+                })
+    except Exception:
+        pass
+    return devices
+
+
+def _play_over_air(filepath, repeat=False, delay=3.0):
+    """Play a WAV file over the air with PTT. Runs in a thread."""
+    global _vk_play_proc, _vk_state
+    _vk_stop_event.clear()
+    _vk_state = 'playing'
+    try:
+        while True:
+            if rig:
+                rig.set_ptt(True)
+            time.sleep(0.3)
+            _vk_play_proc = subprocess.Popen(
+                ['aplay', '-D', 'plughw:ET_AUDIO,0', str(filepath)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _vk_play_proc.wait()
+            _vk_play_proc = None
+            if rig:
+                rig.set_ptt(False)
+            if not repeat or _vk_stop_event.is_set():
+                break
+            if _vk_stop_event.wait(timeout=delay):
+                break
+    finally:
+        if rig:
+            rig.set_ptt(False)
+        _vk_play_proc = None
+        _vk_state = 'idle'
+
+
+@app.route('/api/voicekeyer/devices', methods=['GET'])
+def api_vk_devices():
+    """List available ALSA capture devices."""
+    return jsonify({'devices': _list_capture_devices()})
+
+
+@app.route('/api/voicekeyer/messages', methods=['GET'])
+def api_vk_messages():
+    """List all recorded voice messages."""
+    msg_dir = get_cq_msg_dir()
+    messages = []
+    for f in sorted(msg_dir.glob('*.wav')):
+        messages.append({
+            'filename': f.name,
+            'title': f.stem,
+            'size': f.stat().st_size,
+            'duration': _get_wav_duration(f),
+        })
+    return jsonify({'messages': messages, 'state': _vk_state,
+                    'path': str(msg_dir)})
+
+
+@app.route('/api/voicekeyer/record', methods=['POST'])
+def api_vk_record_start():
+    """Start recording a voice message."""
+    global _vk_record_proc, _vk_state
+    if _vk_state != 'idle':
+        return jsonify({'success': False, 'error': f'Busy: {_vk_state}'}), 409
+
+    data = request.get_json()
+    name = _safe_filename(data.get('filename', 'message'))
+    device = data.get('device', 'default')
+    msg_dir = get_cq_msg_dir()
+    filepath = msg_dir / f'{name}.wav'
+
+    # Don't overwrite — append number
+    counter = 1
+    while filepath.exists():
+        filepath = msg_dir / f'{name}_{counter}.wav'
+        counter += 1
+
+    try:
+        _vk_record_proc = subprocess.Popen(
+            ['arecord', '-D', device, '-f', 'S16_LE', '-r', '44100',
+             '-c', '1', str(filepath)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _vk_state = 'recording'
+        return jsonify({'success': True, 'filename': filepath.name})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/voicekeyer/record', methods=['DELETE'])
+def api_vk_record_stop():
+    """Stop recording."""
+    global _vk_record_proc, _vk_state
+    if _vk_record_proc:
+        _vk_record_proc.terminate()
+        try:
+            _vk_record_proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            _vk_record_proc.kill()
+        _vk_record_proc = None
+    _vk_state = 'idle'
+    return jsonify({'success': True})
+
+
+@app.route('/api/voicekeyer/play', methods=['POST'])
+def api_vk_play_start():
+    """Play a message over the air with PTT."""
+    global _vk_play_thread
+    if _vk_state != 'idle':
+        return jsonify({'success': False, 'error': f'Busy: {_vk_state}'}), 409
+
+    data = request.get_json()
+    filename = data.get('filename', '')
+    repeat = data.get('repeat', False)
+    delay = float(data.get('delay', 3.0))
+
+    filepath = get_cq_msg_dir() / filename
+    if not filepath.exists() or not filepath.suffix == '.wav':
+        return jsonify({'success': False, 'error': 'File not found'}), 404
+
+    _vk_play_thread = threading.Thread(
+        target=_play_over_air, args=(filepath, repeat, delay), daemon=True)
+    _vk_play_thread.start()
+    return jsonify({'success': True})
+
+
+@app.route('/api/voicekeyer/play', methods=['DELETE'])
+def api_vk_play_stop():
+    """Stop playback and unkey PTT."""
+    global _vk_play_proc, _vk_state
+    _vk_stop_event.set()
+    if _vk_play_proc:
+        try:
+            _vk_play_proc.terminate()
+        except Exception:
+            pass
+    if rig:
+        rig.set_ptt(False)
+    _vk_state = 'idle'
+    return jsonify({'success': True})
+
+
+@app.route('/api/voicekeyer/preview/<filename>', methods=['GET'])
+def api_vk_preview(filename):
+    """Stream WAV file for browser preview (laptop speakers, no PTT)."""
+    filepath = get_cq_msg_dir() / filename
+    if not filepath.exists():
+        return jsonify({'error': 'Not found'}), 404
+    return send_file(str(filepath), mimetype='audio/wav')
+
+
+@app.route('/api/voicekeyer/message/<filename>', methods=['DELETE'])
+def api_vk_delete(filename):
+    """Delete a voice message."""
+    filepath = get_cq_msg_dir() / filename
+    if filepath.exists():
+        filepath.unlink()
+        return jsonify({'success': True})
+    return jsonify({'error': 'Not found'}), 404
+
+
+@app.route('/api/voicekeyer/message/<filename>', methods=['PUT'])
+def api_vk_rename(filename):
+    """Rename a voice message."""
+    data = request.get_json()
+    new_name = _safe_filename(data.get('new_name', ''))
+    if not new_name:
+        return jsonify({'success': False, 'error': 'Invalid name'}), 400
+
+    msg_dir = get_cq_msg_dir()
+    old_path = msg_dir / filename
+    new_path = msg_dir / f'{new_name}.wav'
+
+    if not old_path.exists():
+        return jsonify({'error': 'Not found'}), 404
+    if new_path.exists():
+        return jsonify({'success': False, 'error': 'Name already exists'}), 409
+
+    old_path.rename(new_path)
+    return jsonify({'success': True, 'filename': new_path.name})
+
+
+# ============================================================================
+# Air Recorder
+# ============================================================================
+
+_ar_record_proc = None
+_ar_state = 'idle'  # idle, recording
+
+
+def get_air_rec_dir():
+    """Get air recordings storage directory. Prefers USB persistence if mounted."""
+    try:
+        for user_dir in Path("/media").iterdir():
+            emcomm = user_dir / "EMCOMM-DATA"
+            if emcomm.exists():
+                usb = emcomm / "AIR-REC"
+                usb.mkdir(parents=True, exist_ok=True)
+                return usb
+    except (PermissionError, OSError):
+        pass
+    d = LOGGER_DIR / "air-recordings"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+@app.route('/api/airrecorder/messages', methods=['GET'])
+def api_ar_messages():
+    """List all air recordings."""
+    rec_dir = get_air_rec_dir()
+    recordings = []
+    for f in sorted(rec_dir.glob('*.wav'), key=lambda x: x.stat().st_mtime,
+                    reverse=True):
+        recordings.append({
+            'filename': f.name,
+            'title': f.stem,
+            'size': f.stat().st_size,
+            'duration': _get_wav_duration(f),
+        })
+    return jsonify({'recordings': recordings, 'state': _ar_state,
+                    'path': str(rec_dir)})
+
+
+@app.route('/api/airrecorder/record', methods=['POST'])
+def api_ar_record_start():
+    """Start recording from ET_AUDIO (radio RX audio)."""
+    global _ar_record_proc, _ar_state
+    if _ar_state != 'idle':
+        return jsonify({'success': False, 'error': f'Busy: {_ar_state}'}), 409
+
+    data = request.get_json()
+    name = _safe_filename(data.get('filename', ''))
+    if not name:
+        name = datetime.now().strftime('air_%Y%m%d_%H%M%S')
+    rec_dir = get_air_rec_dir()
+    filepath = rec_dir / f'{name}.wav'
+
+    counter = 1
+    while filepath.exists():
+        filepath = rec_dir / f'{name}_{counter}.wav'
+        counter += 1
+
+    try:
+        _ar_record_proc = subprocess.Popen(
+            ['arecord', '-D', 'plughw:ET_AUDIO,0', '-f', 'S16_LE',
+             '-r', '44100', '-c', '1', str(filepath)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _ar_state = 'recording'
+        return jsonify({'success': True, 'filename': filepath.name})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/airrecorder/record', methods=['DELETE'])
+def api_ar_record_stop():
+    """Stop air recording."""
+    global _ar_record_proc, _ar_state
+    if _ar_record_proc:
+        _ar_record_proc.terminate()
+        try:
+            _ar_record_proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            _ar_record_proc.kill()
+        _ar_record_proc = None
+    _ar_state = 'idle'
+    return jsonify({'success': True})
+
+
+@app.route('/api/airrecorder/preview/<filename>', methods=['GET'])
+def api_ar_preview(filename):
+    """Stream air recording WAV for browser playback."""
+    filepath = get_air_rec_dir() / filename
+    if not filepath.exists():
+        return jsonify({'error': 'Not found'}), 404
+    return send_file(str(filepath), mimetype='audio/wav')
+
+
+@app.route('/api/airrecorder/message/<filename>', methods=['DELETE'])
+def api_ar_delete(filename):
+    """Delete an air recording."""
+    filepath = get_air_rec_dir() / filename
+    if filepath.exists():
+        filepath.unlink()
+        return jsonify({'success': True})
+    return jsonify({'error': 'Not found'}), 404
+
+
+@app.route('/api/airrecorder/device', methods=['GET'])
+def api_ar_device():
+    """Check if ET_AUDIO capture device is available."""
+    try:
+        result = subprocess.run(['arecord', '-l'], capture_output=True,
+                                text=True, timeout=5)
+        available = 'ET_AUDIO' in result.stdout
+        return jsonify({'available': available})
+    except Exception:
+        return jsonify({'available': False})
+
+
+@app.route('/api/airrecorder/message/<filename>', methods=['PUT'])
+def api_ar_rename(filename):
+    """Rename an air recording."""
+    data = request.get_json()
+    new_name = _safe_filename(data.get('new_name', ''))
+    if not new_name:
+        return jsonify({'success': False, 'error': 'Invalid name'}), 400
+
+    rec_dir = get_air_rec_dir()
+    old_path = rec_dir / filename
+    new_path = rec_dir / f'{new_name}.wav'
+
+    if not old_path.exists():
+        return jsonify({'error': 'Not found'}), 404
+    if new_path.exists():
+        return jsonify({'success': False, 'error': 'Name already exists'}), 409
+
+    old_path.rename(new_path)
+    return jsonify({'success': True, 'filename': new_path.name})
 
 
 # ============================================================================

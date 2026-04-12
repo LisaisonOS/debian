@@ -1138,8 +1138,11 @@ class ModeEngine:
 
         # Defaults from et-vara-fm v1
         defaults = {
+            "rig": None,        # VARA FM rig number (radio-specific)
             "pttPort": "COM5",
+            "catPort": None,    # CAT port (defaults to pttPort if not set)
             "pttVia": "2",      # 0=VOX, 1=CAT, 2=COM (RTS/DTR), 3=CM108
+            "baud": "38400",
             "rts": "1",
             "dtr": "0",
         }
@@ -1156,6 +1159,10 @@ class ModeEngine:
         except (FileNotFoundError, json.JSONDecodeError) as e:
             log.warning("No active radio config, using PTT defaults: %s", e)
 
+        # CATPort defaults to PTTPort if not specified
+        if not settings["catPort"]:
+            settings["catPort"] = settings["pttPort"]
+
         # Calculate Pin from RTS/DTR
         rts = settings["rts"] == "1"
         dtr = settings["dtr"] == "1"
@@ -1170,15 +1177,22 @@ class ModeEngine:
 
         updates = {
             "PTTPort": settings["pttPort"],
+            "CATPort": settings["catPort"],
+            "Baud": settings["baud"],
             "Via": settings["pttVia"],
             "RTS": settings["rts"],
             "DTR": settings["dtr"],
             "Pin": pin,
         }
+        # Only write Rig if the radio config specifies one
+        if settings["rig"]:
+            updates["Rig"] = settings["rig"]
+
         self._update_ini_keys(vara_ini, updates)
-        log.info("VARA FM PTT config: Port=%s Via=%s RTS=%s DTR=%s Pin=%s",
-                 settings["pttPort"], settings["pttVia"],
-                 settings["rts"], settings["dtr"], pin)
+        log.info("VARA FM PTT config: Rig=%s Port=%s CAT=%s Baud=%s Via=%s RTS=%s DTR=%s Pin=%s",
+                 settings["rig"] or "unchanged", settings["pttPort"],
+                 settings["catPort"], settings["baud"],
+                 settings["pttVia"], settings["rts"], settings["dtr"], pin)
 
     def _apply_varac_config(self):
         """Update VarAC.ini with callsign, grid, and radio model.
