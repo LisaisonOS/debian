@@ -49,6 +49,7 @@ python3-werkzeug
 python3-webview
 python3-pip
 chirp
+qasmixer
 
 # Runtime audio libraries (dev packages installed by hooks when compiling)
 libportaudio2

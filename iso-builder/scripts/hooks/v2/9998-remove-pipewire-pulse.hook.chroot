@@ -1,0 +1,18 @@
+#!/bin/bash
+# ============================================================================
+# Remove PipeWire PulseAudio layer
+# emcomm-tools uses ALSA directly for all audio (digital modes, Wine/VARA)
+# PipeWire intercepts audio devices and prevents direct ALSA access
+# ============================================================================
+echo "Removing PulseAudio and PipeWire..."
+apt-get remove --purge -y pulseaudio pipewire-pulse xfce4-pulseaudio-plugin 2>/dev/null || true
+# Do NOT autoremove — it cascades and removes xfce4-panel and other needed packages
+
+# Disable PipeWire and WirePlumber user services
+systemctl --global disable pipewire.service 2>/dev/null || true
+systemctl --global disable pipewire.socket 2>/dev/null || true
+systemctl --global disable wireplumber.service 2>/dev/null || true
+systemctl --global disable pulseaudio.service 2>/dev/null || true
+systemctl --global disable pulseaudio.socket 2>/dev/null || true
+
+echo "PulseAudio and PipeWire removed — ALSA direct access enabled"
