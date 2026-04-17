@@ -1,0 +1,73 @@
+{
+    "$schema": "et-mode-v2",
+    "id": "vara-hf",
+    "name": {
+        "en": "VARA HF (Standalone)",
+        "fr": "VARA HF (Autonome)"
+    },
+    "category": "digital",
+    "requires_bands": [
+        "HF"
+    ],
+    "requires": {
+        "devices": [
+            "et-audio",
+            "et-cat"
+        ],
+        "services": [
+            "rigctld"
+        ]
+    },
+    "prechecks": [
+        {
+            "type": "device-exists",
+            "path": "/dev/et-audio"
+        },
+        {
+            "type": "audio-tagged",
+            "tag": "ET_AUDIO"
+        },
+        {
+            "type": "service-active",
+            "name": "rigctld"
+        },
+        {
+            "type": "callsign-set"
+        }
+    ],
+    "config": [],
+    "pre_start": [
+        {
+            "action": "kill-all"
+        },
+        {
+            "action": "audio-config"
+        },
+        {
+            "action": "set-radio-width",
+            "width": 2750
+        }
+    ],
+    "chain": [
+        {
+            "name": "vara-hf",
+            "command": [
+                "wine",
+                "C:\\VARA\\VARA.exe"
+            ],
+            "env": {
+                "WINEPREFIX": "~/.wine32",
+                "WINEARCH": "win32"
+            },
+            "cwd": "~/.wine32/drive_c/VARA",
+            "health": {
+                "type": "tcp-port",
+                "port": 8300,
+                "timeout": 60
+            },
+            "restart": "never"
+        }
+    ],
+    "post_start": [],
+    "kill_all_first": true
+}

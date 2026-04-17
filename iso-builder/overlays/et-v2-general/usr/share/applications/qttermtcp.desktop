@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=QtTermTCP
+Comment=Packet BBS Terminal Client
+Exec=/usr/local/bin/QtTermTCP
+Icon=utilities-terminal
+Categories=HamRadio;
+Terminal=false

@@ -266,6 +266,8 @@ MODE_CATEGORIES = {
         'label_fr': 'Autres',
         'modes': [
             {'id': 'ft8', 'name': 'FT8/FT4 (WSJT-X)'},
+            {'id': 'vara-hf', 'name': 'VARA HF'},
+            {'id': 'vara-fm', 'name': 'VARA FM'},
             {'id': 'direwolf-tnc', 'name': 'Direwolf KISS TNC'},
         ]
     },
@@ -1464,22 +1466,32 @@ class EmCommDashboard(Gtk.Window):
         is_bt_mode = self._active_mode_id and self._active_mode_id.endswith("-bt")
 
         is_tnc_mode = self._active_mode_id == "direwolf-tnc"
+        is_vara_standalone = self._active_mode_id in ("vara-hf", "vara-fm")
 
-        if is_tnc_mode:
-            # Direwolf TNC mode — show IP + port 8001 status
+        if is_tnc_mode or is_vara_standalone:
+            # Show IP + port status for network-accessible modes
             self.cat_audio_box.show_all()
             self.bt_label.hide()
             local_ip = self.run_command("hostname -I 2>/dev/null")
             ip_addr = local_ip.split()[0] if local_ip and local_ip.strip() else "?"
-            port_check = self.run_command("ss -tln sport = :8001 2>/dev/null")
-            if port_check and "8001" in port_check:
-                self.tnc_ip_label.set_markup(
-                    f"<span foreground='#888888'>TNC: </span>"
-                    f"<span foreground='#00CC00'>✓ {ip_addr}:8001</span>")
+            if is_tnc_mode:
+                label = "TNC"
+                port = "8001"
+                port_check = self.run_command(f"ss -tln sport = :{port} 2>/dev/null")
+                if port_check and port in port_check:
+                    self.tnc_ip_label.set_markup(
+                        f"<span foreground='#888888'>{label}: </span>"
+                        f"<span foreground='#00CC00'>✓ {ip_addr}:{port}</span>")
+                else:
+                    self.tnc_ip_label.set_markup(
+                        f"<span foreground='#888888'>{label}: </span>"
+                        f"<span foreground='#CC0000'>✗ {ip_addr}:{port}</span>")
             else:
+                label = "VARA"
+                port = "8300"
                 self.tnc_ip_label.set_markup(
-                    f"<span foreground='#888888'>TNC: </span>"
-                    f"<span foreground='#CC0000'>✗ {ip_addr}:8001</span>")
+                    f"<span foreground='#888888'>{label}: </span>"
+                    f"<span foreground='#00CC00'>{ip_addr}:{port}</span>")
             self.tnc_ip_label.show()
         elif is_bt_mode:
             # Bluetooth mode — hide CAT/Audio, show BT TNC status

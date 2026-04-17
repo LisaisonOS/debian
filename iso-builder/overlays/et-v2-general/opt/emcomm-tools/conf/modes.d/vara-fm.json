@@ -1,0 +1,67 @@
+{
+    "$schema": "et-mode-v2",
+    "id": "vara-fm",
+    "name": {
+        "en": "VARA FM (Standalone)",
+        "fr": "VARA FM (Autonome)"
+    },
+    "category": "digital",
+    "requires_bands": [
+        "VHF",
+        "UHF"
+    ],
+    "requires": {
+        "devices": [
+            "et-audio",
+            "et-cat"
+        ],
+        "services": []
+    },
+    "prechecks": [
+        {
+            "type": "device-exists",
+            "path": "/dev/et-audio"
+        },
+        {
+            "type": "audio-tagged",
+            "tag": "ET_AUDIO"
+        },
+        {
+            "type": "callsign-set"
+        }
+    ],
+    "config": [],
+    "pre_start": [
+        {
+            "action": "kill-all"
+        },
+        {
+            "action": "audio-config"
+        },
+        {
+            "action": "vara-fm-ptt-config"
+        }
+    ],
+    "chain": [
+        {
+            "name": "vara-fm",
+            "command": [
+                "wine",
+                "C:\\VARA FM\\VARAFM.exe"
+            ],
+            "env": {
+                "WINEPREFIX": "~/.wine32",
+                "WINEARCH": "win32"
+            },
+            "cwd": "~/.wine32/drive_c/VARA FM",
+            "health": {
+                "type": "tcp-port",
+                "port": 8300,
+                "timeout": 60
+            },
+            "restart": "never"
+        }
+    ],
+    "post_start": [],
+    "kill_all_first": true
+}
