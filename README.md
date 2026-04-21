@@ -1,4 +1,4 @@
-<h1 align="center">EmComm-Tools OS — Debian Edition</h1>
+<h1 align="center">EmComm OS for Debian</h1>
 <p align="center">
   <em>Explore. Connect. Respond.</em><br>
   <em>Explorer. Connecter. Répondre.</em>
@@ -33,7 +33,6 @@
 <p>
 📖 <a href="FUTURES_fr.md">Documentation</a><br>
 💾 <a href="https://sourceforge.net/projects/emcomm-tools/files/ISO/">Téléchargements ISO</a><br>
-☕ <a href="https://buymeacoffee.com/emcommtools">Offrez-moi un café</a><br>
 ⚠️ <a href="DISCLAIMER.md">Avis de non-responsabilité</a>
 </p>
 
@@ -49,7 +48,6 @@
 <p>
 📖 <a href="FUTURES.md">Documentation</a><br>
 💾 <a href="https://sourceforge.net/projects/emcomm-tools/files/ISO/">ISO Downloads</a><br>
-☕ <a href="https://buymeacoffee.com/emcommtools">Buy Me a Coffee</a><br>
 ⚠️ <a href="DISCLAIMER.md">Disclaimer</a>
 </p>
 
