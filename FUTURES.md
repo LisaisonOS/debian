@@ -1,4 +1,4 @@
-# EmComm-Tools OS - Debian Edition
+# EmComm OS - Debian Edition
 
 ## Vision et Philosophie / Vision and Philosophy
 
