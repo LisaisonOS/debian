@@ -1,8 +1,8 @@
-# EmComm-Tools OS - Édition Debian
+# Communication d'urgence OS - Édition Debian
 
 ## Vision et Philosophie
 
-Ce document décrit l'orientation future d'EmComm-Tools OS Édition Debian, un fork du projet original EmComm-Tools OS Community par Gaston Gonzalez (KT7RUN / TheTechPrepper).
+Ce document décrit l'orientation future d'EmComm OS Édition Debian, un fork du projet original EmComm-Tools OS Community par Gaston Gonzalez (KT7RUN / TheTechPrepper).
 
 **Mainteneur :** Sylvain Deguire (VA2OPS)
 
@@ -76,7 +76,7 @@ Ce que plusieurs utilisateurs ne réalisent pas, c'est qu'**Ubuntu est construit
 
 En termes pratiques, Ubuntu prend les dépôts de paquets Debian, modifie certains paquets, ajoute les leurs, et publie le tout avec l'image de marque Ubuntu. Le système sous-jacent - le gestionnaire de paquets (apt/dpkg), la structure du système de fichiers, les utilitaires de base - tout provient de Debian.
 
-**Ce que ça signifie pour EmComm-Tools :**
+**Ce que ça signifie pour EmComm :**
 
 Passer d'Ubuntu à Debian n'est pas un changement radical - c'est retourner à la source. La plupart de ce qui fonctionnait sur Ubuntu fonctionne identiquement sur Debian parce qu'Ubuntu l'a hérité de Debian au départ. Les principales différences sont :
 - Aucune restriction de marque de commerce sur la redistribution
