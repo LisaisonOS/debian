@@ -1,4 +1,4 @@
-# EmComm OS - Debian Edition
+# Emergency Communication OS - Debian Edition
 
 ## Vision et Philosophie / Vision and Philosophy
 
@@ -76,7 +76,7 @@ What many users don't realize is that **Ubuntu is built on top of Debian**. When
 
 In practical terms, Ubuntu takes Debian's package repositories, modifies some packages, adds their own, and releases it with Ubuntu branding. The underlying system - the package manager (apt/dpkg), the file system structure, the core utilities - all come from Debian.
 
-**What this means for EmComm-Tools:**
+**What this means for Emergency Communication OS :**
 
 Moving from Ubuntu to Debian isn't a radical change - it's going back to the source. Most of what worked on Ubuntu works identically on Debian because Ubuntu inherited it from Debian in the first place. The main differences are:
 - No trademark restrictions on redistribution
