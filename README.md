@@ -161,9 +161,8 @@ The dashboard provides **16 one-click operational modes:**
 
 | | |
 |---|---|
-| 🌐 **Website** | [emcomm-tools.ca](https://emcomm-tools.ca) |
 | 💾 **ISO Downloads** | [SourceForge](https://sourceforge.net/projects/emcomm-tools/files/ISO/) |
-| 🐙 **GitHub** | [LiaisonOS/debian](https://github.com/liaison/debian/) |
+| 🐙 **GitHub** | [LiaisonOS/debian](https://github.com/liaisonos/debian/) |
 | 👤 **Maintainer** | [va2ops.ca](https://va2ops.ca) |
 | 📧 **Contact** | <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c5acaba3aa85a0a8a6aaa8a8e8b1aaaaa9b6eba6a4">[email&#160;protected]</a> |
 
