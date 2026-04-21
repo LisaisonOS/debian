@@ -1,4 +1,4 @@
-<h1 align="center">EmComm OS for Debian</h1>
+<h1 align="center">Liaison OS for Debian</h1>
 <p align="center">
   <em>Explore. Connect. Respond.</em><br>
   <em>Explorer. Connecter. Répondre.</em>
@@ -163,9 +163,8 @@ The dashboard provides **16 one-click operational modes:**
 |---|---|
 | 🌐 **Website** | [emcomm-tools.ca](https://emcomm-tools.ca) |
 | 💾 **ISO Downloads** | [SourceForge](https://sourceforge.net/projects/emcomm-tools/files/ISO/) |
-| 🐙 **GitHub** | [emcomm-tools/debian](https://github.com/emcomm-tools/debian/) |
+| 🐙 **GitHub** | [LiaisonOS/debian](https://github.com/liaison/debian/) |
 | 👤 **Maintainer** | [va2ops.ca](https://va2ops.ca) |
-| ☕ **Support** | [Buy Me a Coffee](https://buymeacoffee.com/emcommtools) |
 | 📧 **Contact** | <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c5acaba3aa85a0a8a6aaa8a8e8b1aaaaa9b6eba6a4">[email&#160;protected]</a> |
 
 ---
