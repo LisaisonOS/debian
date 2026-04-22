@@ -1,18 +1,18 @@
 #!/bin/bash
 # =============================================================================
 # LiaisonOS Debian ISO Builder
-# https://emcomm-tools.ca
+# https://liaisonos.com
 # 
 # Author: Sylvain Deguire (VA2OPS)
 #
 # Directory structure:
-#   ./overlays/          - overlay versions ( et-v2-general, etc.)
+#   ./overlays/          - LiaisonOS overlay versions (et-v1-general, et-v2-general, etc.)
 #   ./wine-sources/      - Wine prefixes with VarAC, VARA, FT8, etc.
-#   ./backgrounds/       - Wallpaper images (wallpaper-base.png for generator)
+#   ./backgrounds/       - Wallpaper images (emcomm-base.png for generator)
 #   ./motd/              - Custom terminal banners
 #   ./build/             - Build output (auto-created)
 #
-# Usage: ./setup-iso-v2.sh [build-profile.json]
+# Usage: ./setup-emcomm-iso-v2.sh [build-profile.json]
 #   No arguments = interactive mode (dialog prompts)
 #   With profile = headless mode (reads all settings from JSON)
 # =============================================================================
@@ -28,10 +28,10 @@ WINE_SOURCE_DIR="$SCRIPT_DIR/wine-sources"
 WALLPAPER_DIR="$SCRIPT_DIR/backgrounds"
 MOTD_DIR="$SCRIPT_DIR/motd"
 BUILD_DIR="$SCRIPT_DIR/build"
-ISO_DIR="$BUILD_DIR/debian-iso"
+ISO_DIR="$BUILD_DIR/emcomm-debian-iso"
 
 # =============================================================================
-# EmComm-Tools Version Configuration
+# LiaisonOS Version Configuration
 # =============================================================================
 # Version is loaded from build-config.json for easy editing
 # Run: nano build-config.json (or use any text editor)
@@ -44,9 +44,9 @@ if [ ! -f "$CONFIG_FILE" ]; then
 {
     "version": "1.0.0",
     "codename": "Trixie",
-    "distro_name": "EmComm-Tools Debian Edition",
-    "website": "https://emcomm-tools.ca",
-    "support_url": "https://emcomm-tools.ca/support",
+    "distro_name": "LiaisonOS Debian Edition",
+    "website": "https://liaisonos.com",
+    "support_url": "https://liaisonos.com/support",
     "author": "VA2OPS"
 }
 DEFAULT_CONFIG
@@ -203,12 +203,12 @@ if [ -z "$BUILD_PROFILE" ]; then
     if [ "$SCRIPT_LANG" = "fr" ]; then
         VERSION_TITLE="Confirmation de la version"
         VERSION_MSG="Vous êtes sur le point de construire:\n\n  Distribution: ${ET_DISTRO_NAME}\n  Version: ${ET_VERSION}\n  Base Debian: ${ET_CODENAME}\n  Auteur: ${ET_AUTHOR}\n\nCette version apparaîtra dans:\n  • L'installateur Calamares\n  • Les dialogues À propos\n  • Le système de mise à jour\n\nContinuer avec cette version?"
-        VERSION_EDIT_MSG="Pour modifier la version, éditez le fichier de configuration:\n\n  nano ${CONFIG_FILE}\n\nExemple de contenu:\n  {\n    \"version\": \"1.0.1\",\n    \"codename\": \"Trixie\",\n    \"distro_name\": \"EmComm-Tools Debian Edition\",\n    ...\n  }"
+        VERSION_EDIT_MSG="Pour modifier la version, éditez le fichier de configuration:\n\n  nano ${CONFIG_FILE}\n\nExemple de contenu:\n  {\n    \"version\": \"1.0.1\",\n    \"codename\": \"Trixie\",\n    \"distro_name\": \"LiaisonOS Debian Edition\",\n    ...\n  }"
         VERSION_EXIT_MSG="Construction annulée."
     else
         VERSION_TITLE="Version Confirmation"
         VERSION_MSG="You are about to build:\n\n  Distribution: ${ET_DISTRO_NAME}\n  Version: ${ET_VERSION}\n  Debian Base: ${ET_CODENAME}\n  Author: ${ET_AUTHOR}\n\nThis version will appear in:\n  • Calamares installer\n  • About dialogs\n  • Update system\n\nContinue with this version?"
-        VERSION_EDIT_MSG="To change the version, edit the config file:\n\n  nano ${CONFIG_FILE}\n\nExample content:\n  {\n    \"version\": \"1.0.1\",\n    \"codename\": \"Trixie\",\n    \"distro_name\": \"EmComm-Tools Debian Edition\",\n    ...\n  }"
+        VERSION_EDIT_MSG="To change the version, edit the config file:\n\n  nano ${CONFIG_FILE}\n\nExample content:\n  {\n    \"version\": \"1.0.1\",\n    \"codename\": \"Trixie\",\n    \"distro_name\": \"LiaisonOS Debian Edition\",\n    ...\n  }"
         VERSION_EXIT_MSG="Build cancelled."
     fi
 
@@ -236,7 +236,7 @@ fi
 set_messages() {
     if [ "$SCRIPT_LANG" = "fr" ]; then
         # French messages
-        MSG_SCRIPT_TITLE="=== Constructeur ISO EmComm-Tools Debian ==="
+        MSG_SCRIPT_TITLE="=== Constructeur ISO LiaisonOS Debian ==="
         MSG_SCRIPT_DIR="Répertoire du script:"
         
         # Version
@@ -287,7 +287,7 @@ set_messages() {
         MSG_WALLPAPER_GENERATED="Fond d'écran généré:"
         MSG_NO_CALLSIGN_DEFAULT="Aucun indicatif entré, utilisation du fond d'écran par défaut."
         MSG_BASE_IMAGE_NOT_FOUND="Image de base non trouvée:"
-        MSG_COPY_BASE_IMAGE="Veuillez copier welcome-base.png dans le répertoire backgrounds/"
+        MSG_COPY_BASE_IMAGE="Veuillez copier emcomm-base.png dans le répertoire backgrounds/"
         MSG_USING_DEFAULT_WALLPAPER="Utilisation du fond d'écran par défaut de l'overlay."
         DLG_WALLPAPER_SELECT_TITLE="Sélection du fond d'écran"
         DLG_WALLPAPER_SELECT_MENU="Sélectionnez le fond d'écran pour l'ISO:"
@@ -378,7 +378,7 @@ set_messages() {
         MSG_CLEANING_UBUNTU="Nettoyage des fichiers spécifiques à Ubuntu..."
         MSG_CLEANING_ETUSER="Nettoyage des variantes et-user..."
         MSG_COPYING_WINE="Copie du préfixe Wine depuis:"
-        MSG_CREATING_SCRIPTS="Création des scripts EmComm-Tools..."
+        MSG_CREATING_SCRIPTS="Création des scripts LiaisonOS..."
         MSG_COPYING_AUTOSTART="Copie de l'entrée autostart du premier démarrage..."
         MSG_VARAC_ICON_FOUND="Icône VarAC trouvée dans l'overlay"
         MSG_ICONS_COPIED="Icônes copiées dans pixmaps pour compatibilité Debian"
@@ -406,6 +406,7 @@ set_messages() {
         MSG_BUILD_SUCCESS="║  CONSTRUCTION RÉUSSIE!                                                ║"
         MSG_ISO_CREATED="ISO créé:"
         MSG_SIZE="Taille:"
+        MSG_SAVING_APT_CACHE="Sauvegarde du cache apt pour les constructions hors-ligne..."
         MSG_START_QEMU="Démarrer QEMU pour tester l'ISO? (o/n): "
         MSG_STARTING_QEMU="Démarrage de QEMU..."
         MSG_QEMU_STARTED="QEMU démarré en arrière-plan."
@@ -420,7 +421,7 @@ set_messages() {
         # Update System
         DLG_UPDATE_TITLE="Configuration du système de mise à jour"
         DLG_UPDATE_MENU="Configurer la vérification automatique des mises à jour?\n\nCeci permet aux utilisateurs de recevoir les mises à jour\nde l'overlay sans réinstaller l'OS."
-        DLG_UPDATE_OPT1="Oui - Serveur public (emcomm-tools.ca)"
+        DLG_UPDATE_OPT1="Oui - Serveur public (liaisonos.com)"
         DLG_UPDATE_OPT2="Oui - URL personnalisée (club/organisation)"
         DLG_UPDATE_OPT3="Non - Hors-ligne seulement (mises à jour manuelles)"
         MSG_UPDATE_CUSTOM_URL="Entrez l'URL du serveur de mise à jour (sans / à la fin): "
@@ -435,9 +436,18 @@ set_messages() {
         MSG_GENERATING_MANIFEST="Génération du catalogue de fichiers (manifest.json)..."
         MSG_MANIFEST_GENERATED="Catalogue généré avec"
         MSG_MANIFEST_FILES="fichiers"
+
+        # Download Cache
+        DLG_DOWNLOADS_TITLE="Cache de téléchargements"
+        DLG_DOWNLOADS_MENU="Mettre à jour le cache local des téléchargements?\n\nLe cache Apache local (http://127.0.0.1/) fournit\ntous les fichiers aux hooks de construction.\nMettre à jour récupère les dernières versions."
+        DLG_DOWNLOADS_OPT1="Oui - Mettre à jour depuis Internet"
+        DLG_DOWNLOADS_OPT2="Non - Utiliser le cache existant"
+        MSG_DOWNLOADS_UPDATING="Mise à jour du cache de téléchargements..."
+        MSG_DOWNLOADS_SKIPPED="Utilisation du cache de téléchargements existant."
+        MSG_DOWNLOADS_FAILED="AVERTISSEMENT: Certains téléchargements ont échoué — vérifiez la connexion Internet."
     else
         # English messages
-        MSG_SCRIPT_TITLE="=== EmComm-Tools Debian ISO Builder ==="
+        MSG_SCRIPT_TITLE="=== LiaisonOS Debian ISO Builder ==="
         MSG_SCRIPT_DIR="Script directory:"
         
         # Version
@@ -456,7 +466,7 @@ set_messages() {
         MSG_USING_OVERLAY="Using overlay:"
         
         # Maps
-        DLG_MAPS_TITLE="EmComm-Tools ISO Builder"
+        DLG_MAPS_TITLE="LiaisonOS ISO Builder"
         DLG_MAPS_MENU="Offline Maps Configuration:\n\nDo you want to include maps in the ISO?"
         DLG_MAPS_OPT1="No - Use external drive (Recommended, ~2.8GB ISO)"
         DLG_MAPS_OPT2="Yes - Bake maps into ISO (~5.5GB ISO)"
@@ -579,7 +589,7 @@ set_messages() {
         MSG_CLEANING_UBUNTU="Cleaning Ubuntu-specific files..."
         MSG_CLEANING_ETUSER="Cleaning et-user variants..."
         MSG_COPYING_WINE="Copying Wine prefix from:"
-        MSG_CREATING_SCRIPTS="Creating EmComm-Tools scripts..."
+        MSG_CREATING_SCRIPTS="Creating LiaisonOS scripts..."
         MSG_COPYING_AUTOSTART="Copying first-boot autostart entry..."
         MSG_VARAC_ICON_FOUND="VarAC icon found in overlay"
         MSG_ICONS_COPIED="Icons copied to pixmaps for Debian compatibility"
@@ -607,6 +617,7 @@ set_messages() {
         MSG_BUILD_SUCCESS="║  BUILD SUCCESSFUL!                                                    ║"
         MSG_ISO_CREATED="ISO created:"
         MSG_SIZE="Size:"
+        MSG_SAVING_APT_CACHE="Saving apt cache for offline builds..."
         MSG_START_QEMU="Start QEMU to test the ISO? (y/n): "
         MSG_STARTING_QEMU="Starting QEMU..."
         MSG_QEMU_STARTED="QEMU started in background."
@@ -621,7 +632,7 @@ set_messages() {
         # Update System
         DLG_UPDATE_TITLE="Update System Configuration"
         DLG_UPDATE_MENU="Configure automatic update checking?\n\nThis allows users to receive overlay updates\nwithout reinstalling the OS."
-        DLG_UPDATE_OPT1="Yes - Public server (emcomm-tools.ca)"
+        DLG_UPDATE_OPT1="Yes - Public server (liaisonos.com)"
         DLG_UPDATE_OPT2="Yes - Custom URL (club/organization)"
         DLG_UPDATE_OPT3="No - Offline only (manual updates)"
         MSG_UPDATE_CUSTOM_URL="Enter update server URL (no trailing slash): "
@@ -636,6 +647,15 @@ set_messages() {
         MSG_GENERATING_MANIFEST="Generating file catalog (manifest.json)..."
         MSG_MANIFEST_GENERATED="Manifest generated with"
         MSG_MANIFEST_FILES="files"
+
+        # Download Cache
+        DLG_DOWNLOADS_TITLE="Download Cache"
+        DLG_DOWNLOADS_MENU="Update local download cache?\n\nThe local Apache cache (http://127.0.0.1/) serves\nall files to build hooks.\nUpdating fetches the latest versions."
+        DLG_DOWNLOADS_OPT1="Yes - Update from Internet"
+        DLG_DOWNLOADS_OPT2="No - Use existing cache"
+        MSG_DOWNLOADS_UPDATING="Updating download cache..."
+        MSG_DOWNLOADS_SKIPPED="Using existing download cache."
+        MSG_DOWNLOADS_FAILED="WARNING: Some downloads failed — check Internet connection."
     fi
 }
 
@@ -1403,7 +1423,7 @@ UPDATE_CHANNEL="stable"
 if [ -n "$BUILD_PROFILE" ]; then
     UPDATE_ENABLED=$(jq -r '.update.enabled // false' "$BUILD_PROFILE")
     if [ "$UPDATE_ENABLED" = "true" ]; then
-        UPDATE_URL=$(jq -r '.update.url // "https://emcomm-tools.ca/updates"' "$BUILD_PROFILE")
+        UPDATE_URL=$(jq -r '.update.url // "https://liaisonos.com/updates"' "$BUILD_PROFILE")
         UPDATE_CHANNEL=$(jq -r '.update.channel // "stable"' "$BUILD_PROFILE")
         echo "$MSG_UPDATE_ENABLED $UPDATE_URL"
         echo "$MSG_UPDATE_CHANNEL $UPDATE_CHANNEL"
@@ -1423,14 +1443,14 @@ else
     case $UPDATE_CHOICE in
         1)
             UPDATE_ENABLED="true"
-            UPDATE_URL="https://emcomm-tools.ca/updates"
+            UPDATE_URL="https://liaisonos.com/updates"
             echo "$MSG_UPDATE_ENABLED $UPDATE_URL"
             ;;
         2)
             UPDATE_ENABLED="true"
             read -p "$MSG_UPDATE_CUSTOM_URL" UPDATE_URL
             if [ -z "$UPDATE_URL" ]; then
-                UPDATE_URL="https://emcomm-tools.ca/updates"
+                UPDATE_URL="https://liaisonos.com/updates"
             fi
             echo "$MSG_UPDATE_ENABLED $UPDATE_URL"
             ;;
@@ -1728,6 +1748,39 @@ if [ -n "$BUILD_PROFILE" ]; then
 fi
 
 # =============================================================================
+# Update Download Cache (optional)
+# =============================================================================
+if [ -n "$BUILD_PROFILE" ]; then
+    UPDATE_DOWNLOADS=$(jq -r '.update_downloads // "no"' "$BUILD_PROFILE")
+    if [ "$UPDATE_DOWNLOADS" = "yes" ]; then
+        echo "$MSG_DOWNLOADS_UPDATING"
+        "${SCRIPT_DIR}/tools/et-update-downloads" --all || echo "$MSG_DOWNLOADS_FAILED"
+    else
+        echo "$MSG_DOWNLOADS_SKIPPED"
+    fi
+else
+    DL_CHOICE=$(dialog --title "$DLG_DOWNLOADS_TITLE" \
+        --menu "$DLG_DOWNLOADS_MENU" 14 60 2 \
+        1 "$DLG_DOWNLOADS_OPT1" \
+        2 "$DLG_DOWNLOADS_OPT2" \
+        3>&1 1>&2 2>&3)
+
+    clear
+
+    case $DL_CHOICE in
+        1)
+            echo "$MSG_DOWNLOADS_UPDATING"
+            "${SCRIPT_DIR}/tools/et-update-downloads" --all || echo "$MSG_DOWNLOADS_FAILED"
+            ;;
+        *)
+            echo "$MSG_DOWNLOADS_SKIPPED"
+            ;;
+    esac
+fi
+
+echo ""
+
+# =============================================================================
 # BUILD PHASE - Starting now!
 # =============================================================================
 echo ""
@@ -1789,6 +1842,13 @@ lb config \
   --debian-installer-gui true \
   --bootappend-live "boot=live components quiet splash"
 
+# Allow snapshot mirrors (older Release files)
+if echo "$DEBIAN_MIRROR" | grep -q snapshot; then
+    mkdir -p config/apt/apt.conf.d
+    echo 'Acquire::Check-Valid-Until "false";' > config/apt/apt.conf.d/no-check-valid-until
+    echo "Snapshot mirror detected — disabled Check-Valid-Until for apt"
+fi
+
 # Package list
 echo "$MSG_COPYING_PACKAGES"
 cp "${SCRIPT_DIR}/scripts/package-lists/emcomm.list.chroot" config/package-lists/
@@ -1799,6 +1859,20 @@ cp "${SCRIPT_DIR}/scripts/package-lists/emcomm.list.chroot" config/package-lists
 echo "$MSG_COPYING_OVERLAY"
 mkdir -p config/includes.chroot
 cp -a ${OVERLAY_DIR}/* config/includes.chroot/
+
+# Install PNGTileLayer YAAC plugin directly into includes.chroot
+# (hooks run inside chroot where repo paths are not accessible,
+#  includes.chroot is applied after hooks, so /opt/yaac-latest/ already exists)
+PLUGIN_JAR="${SCRIPT_DIR}/downloads/PNGTileLayer.jar"
+if [ -f "${PLUGIN_JAR}" ]; then
+    mkdir -p config/includes.chroot/opt/yaac-latest/plugins
+    cp "${PLUGIN_JAR}" config/includes.chroot/opt/yaac-latest/plugins/
+    echo "Installed PNGTileLayer.jar plugin into includes.chroot"
+else
+    echo "WARNING: ${PLUGIN_JAR} not found — plugin will not be in ISO"
+fi
+
+
 
 # Copy selected wallpaper
 echo "$MSG_SETTING_WALLPAPER"
@@ -1848,7 +1922,7 @@ if [ -n "$GENERATED_BOOT_LOGO" ] && [ -f "$GENERATED_BOOT_LOGO" ]; then
             -pointsize 24 \
             -fill "white" \
             -gravity northwest \
-            -annotate +150+30 "EmComm-Tools Debian Edition" \
+            -annotate +150+30 "LiaisonOS Debian Edition" \
             config/bootloaders/isolinux/splash.png
         echo "ISOLINUX splash created (BIOS boot)"
     else
@@ -1888,7 +1962,7 @@ if [ -n "$GENERATED_BOOT_LOGO" ] && [ -f "$GENERATED_BOOT_LOGO" ]; then
             -pointsize 36 \
             -fill "white" \
             -gravity northwest \
-            -annotate +100+50 "EmComm-Tools Debian Edition" \
+            -annotate +100+50 "LiaisonOS Debian Edition" \
             config/bootloaders/grub-pc/splash.png
         cp config/bootloaders/grub-pc/splash.png config/bootloaders/grub-efi/splash.png
         echo "GRUB splash created (UEFI boot)"
@@ -1909,7 +1983,7 @@ if [ -n "$GENERATED_BOOT_LOGO" ] && [ -f "$GENERATED_BOOT_LOGO" ]; then
     
     # Create live.cfg.in that includes our splash (this is used by live-build)
     cat > config/bootloaders/grub-pc/live-theme.cfg << 'GRUB_LIVE_THEME'
-# EmComm-Tools GRUB Live Boot Theme
+# LiaisonOS GRUB Live Boot Theme
 insmod png
 if background_image /boot/grub/splash.png; then
     set color_normal=white/black
@@ -1927,7 +2001,7 @@ GRUB_LIVE_THEME
     
     # Create custom grub.cfg header to be included
     cat > config/bootloaders/grub-pc/config.cfg << 'GRUB_CONFIG'
-# EmComm-Tools Custom GRUB Config
+# LiaisonOS Custom GRUB Config
 insmod png
 insmod gfxterm
 insmod vbe
@@ -1942,7 +2016,7 @@ GRUB_CONFIG
     # Create a hook to install GRUB splash into the ISO
     cat > config/hooks/live/0051-grub-branding.hook.chroot << 'GRUB_HOOK'
 #!/bin/bash
-# Configure GRUB branding for EmComm-Tools (UEFI boot)
+# Configure GRUB branding for LiaisonOS (UEFI boot)
 
 echo "Configuring GRUB boot branding..."
 
@@ -2008,7 +2082,7 @@ GRUB_BINARY_HOOK
     echo "$MSG_CREATING_PLYMOUTH_HOOK"
     cat > config/hooks/live/0050-plymouth-branding.hook.chroot << 'PLYMOUTH_HOOK'
 #!/bin/bash
-# Configure Plymouth boot branding for EmComm-Tools
+# Configure Plymouth boot branding for LiaisonOS
 
 echo "Configuring Plymouth boot branding..."
 
@@ -2072,17 +2146,17 @@ windowPlacement: center
 
 strings:
     productName:         "${ET_DISTRO_NAME}"
-    shortProductName:    "EmComm-Tools"
+    shortProductName:    "LiaisonOS"
     version:             "${ET_VERSION}"
     shortVersion:        "${ET_VERSION}"
     versionedName:       "${ET_DISTRO_NAME} ${ET_VERSION}"
-    shortVersionedName:  "EmComm-Tools ${ET_VERSION}"
-    bootloaderEntryName: "EmComm-Tools"
+    shortVersionedName:  "LiaisonOS ${ET_VERSION}"
+    bootloaderEntryName: "LiaisonOS"
     productUrl:          "${ET_WEBSITE}"
     supportUrl:          "${ET_SUPPORT_URL}"
     knownIssuesUrl:      "${ET_WEBSITE}/issues"
     releaseNotesUrl:     "${ET_WEBSITE}/releases"
-    donateUrl:           "https://buymeacoffee.com/emcommtools"
+    donateUrl:           "https://buymeacoffee.com/liaisonos"
 
 sidebar: widget
 navigation: widget
@@ -2111,7 +2185,7 @@ echo "Calamares branding.desc updated with version ${ET_VERSION}"
 # Create hook to ensure Calamares uses debian branding (should already be set)
 cat > config/hooks/live/0052-calamares-branding.hook.chroot << 'CALAMARES_HOOK'
 #!/bin/bash
-# Ensure Calamares uses debian branding (with EmComm-Tools customization)
+# Ensure Calamares uses debian branding (with LiaisonOS customization)
 
 echo "Verifying Calamares branding configuration..."
 
@@ -2143,6 +2217,13 @@ rm -rf config/includes.chroot/etc/apt
 
 # Explicitly remove GNOME schema override that causes "No such schema" errors
 rm -f config/includes.chroot/usr/share/glib-2.0/schemas/90_ubuntu-settings.gschema.override 2>/dev/null || true
+
+# Re-add emcomm gsettings overrides (onboard start-minimized, etc.)
+mkdir -p config/includes.chroot/usr/share/glib-2.0/schemas
+if [ -f "${OVERLAY_DIR}/usr/share/glib-2.0/schemas/99_emcomm-onboard.gschema.override" ]; then
+    cp "${OVERLAY_DIR}/usr/share/glib-2.0/schemas/99_emcomm-onboard.gschema.override" \
+       config/includes.chroot/usr/share/glib-2.0/schemas/
+fi
 
 # Remove GNOME-specific configs that cause errors on XFCE
 rm -rf config/includes.chroot/etc/skel/.config/dconf
@@ -2273,6 +2354,8 @@ rm -f config/includes.chroot/etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/x
 
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-4
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-5
+mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-27
+mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-28
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-24
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-25
 mkdir -p config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-26
@@ -2282,6 +2365,12 @@ cp "${SCRIPT_DIR}/scripts/panel-launchers/launcher-4-thunar.desktop" config/incl
 
 # Panel launcher: xfce4-terminal
 cp "${SCRIPT_DIR}/scripts/panel-launchers/launcher-5-xfce4-terminal.desktop" config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-5/xfce4-terminal.desktop
+
+# Panel launcher: et-repeater
+cp "${SCRIPT_DIR}/scripts/panel-launchers/launcher-27-et-repeater.desktop" config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-27/et-repeater.desktop
+
+# Panel launcher: et-logger
+cp "${SCRIPT_DIR}/scripts/panel-launchers/launcher-28-et-logger.desktop" config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-28/et-logger.desktop
 
 # Panel launcher: navit
 cp "${SCRIPT_DIR}/scripts/panel-launchers/launcher-24-navit.desktop" config/includes.chroot/etc/skel/.config/xfce4/panel/launcher-24/navit.desktop
@@ -2322,7 +2411,7 @@ if [ "$INCLUDE_MAPS" = "yes" ]; then
     cat > config/hooks/live/0400-download-maps.hook.chroot << 'MAPHOOK_HEADER'
 #!/bin/bash
 # =============================================================================
-# EmComm-Tools Map Download Hook
+# LiaisonOS Map Download Hook
 # Generated by setup-emcomm-iso.sh
 # Downloads: mbtiles tilesets + selected OSM/Navit maps
 # =============================================================================
@@ -2479,7 +2568,7 @@ mkdir -p config/includes.chroot/opt/emcomm-tools/conf
 # Generate update.conf
 cat > config/includes.chroot/opt/emcomm-tools/conf/update.conf << EOF
 # =============================================================================
-# EmComm-Tools Update Configuration
+# LiaisonOS Update Configuration
 # Generated: $(date '+%Y-%m-%d %H:%M:%S')
 # =============================================================================
 
@@ -2635,16 +2724,6 @@ sudo rm -rf chroot/opt/flmsg* 2>/dev/null || true
 sudo rm -rf chroot/opt/flamp* 2>/dev/null || true
 echo "Cache cleaned."
 
-# Copy local downloads into chroot so hooks can use them as fallback
-# Use includes.chroot_before_packages to guarantee files are in place before hooks run
-DOWNLOADS_DIR="${SCRIPT_DIR}/downloads"
-if [ -d "$DOWNLOADS_DIR" ] && [ "$(ls -A "$DOWNLOADS_DIR" 2>/dev/null)" ]; then
-    echo "Copying local downloads for hook fallback..."
-    mkdir -p config/includes.chroot_before_packages/opt/downloads
-    cp -v "$DOWNLOADS_DIR"/* config/includes.chroot_before_packages/opt/downloads/
-else
-    echo "No downloads/ directory found (optional - hooks will download from internet)"
-fi
 
 # Add local package repositories if available
 mkdir -p config/archives
@@ -2692,7 +2771,13 @@ if [ $BUILD_STATUS -eq 0 ]; then
         echo "$MSG_ISO_CREATED ${ISO_DIR}/${ISO_FILE}"
         echo "$MSG_SIZE $(du -h "$ISO_FILE" | cut -f1)"
         echo ""
-        
+
+        # Save apt cache for future offline builds
+        if [ -f "${REPO_ROOT}/save-apt-cache.sh" ]; then
+            echo "$MSG_SAVING_APT_CACHE"
+            bash "${REPO_ROOT}/save-apt-cache.sh"
+        fi
+
         # Offer to start QEMU
         read -p "$MSG_START_QEMU" QEMU_CHOICE
         
