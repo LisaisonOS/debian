@@ -26,7 +26,7 @@
 
 <h3>Français</h3>
 
-<p>Distribution LiaisonOS (FR/EN) basée sur Debian pour radioamateurs.</p>
+<p>LiaisonOS (FR/EN) basée sur Debian pour radioamateurs.</p>
 
 <p><strong>Mainteneur :</strong> <a href="https://va2ops.ca/fr/">Sylvain Deguire (VA2OPS)</a></p>
 
