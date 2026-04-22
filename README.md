@@ -170,7 +170,6 @@ The dashboard provides **16 one-click operational modes:**
 
 ## 🙏 Acknowledgments
 
-- **Gaston Gonzalez (KT7RUN)** — Original EmComm-Tools OS Community project
 - **The Debian Ham Radio Team** — Maintaining excellent ham radio packages
 - **José Alberto Nieto Ros (EA5HVK)** — VARA HF/FM modem development
 - **Irad Deutsch (4Z1AC) and the VarAC Development Team** — VarAC
@@ -180,6 +179,7 @@ The dashboard provides **16 one-click operational modes:**
 - **Martin F N Cooper** — Paracon
 - **David Freese (W1HKJ)** — fldigi
 - **Joe Taylor (K1JT) and the WSJT Development Team** — WSJT-X
+- **Gaston Gonzalez (KT7RUN)** — Initial fork from Original EmComm-Tools OS Community project
 
 ---
 
