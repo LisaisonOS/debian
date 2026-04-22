@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# et-update - EmComm-Tools Safe Update System
+# et-update - LiaisonOS Safe Update System
 # Version: 1.0.0
 # Updated: 2026-01-10
 # Author: Sylvain Deguire (VA2OPS)
@@ -445,7 +445,7 @@ do_update() {
 # =============================================================================
 show_help() {
     cat << EOF
-EmComm-Tools Update System
+LiaisonOS Update System
 
 Usage: et-update [OPTIONS] [COMMAND]
 
@@ -474,7 +474,7 @@ show_status() {
     load_config
     
     echo "╔══════════════════════════════════════════════════════════════════╗"
-    echo "║  EmComm-Tools Update Status                                      ║"
+    echo "║  LiaisonOS Update Status                                      ║"
     echo "╠══════════════════════════════════════════════════════════════════╣"
     
     if [ -f "$ET_MANIFEST" ]; then

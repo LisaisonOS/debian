@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=EmComm Dashboard
-Comment=EmComm-Tools Interactive Dashboard
+Comment=LiaisonOS Interactive Dashboard
 
 ## optimized version
 Exec=/opt/emcomm-tools/bin/et-flask-apps/et-dashboard

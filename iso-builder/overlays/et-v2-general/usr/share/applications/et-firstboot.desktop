@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=EmComm-Tools Setup Wizard
-Name[fr]=Assistant de configuration EmComm-Tools
-Comment=Configure your EmComm-Tools system
-Comment[fr]=Configurez votre système EmComm-Tools
+Name=LiaisonOS Setup Wizard
+Name[fr]=Assistant de configuration LiaisonOS
+Comment=Configure your LiaisonOS system
+Comment[fr]=Configurez votre système LiaisonOS
 Exec=/opt/emcomm-tools/bin/et-flask-apps/et-firstboot/et-firstboot.py --force
 Icon=/usr/share/pixmaps/emcomm-icon.png
 Terminal=false

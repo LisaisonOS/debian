@@ -19,7 +19,7 @@ NC='\033[0m'
 
 show_help() {
     cat << EOF
-EmComm-Tools Manifest Builder
+LiaisonOS Manifest Builder
 
 Usage: et-manifest-build [OPTIONS] -s SOURCE_DIR -o OUTPUT_FILE
 
@@ -37,7 +37,7 @@ Examples:
                     --output ~/public_html/updates/stable/manifest.json \\
                     --version 1.0.0 \\
                     --channel stable \\
-                    --url https://emcomm-tools.ca/updates/stable/files
+                    --url https://liaisonos.com/updates/stable/files
 
 EOF
 }
@@ -137,7 +137,7 @@ generate_manifest() {
     
     jq -n \
         --arg schema_version "1.0" \
-        --arg distribution "EmComm-Tools Debian Edition" \
+        --arg distribution "LiaisonOS Debian Edition" \
         --arg version "$version" \
         --arg channel "$channel" \
         --arg release_date "$release_date" \
@@ -177,7 +177,7 @@ main() {
     local output_file=""
     local version="1.0.0"
     local channel="stable"
-    local base_url="https://emcomm-tools.ca/updates/stable/files"
+    local base_url="https://liaisonos.com/updates/stable/files"
     
     while [[ $# -gt 0 ]]; do
         case $1 in

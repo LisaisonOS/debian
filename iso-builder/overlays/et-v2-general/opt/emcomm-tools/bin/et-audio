@@ -1,18 +1,31 @@
-#!/bin/bash
+#
+# Author  : Gaston Gonzalez!/bin/bash
 #
 # Author  : Gaston Gonzalez
-# Date    : 31 October 2024
-# Updated : 13 October 2025
-# Purpose : Configures ET audio device with sane defaults
 #
-# Modified: VA2OPS - January 2026
-#           Added pulseaudio -k to release ET_AUDIO for direct ALSA access
+# Author  : Gaston Gonzalez Date    : 31 October 2024
 #
-# Preconditions
-# 1. Supported audio interface is connected and properly detected
+# Author  : Gaston Gonzalez Updated : 13 October 2025
 #
-# Postconditions
-# 1. ALSA settings set on ET audio device
+# Author  : Gaston Gonzalez Purpose : Configures ET audio device with sane defaults
+#
+# Author  : Gaston Gonzalez
+#
+# Author  : Gaston Gonzalez Modified: VA2OPS - January 2026
+#
+# Author  : Gaston Gonzalez           Added pulseaudio -k to release ET_AUDIO for direct ALSA access
+#
+# Author  : Gaston Gonzalez
+#
+# Author  : Gaston Gonzalez Preconditions
+#
+# Author  : Gaston Gonzalez 1. Supported audio interface is connected and properly detected
+#
+# Author  : Gaston Gonzalez
+#
+# Author  : Gaston Gonzalez Postconditions
+#
+# Author  : Gaston Gonzalez 1. ALSA settings set on ET audio device
 
 . /opt/emcomm-tools/bin/et-common
 
@@ -21,7 +34,8 @@ usage() {
   echo "  update-config   - Update amixer config"
 }
 
-if [ $# -ne 1 ]; then
+if [ $#
+# Author  : Gaston Gonzalez -ne 1 ]; then
   usage
   exit 1
 fi
@@ -32,18 +46,22 @@ start() {
 
 update-config () {
 
-  # Kill PulseAudio to release ET_AUDIO for direct ALSA access
+  #
+# Author  : Gaston Gonzalez Kill PulseAudio to release ET_AUDIO for direct ALSA access
   pulseaudio -k 2>/dev/null
   sleep 1
 
-  # 1. Check if the symlink was created by the udev rules
+  #
+# Author  : Gaston Gonzalez 1. Check if the symlink was created by the udev rules
   if [ -e /dev/et-audio ]; then
 
-     # 2. Check that this device was properly tagged with the ET_AUDIO env variable with a udev rule
+     #
+# Author  : Gaston Gonzalez 2. Check that this device was properly tagged with the ET_AUDIO env variable with a udev rule
      APLAY_OUT=$(arecord -l | grep ET_AUDIO)
      if [ $? -eq 0 ]; then
 
-       # Use device descriptor assigned by udev rules
+       #
+# Author  : Gaston Gonzalez Use device descriptor assigned by udev rules
        ET_DEVICE=$(udevadm info /dev/et-audio | grep ET_DEVICE)
        if [ $? -ne 0 ]; then
          et-log "ET_DEVICE not set by udev rule. Can't set ALSA settings"
@@ -57,7 +75,8 @@ update-config () {
 
        et-log "Updating audio device: '${ET_DEVICE_NAME}' (${FULL_AUDIO_DEVICE})' for ALSA PnP configuration."
 
-       # Handle audio settings specifically if defined in the radio configuration
+       #
+# Author  : Gaston Gonzalez Handle audio settings specifically if defined in the radio configuration
        AUDIO_INIT_SCRIPT=$(jq -r -e '.audio.script' ${ET_ACTIVE_RADIO_CONF})
        if [[ $? -eq 0 ]]; then
          et-log "Executing audio configuration script: ${AUDIO_INIT_SCRIPT}"
@@ -75,52 +94,69 @@ update-config () {
          exit 0
        fi
 
-       # Handle audio generically for most sound card interfaces
+       #
+# Author  : Gaston Gonzalez Handle audio generically for most sound card interfaces
        case ${ET_DEVICE_NAME} in
          "DIGIRIG_MOBILE")
-           # Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
+           #
+# Author  : Gaston Gonzalez Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
            amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 42% unmute
-           # Unmute Mic
+           #
+# Author  : Gaston Gonzalez Unmute Mic
            amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 52% unmute
-           # Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
+           #
+# Author  : Gaston Gonzalez Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
            amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 31% unmute
-           # Disable Auto Gain Control
+           #
+# Author  : Gaston Gonzalez Disable Auto Gain Control
            amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
 
            et-log "Applied amixer settings for ${ET_DEVICE_NAME}"
          ;;
          "DIGIRIG_LITE")
-           # Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
+           #
+# Author  : Gaston Gonzalez Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
            amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 42% unmute
-           # Unmute Mic
+           #
+# Author  : Gaston Gonzalez Unmute Mic
            amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 52% unmute
-           # Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
+           #
+# Author  : Gaston Gonzalez Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
            amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 31% unmute
-           # Disable Auto Gain Control
+           #
+# Author  : Gaston Gonzalez Disable Auto Gain Control
            amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
 
            et-log "Applied amixer settings for ${ET_DEVICE_NAME}"
          ;;
          "FT-891")
-           # Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
+           #
+# Author  : Gaston Gonzalez Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
            amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 42% unmute
-           # Unmute Mic
+           #
+# Author  : Gaston Gonzalez Unmute Mic
            amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 52% unmute
-           # Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
+           #
+# Author  : Gaston Gonzalez Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
            amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 31% unmute
-           # Disable Auto Gain Control
+           #
+# Author  : Gaston Gonzalez Disable Auto Gain Control
            amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
 
            et-log "Applied amixer settings for ${ET_DEVICE_NAME}"
          ;;
          "FTX-1")
-           # Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
+           #
+# Author  : Gaston Gonzalez Unmute Speaker a set volume. Adjust if remote station can't decode you. Your TX controls.
            amixer -q -c ${AUDIO_CARD} sset Speaker Playback Switch 42% unmute
-           # Unmute Mic
+           #
+# Author  : Gaston Gonzalez Unmute Mic
            amixer -q -c ${AUDIO_CARD} sset Mic Playback Switch 52% unmute
-           # Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
+           #
+# Author  : Gaston Gonzalez Set "L/R Capture" to 19. Adjust if you can't decode received audio. Your RX controls.
            amixer -q -c ${AUDIO_CARD} sset Mic Capture Switch 31% unmute
-           # Disable Auto Gain Control
+           #
+# Author  : Gaston Gonzalez Disable Auto Gain Control
            amixer -q -c ${AUDIO_CARD} sset 'Auto Gain Control' mute
 
            et-log "Applied amixer settings for ${ET_DEVICE_NAME}"

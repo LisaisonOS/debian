@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# EmComm-Tools Post-Install Verification Script
+# LiaisonOS Post-Install Verification Script
 # Author: Sylvain Deguire (VA2OPS)
 # Date: 7 January 2026
 #
@@ -18,7 +18,7 @@ FAIL=0
 WARN=0
 
 echo "╔═══════════════════════════════════════════════════════════════════════╗"
-echo "║         EmComm-Tools Post-Install Verification                        ║"
+echo "║         LiaisonOS Post-Install Verification                        ║"
 echo "╚═══════════════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -101,9 +101,9 @@ check_command wine
 echo ""
 
 # -----------------------------------------------------------------------------
-# 2. EmComm-Tools Scripts
+# 2. LiaisonOS Scripts
 # -----------------------------------------------------------------------------
-echo "=== EmComm-Tools Scripts ==="
+echo "=== LiaisonOS Scripts ==="
 check_command et-user
 check_command et-radio
 check_command et-mode

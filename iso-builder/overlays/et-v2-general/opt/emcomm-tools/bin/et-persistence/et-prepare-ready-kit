@@ -2,7 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : Prepare an EmComm-Tools "Ready Kit" USB drive for sale
+# Purpose : Prepare an LiaisonOS "Ready Kit" USB drive for sale
 #
 # This creates the complete structure including pre-built emcomm-data/
 #
@@ -25,7 +25,7 @@ error() {
 show_usage() {
     cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════════╗
-║         EmComm-Tools Ready Kit USB Preparation Tool                   ║
+║         LiaisonOS Ready Kit USB Preparation Tool                   ║
 ║                     "Plug and Communicate"                            ║
 ╚═══════════════════════════════════════════════════════════════════════╝
 
@@ -79,7 +79,7 @@ create_emcomm_data() {
   "created": "$(date -Iseconds)",
   "last_save": null,
   "prepared_by": "VA2OPS",
-  "website": "https://emcomm-tools.ca"
+  "website": "https://liaisonos.com"
 }
 EOF
     
@@ -99,14 +99,14 @@ EOF
     # Create README
     cat > "${persistence_dir}/README.txt" << 'EOF'
 ═══════════════════════════════════════════════════════════════════
-  EmComm-Tools - Dossier de Persistance / Persistence Folder
+  LiaisonOS - Dossier de Persistance / Persistence Folder
 ═══════════════════════════════════════════════════════════════════
 
-FR: Ce dossier contient votre configuration EmComm-Tools.
+FR: Ce dossier contient votre configuration LiaisonOS.
     Au premier démarrage, entrez votre indicatif et vos paramètres.
     Ils seront sauvegardés ici automatiquement!
 
-EN: This folder contains your EmComm-Tools configuration.
+EN: This folder contains your LiaisonOS configuration.
     On first boot, enter your callsign and settings.
     They will be saved here automatically!
 
@@ -123,7 +123,7 @@ BACKUP / SAUVEGARDE:
   Simply copy this 'emcomm-data' folder to backup all your
   configuration.
 
-Support: https://emcomm-tools.ca
+Support: https://liaisonos.com
 73 de VA2OPS
 ═══════════════════════════════════════════════════════════════════
 EOF
@@ -146,7 +146,7 @@ create_maps_structure() {
     mkdir -p "${base}/my-maps"
     
     cat > "${base}/maps/README.txt" << 'EOF'
-EmComm-Tools Offline Maps / Cartes hors-ligne
+LiaisonOS Offline Maps / Cartes hors-ligne
 ══════════════════════════════════════════════
 
 mbtiles/    - Tuiles raster pour carte web / Raster tiles for web map
@@ -177,7 +177,7 @@ create_wikipedia_structure() {
     mkdir -p "${base}/wikipedia"
     
     cat > "${base}/wikipedia/README.txt" << 'EOF'
-EmComm-Tools Offline Wikipedia / Wikipédia hors-ligne
+LiaisonOS Offline Wikipedia / Wikipédia hors-ligne
 ══════════════════════════════════════════════════════
 
 Fichiers ZIM pour Wikipédia hors-ligne.
@@ -203,7 +203,7 @@ create_docs_structure() {
     mkdir -p "${base}/docs/training"
     
     cat > "${base}/docs/README.txt" << 'EOF'
-EmComm-Tools Documentation / Documentation
+LiaisonOS Documentation / Documentation
 ══════════════════════════════════════════════════════
 
 ics-forms/  - Formulaires ICS / ICS Forms
@@ -224,9 +224,9 @@ create_main_readme() {
     
     cat > "${base}/README.txt" << EOF
 ═══════════════════════════════════════════════════════════════════════
-  EmComm-Tools "Ready Kit" USB - ${edition^} Edition
+  LiaisonOS "Ready Kit" USB - ${edition^} Edition
   Version ${VERSION}
-  https://emcomm-tools.ca
+  https://liaisonos.com
 ═══════════════════════════════════════════════════════════════════════
 
 BIENVENUE! / WELCOME!
@@ -250,8 +250,8 @@ COMMENT UTILISER / HOW TO USE:
   1. Démarrez votre ordinateur sur cette clé USB
      Boot your computer from this USB drive
 
-  2. Sélectionnez "EmComm-Tools" dans le menu Ventoy
-     Select "EmComm-Tools" from Ventoy menu
+  2. Sélectionnez "LiaisonOS" dans le menu Ventoy
+     Select "LiaisonOS" from Ventoy menu
 
   3. Au premier démarrage, entrez votre indicatif
      On first boot, enter your callsign
@@ -261,8 +261,8 @@ COMMENT UTILISER / HOW TO USE:
 
 SUPPORT:
 ────────
-  Web:   https://emcomm-tools.ca
-  Email: support@emcomm-tools.ca
+  Web:   https://liaisonos.com
+  Email: support@liaisonos.com
 
 Préparé par / Prepared by: Sylvain Deguire (VA2OPS)
 Club: VA2GCU
@@ -468,7 +468,7 @@ main() {
     
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
-    echo "  EmComm-Tools Ready Kit Preparation"
+    echo "  LiaisonOS Ready Kit Preparation"
     echo "  Version ${VERSION}"
     echo "═══════════════════════════════════════════════════════════════"
     echo "  Target:  ${mount_point}"

@@ -1,6 +1,6 @@
 [Unit]
-Description=EmComm Tools Process Supervisor
-Documentation=https://emcomm-tools.ca
+Description=LiaisonOS Process Supervisor
+Documentation=https://liaisonos.com
 
 [Service]
 Type=simple

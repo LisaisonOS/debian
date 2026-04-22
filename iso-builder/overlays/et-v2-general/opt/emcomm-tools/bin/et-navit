@@ -2,7 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : Wrapper script for Navit with EmComm-Tools integration
+# Purpose : Wrapper script for Navit with LiaisonOS integration
 #
 # Features:
 # - Sets home position from grid square in user.json

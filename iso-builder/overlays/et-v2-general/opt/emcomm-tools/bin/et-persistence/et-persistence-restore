@@ -2,7 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : Restore EmComm-Tools configs from USB persistence
+# Purpose : Restore LiaisonOS configs from USB persistence
 #
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
@@ -51,7 +51,7 @@ is_live_boot() {
 }
 
 if [[ -z "$PERSISTENCE_PATH" ]]; then
-    error "No EmComm-Tools persistence drive found (et-config folder). Please insert your USB drive."
+    error "No LiaisonOS persistence drive found (et-config folder). Please insert your USB drive."
 fi
 
 log "Found persistence at: ${PERSISTENCE_PATH}"
@@ -416,7 +416,7 @@ restore_thunderbird_profile() {
 log "Starting config restores..."
 RESTORED=0
 
-# --- EmComm-Tools Core (MERGE to preserve winlinkPasswd) ---
+# --- LiaisonOS Core (MERGE to preserve winlinkPasswd) ---
 if merge_user_json "${PERSISTENCE_PATH}/user.json" "${HOME}/.config/emcomm-tools/user.json"; then
     ((RESTORED++)) || true
 fi

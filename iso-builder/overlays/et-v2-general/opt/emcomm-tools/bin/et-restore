@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# et-restore - EmComm-Tools Backup Restore System
+# et-restore - LiaisonOS Backup Restore System
 # Version: 1.0.0
 # Updated: 2026-01-10
 # Author: Sylvain Deguire (VA2OPS)
@@ -158,7 +158,7 @@ restore_file() {
 
 show_help() {
     cat << EOF
-EmComm-Tools Restore System
+LiaisonOS Restore System
 
 Usage: et-restore [OPTIONS] [BACKUP_NAME]
 

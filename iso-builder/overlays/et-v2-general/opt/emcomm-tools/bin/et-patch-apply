@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# et-patch-apply - Apply offline patch to EmComm-Tools
+# et-patch-apply - Apply offline patch to LiaisonOS
 # Version: 1.0.0
 # Updated: 2026-03-02
 # Author: Sylvain Deguire (VA2OPS)
@@ -42,7 +42,7 @@ log() {
 
 show_help() {
     cat << 'EOF'
-EmComm-Tools Offline Patch Applier
+LiaisonOS Offline Patch Applier
 
 Applies a patch package (.tar.gz) created by et-patch-build.
 Backs up all modified files before applying and can roll back on failure.
@@ -294,7 +294,7 @@ apply_patch() {
     # --- Show summary ---
     echo ""
     echo "────────────────────────────────────────────────────"
-    echo "  EmComm-Tools Patch"
+    echo "  LiaisonOS Patch"
     echo "────────────────────────────────────────────────────"
     echo "  From:       $from_version"
     echo "  To:         $to_version"

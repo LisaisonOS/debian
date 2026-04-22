@@ -225,7 +225,7 @@ show_summary() {
     
     echo ""
     echo "=============================================="
-    echo "  EmComm-Tools USB Data Summary"
+    echo "  LiaisonOS USB Data Summary"
     echo "=============================================="
     echo "  USB Path: ${usb_path}"
     echo ""
@@ -279,14 +279,14 @@ show_summary() {
 
 # Main
 main() {
-    log "Searching for EmComm-Tools USB data..."
+    log "Searching for LiaisonOS USB data..."
     
     USB_PATH=$(find_usb_data)
     
     if [[ -z "$USB_PATH" ]]; then
-        log "No EmComm-Tools USB data found."
+        log "No LiaisonOS USB data found."
         echo "No USB data partition found."
-        echo "Insert your EmComm-Tools USB and try again."
+        echo "Insert your LiaisonOS USB and try again."
         exit 1
     fi
     
@@ -314,7 +314,7 @@ case "${1:-}" in
         echo "the live system for direct access without copying to RAM."
         echo ""
         echo "This script is automatically run at boot when using"
-        echo "EmComm-Tools 'Ready Kit' USB drives."
+        echo "LiaisonOS 'Ready Kit' USB drives."
         exit 0
         ;;
     --summary)

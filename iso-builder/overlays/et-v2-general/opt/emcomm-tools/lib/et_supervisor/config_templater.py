@@ -390,7 +390,7 @@ def _ini_replace_or_add(lines, key, value, section=None):
 def _ini_replace_first_word(lines, key, value):
     """Replace only the first word of a key's value, keep the rest.
 
-    Example: MyInfo=FT-857D emcomm-tools.ca -> MyInfo=IC-705 emcomm-tools.ca
+    Example: MyInfo=FT-857D liaisonos.com -> MyInfo=IC-705 liaisonos.com
     """
     for i, line in enumerate(lines):
         stripped = line.rstrip('\r\n')

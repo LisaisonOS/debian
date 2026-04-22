@@ -1,1 +1,1 @@
-/* EmComm-Tools Field Logger - app.js placeholder */
+/* LiaisonOS Field Logger - app.js placeholder */

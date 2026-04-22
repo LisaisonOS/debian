@@ -1,4 +1,4 @@
-# EmComm-Tools Flask Apps with PyWebView
+# LiaisonOS Flask Apps with PyWebView
 
 Author: Sylvain Deguire (VA2OPS)
 Date: January 2026

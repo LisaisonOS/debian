@@ -1,11 +1,17 @@
-#!/bin/bash
+#
+# Author   : Gaston Gonzalez!/bin/bash
 #
 # Author   : Gaston Gonzalez
-# Author   : William McKeehan
-# Date     : 6 October 2024
-# Updated  : 26 February 2026 - Sylvain Deguire (VA2OPS)
-#             Added audio-only radio detection (DigiRig Lite) in et-cat check
-# Purpose  : Utility script for dumping system information
+#
+# Author   : Gaston Gonzalez Author   : William McKeehan
+#
+# Author   : Gaston Gonzalez Date     : 6 October 2024
+#
+# Author   : Gaston Gonzalez Updated  : 26 February 2026 - Sylvain Deguire (VA2OPS)
+#
+# Author   : Gaston Gonzalez             Added audio-only radio detection (DigiRig Lite) in et-cat check
+#
+# Author   : Gaston Gonzalez Purpose  : Utility script for dumping system information
 
 function usage() {
   echo "Usage: $(basename $0) <command>"
@@ -21,10 +27,11 @@ function usage() {
   echo "  et-sdr        - Show state of SDR interface"
   echo "  grid          - Current grid square defined by user"
   echo "  ip            - System IP address"
-  echo "  release       - EmComm Tools release"
+  echo "  release       - LiaisonOS release"
 }
 
-if [ $# -ne 1 ]; then
+if [ $#
+# Author   : Gaston Gonzalez -ne 1 ]; then
   usage
   exit 1
 fi
@@ -61,13 +68,15 @@ case $1 in
     ;;
   et-audio)
 
-    # 1. Check if the symlink was created by the udev rules
+    #
+# Author   : Gaston Gonzalez 1. Check if the symlink was created by the udev rules
     if [ -e /dev/et-audio ]; then 
 
       UDEV_OUT=$(udevadm info /dev/et-audio | grep ET_DEVICE)
       if [ $? -eq 0 ]; then
 
-        # Display friendly audio device name
+        #
+# Author   : Gaston Gonzalez Display friendly audio device name
         ET_DEVICE=$(udevadm info /dev/et-audio | grep ET_DEVICE | cut -d"=" -f2)
         case $ET_DEVICE in
           "DIGIRIG_LITE")
@@ -92,10 +101,12 @@ case $1 in
     ;;
   et-audio-card)
 
-    # 1. Check if the symlink was created by the udev rules
+    #
+# Author   : Gaston Gonzalez 1. Check if the symlink was created by the udev rules
     if [ -e /dev/et-audio ]; then 
 
-       # 2. Check that this device was properly tagged with the ET_AUDIO env variable with a udev rule
+       #
+# Author   : Gaston Gonzalez 2. Check that this device was properly tagged with the ET_AUDIO env variable with a udev rule
        APLAY_OUT=$(arecord -l | grep ET_AUDIO)
        if [ $? -eq 0 ]; then
          AUDIO_CARD=$(echo $APLAY_OUT | cut -d":" -f1 | awk '{print $2}')
@@ -116,11 +127,14 @@ case $1 in
       exit 0
     fi
 
-    # Audio-only radios (e.g. DigiRig Lite) have no /dev/et-cat but run rigctld
-    # in dummy mode. Detect via rigctrl.id in the active radio config.
+    #
+# Author   : Gaston Gonzalez Audio-only radios (e.g. DigiRig Lite) have no /dev/et-cat but run rigctld
+    #
+# Author   : Gaston Gonzalez in dummy mode. Detect via rigctrl.id in the active radio config.
     RIG_ID=$(jq -r '.rigctrl.id // empty' "${ET_HOME}/conf/radios.d/active-radio.json" 2>/dev/null)
     if [ "$RIG_ID" = "1" ]; then
-      # Dummy rig (audio-only, no CAT hardware)
+      #
+# Author   : Gaston Gonzalez Dummy rig (audio-only, no CAT hardware)
       systemctl status rigctld --no-pager > /dev/null 2>&1
       if [ $? -eq 0 ]; then
         echo "Audio only"
@@ -130,26 +144,41 @@ case $1 in
       exit 0
     fi
 
-    # 1. Check if the symlink was created by the udev rules
+    #
+# Author   : Gaston Gonzalez 1. Check if the symlink was created by the udev rules
     if [ -e /dev/et-cat ]; then
 
-      # 2. Check if the rigctl systemd unit is running properly
+      #
+# Author   : Gaston Gonzalez 2. Check if the rigctl systemd unit is running properly
       systemctl status rigctld --no-pager > /dev/null
       if [ $? -eq 0 ]; then
 
-        # Note: I am disabling the VFO read as it causes issues with serval Icom
-        # radios and results in the VFO changing momentarily during this client
-        # request. It causes issues during TX and RX. If it is not bulletproof,
-        # features like this will be turned off. This is a problem given that
-        # Conky calls this method every 10 seconds.
         #
-        # 3. Grab and format frequency
-        #FREQ=$(timeout 1 rigctl -m 2 f)
-        #if [ $? -eq 0 ]; then
-        #  printf "%'d MHz\n" "$FREQ" | sed 's|,|.|g'
-        #else
-        #  echo "Connected. Can't access VFO";
-        #fi
+# Author   : Gaston Gonzalez Note: I am disabling the VFO read as it causes issues with serval Icom
+        #
+# Author   : Gaston Gonzalez radios and results in the VFO changing momentarily during this client
+        #
+# Author   : Gaston Gonzalez request. It causes issues during TX and RX. If it is not bulletproof,
+        #
+# Author   : Gaston Gonzalez features like this will be turned off. This is a problem given that
+        #
+# Author   : Gaston Gonzalez Conky calls this method every 10 seconds.
+        #
+# Author   : Gaston Gonzalez
+        #
+# Author   : Gaston Gonzalez 3. Grab and format frequency
+        #
+# Author   : Gaston GonzalezFREQ=$(timeout 1 rigctl -m 2 f)
+        #
+# Author   : Gaston Gonzalezif [ $? -eq 0 ]; then
+        #
+# Author   : Gaston Gonzalez  printf "%'d MHz\n" "$FREQ" | sed 's|,|.|g'
+        #
+# Author   : Gaston Gonzalezelse
+        #
+# Author   : Gaston Gonzalez  echo "Connected. Can't access VFO";
+        #
+# Author   : Gaston Gonzalezfi
         echo "Connected";
       else
         echo "Connected. No rig control"
@@ -160,7 +189,8 @@ case $1 in
 
     ;; 
   et-sdr)
-    # 1. Check if the symlink was created by the udev rules
+    #
+# Author   : Gaston Gonzalez 1. Check if the symlink was created by the udev rules
     if [ -e /dev/et-sdr ]; then
         echo "Connected";
     else
@@ -169,7 +199,8 @@ case $1 in
 
     ;;
   et-bluetooth)
-    # Check if Bluetooth TNC serial port exists (bound via rfcomm)
+    #
+# Author   : Gaston Gonzalez Check if Bluetooth TNC serial port exists (bound via rfcomm)
     if [ -e /dev/rfcomm0 ]; then
         echo "Connected";
     else
@@ -179,14 +210,17 @@ case $1 in
     ;;
   et-gps)
 
-    # 1. Check if the symlink was created by the udev rules
+    #
+# Author   : Gaston Gonzalez 1. Check if the symlink was created by the udev rules
     if [ -e /dev/et-gps ]; then 
 
-      # 2. Check if the gpsd systemd unit is running properly
+      #
+# Author   : Gaston Gonzalez 2. Check if the gpsd systemd unit is running properly
       systemctl status gpsd --no-pager > /dev/null 
       if [ $? -eq 0 ]; then
 
-        # 3. Obtain the current GPS mode
+        #
+# Author   : Gaston Gonzalez 3. Obtain the current GPS mode
         GPS_JSON=$(gpspipe -w -n 10 | grep -m 1 TPV)
         if [ $? -eq 0 ]; then
           GPS_MODE=$(echo $GPS_JSON | jq --exit-status -r .mode)
@@ -221,7 +255,8 @@ case $1 in
 
     ;; 
   et-mode)
-    # Query supervisor for current mode
+    #
+# Author   : Gaston Gonzalez Query supervisor for current mode
     SUPERVISOR_SOCK="/run/user/$(id -u)/et-supervisor.sock"
     if [ -S "$SUPERVISOR_SOCK" ]; then
       MODE=$(et-supervisor-ctl status 2>/dev/null | head -1 | sed 's/^Mode: //')

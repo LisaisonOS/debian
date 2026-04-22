@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-et-supervisor: EmComm-Tools Process Supervisor Daemon
+et-supervisor: LiaisonOS Process Supervisor Daemon
 
 Single daemon that replaces 12 systemd user services. Manages process chains
 via declarative JSON mode configurations, provides PID tracking, health

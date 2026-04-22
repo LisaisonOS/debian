@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=EmComm Display Settings
-Comment=Set display resolution for EmComm-Tools
+Comment=Set display resolution for LiaisonOS
 Exec=/opt/emcomm-tools/bin/et-set-display
 Icon=preferences-desktop-display
 Terminal=false

@@ -15,7 +15,7 @@ USB_PATH=$("$DETECT_SCRIPT" 2>/dev/null) || true
 if [[ -z "$USB_PATH" ]]; then
     # No USB detected - offer Setup Wizard, proceed without saving, or cancel
     CHOICE=$(zenity --list --radiolist \
-        --title="EmComm-Tools - Shutdown" \
+        --title="LiaisonOS - Shutdown" \
         --text="⚠ No USB drive detected.\n\nSaving is not available.\nYou can run the Setup Wizard to select a USB drive." \
         --column="Select" --column="Option" \
         TRUE "Run Setup Wizard" \
@@ -35,7 +35,7 @@ fi
 
 # USB found - ask if user wants to save
 CHOICE=$(zenity --list --radiolist \
-    --title="EmComm-Tools - Shutdown" \
+    --title="LiaisonOS - Shutdown" \
     --text="USB backup drive detected.\n\nDo you want to save your configuration before shutdown?" \
     --column="Select" --column="Option" \
     TRUE "Save & Shutdown" \
@@ -85,7 +85,7 @@ case "$CHOICE" in
             
             sleep 1
         ) | zenity --progress \
-            --title="EmComm-Tools - Saving..." \
+            --title="LiaisonOS - Saving..." \
             --text="Do NOT remove USB drive!" \
             --percentage=0 \
             --auto-close \
@@ -94,7 +94,7 @@ case "$CHOICE" in
             2>/dev/null
 
         # Show confirmation briefly
-        zenity --info --title="EmComm-Tools" --text="✓ Configuration saved!\n\nShutting down now..." --timeout=2 2>/dev/null || true
+        zenity --info --title="LiaisonOS" --text="✓ Configuration saved!\n\nShutting down now..." --timeout=2 2>/dev/null || true
         
         # Shutdown
         systemctl poweroff

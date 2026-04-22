@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-et-user - EmComm-Tools User Configuration
+et-user - LiaisonOS User Configuration
 Author: Sylvain Deguire (VA2OPS)
 Date: January 2026
 
@@ -362,7 +362,7 @@ if __name__ == '__main__':
             
             # Create native window - with frame for touch support
             window = webview.create_window(
-                'EmComm-Tools',
+                'LiaisonOS',
                 f'http://127.0.0.1:{port}',
                 width=win_width,
                 height=win_height,

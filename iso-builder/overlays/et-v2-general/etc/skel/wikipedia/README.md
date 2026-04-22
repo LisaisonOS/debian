@@ -2,7 +2,7 @@
 
 There are several offline repositories that are made freely available
 using a `.zim` file. Depending on the resource, they can be quite large.
-EmComm Tools Community includes an offline reader called "Kiwix" for 
+LiaisonOS Community includes an offline reader called "Kiwix" for 
 searching and reading these resources offline.
 
 1. Visit: http://download.kiwix.org/zim/wikipedia/

@@ -72,7 +72,7 @@ if [ -f "$ET_MANIFEST" ]; then
         
         # Desktop notification if available
         if command -v notify-send &> /dev/null; then
-            notify-send "EmComm-Tools Update" \
+            notify-send "LiaisonOS Update" \
                 "Version $REMOTE_VERSION available\nRun: et-update" \
                 --icon=software-update-available
         fi

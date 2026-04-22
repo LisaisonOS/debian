@@ -1,9 +1,13 @@
-#!/usr/bin/bash
+#
+# Author   : Gaston Gonzalez!/usr/bin/bash
 #
 # Author   : Gaston Gonzalez
-# Date     : 16 March 2024
-# Updated  : 2 January 2025
-# Purpose  : Log message to standard out and log file
+#
+# Author   : Gaston Gonzalez Date     : 16 March 2024
+#
+# Author   : Gaston Gonzalez Updated  : 2 January 2025
+#
+# Author   : Gaston Gonzalez Purpose  : Log message to standard out and log file
 
 ET_TEMP_DIR=/tmp/et
 ET_LOG_FILE=$ET_TEMP_DIR/et.log
@@ -18,7 +22,8 @@ if [ ! -e $ET_LOG_FILE ]; then
   chmod 666 $ET_LOG_FILE
 fi
 
-if [ $# -lt 1 ]; then
+if [ $#
+# Author   : Gaston Gonzalez -lt 1 ]; then
   echo "Usage $(basename $0) <msg>"
   echo ""
   echo "All messages written to: ${ET_LOG_FILE}"

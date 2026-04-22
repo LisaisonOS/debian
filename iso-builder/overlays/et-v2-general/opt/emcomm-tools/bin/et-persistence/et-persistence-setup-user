@@ -20,7 +20,7 @@ if /opt/emcomm-tools/bin/et-persistence/et-persistence-detect &>/dev/null; then
     # Show notification that persistence is active
     if command -v notify-send &>/dev/null; then
         notify-send -i drive-removable-media \
-            "EmComm-Tools" \
+            "LiaisonOS" \
             "USB persistence detected. Your config will be saved on shutdown."
     fi
 fi

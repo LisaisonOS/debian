@@ -28,7 +28,7 @@
                 "ET_DIGI_POWER": {"source": "literal", "value": "20"},
                 "ET_DIGI_HEIGHT": {"source": "literal", "value": "16"},
                 "ET_DIGI_GAIN": {"source": "literal", "value": "6"},
-                "ET_DIGI_COMMENT": {"source": "literal", "value": "https://emcomm-tools.ca"}
+                "ET_DIGI_COMMENT": {"source": "literal", "value": "https://liaisonos.com"}
             }
         }
     ],

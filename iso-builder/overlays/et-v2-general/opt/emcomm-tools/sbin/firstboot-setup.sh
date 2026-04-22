@@ -1,8 +1,8 @@
 #!/bin/bash
-# EmComm-Tools First Boot Setup
+# LiaisonOS First Boot Setup
 # Fixes user groups and permissions after Calamares install
 
-echo "Running EmComm-Tools first boot setup..."
+echo "Running LiaisonOS first boot setup..."
 
 # Find the primary user (UID 1000)
 PRIMARY_USER=$(getent passwd 1000 | cut -d: -f1)

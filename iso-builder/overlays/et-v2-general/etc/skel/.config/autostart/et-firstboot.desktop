@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=EmComm-Tools First Boot Setup
-Name[fr]=Configuration initiale EmComm-Tools
-Comment=Initial configuration wizard for EmComm-Tools
-Comment[fr]=Assistant de configuration initiale pour EmComm-Tools
+Name=LiaisonOS First Boot Setup
+Name[fr]=Configuration initiale LiaisonOS
+Comment=Initial configuration wizard for LiaisonOS
+Comment[fr]=Assistant de configuration initiale pour LiaisonOS
 Exec=/opt/emcomm-tools/bin/et-flask-apps/et-firstboot/et-firstboot.py
 Icon=/usr/share/pixmaps/emcomm-icon.png
 Terminal=false

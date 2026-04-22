@@ -39,7 +39,7 @@ diag_system() {
   out "Architecture : $(uname -m)"
   out "Debian       : $(cat /etc/debian_version 2>/dev/null || echo 'N/A')"
 
-  # EmComm-Tools version
+  # LiaisonOS version
   local ver="N/A"
   if [ -f /opt/emcomm-tools/version.txt ]; then
     ver=$(cat /opt/emcomm-tools/version.txt)
@@ -478,7 +478,7 @@ mkdir -p "$DIAG_DIR"
 # Start fresh
 > "$DIAG_FILE"
 
-out "EmComm-Tools Full Diagnostic Report"
+out "LiaisonOS Full Diagnostic Report"
 out "Generated: $(date '+%Y-%m-%d %H:%M:%S %Z')"
 out ""
 

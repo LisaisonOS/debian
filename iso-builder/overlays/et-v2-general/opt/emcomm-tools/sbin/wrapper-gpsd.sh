@@ -1,8 +1,11 @@
-#!/bin/bash
+#
+# Author  : Gaston Gonzalez!/bin/bash
 #
 # Author  : Gaston Gonzalez
-# Date    : 4 October 2024
-# Purpose : Wrapper startup/shutdown script around systemd/gpsd 
+#
+# Author  : Gaston Gonzalez Date    : 4 October 2024
+#
+# Author  : Gaston Gonzalez Purpose : Wrapper startup/shutdown script around systemd/gpsd 
 
 WAIT=5
 
@@ -17,7 +20,8 @@ start() {
 }
 
 stop() {
-  # Guard: only stop if /dev/et-gps is actually gone (udev remove fires for all tty devices)
+  #
+# Author  : Gaston Gonzalez Guard: only stop if /dev/et-gps is actually gone (udev remove fires for all tty devices)
   if [ -e /dev/et-gps ]; then
     return 0
   fi
@@ -33,7 +37,8 @@ usage() {
   echo "  <cmd>  [start|stop]"
 }
 
-if [ $# -ne 1 ]; then
+if [ $#
+# Author  : Gaston Gonzalez -ne 1 ]; then
   usage
   exit 1
 fi

@@ -2,7 +2,7 @@
 #
 # Author : Sylvain Deguire (VA2OPS)
 # Date   : January 2026
-# Purpose: Download offline maps for EmComm-Tools
+# Purpose: Download offline maps for LiaisonOS
 #          Supports ET Map Tilesets, OSM maps for Navit, and Wikipedia
 #
 
@@ -95,7 +95,7 @@ download_et_maps() {
     # Add "All" option
     OPTIONS+=("ALL" "Download all tilesets" "off")
     
-    SELECTED=$(dialog --clear --backtitle "EmComm-Tools Map Download" \
+    SELECTED=$(dialog --clear --backtitle "LiaisonOS Map Download" \
         --title "Select ET Map Tilesets" \
         --checklist "Use SPACE to select, ENTER to confirm:" 15 70 6 \
         "${OPTIONS[@]}" 2>&1 >/dev/tty)
@@ -180,7 +180,7 @@ download_osm_maps() {
         return 1
     fi
     
-    SELECTED=$(dialog --clear --backtitle "EmComm-Tools Map Download" \
+    SELECTED=$(dialog --clear --backtitle "LiaisonOS Map Download" \
         --title "Select Canadian Province/Territory" \
         --checklist "✓=Navit ready, P=PBF only. Use SPACE to select:" 20 70 12 \
         "${OPTIONS[@]}" 2>&1 >/dev/tty)
@@ -288,7 +288,7 @@ download_wikipedia() {
         return 1
     fi
     
-    SELECTED=$(dialog --clear --backtitle "EmComm-Tools Map Download" \
+    SELECTED=$(dialog --clear --backtitle "LiaisonOS Map Download" \
         --title "Select Wikipedia Topics" \
         --checklist "Use SPACE to select, ENTER to confirm:" 18 70 10 \
         "${OPTIONS[@]}" 2>&1 >/dev/tty)
@@ -323,7 +323,7 @@ download_wikipedia() {
 
 main_menu() {
     while true; do
-        CHOICE=$(dialog --clear --backtitle "EmComm-Tools Map Download" \
+        CHOICE=$(dialog --clear --backtitle "LiaisonOS Map Download" \
             --title "Offline Maps Download" \
             --menu "Select what to download:" 15 60 6 \
             "1" "ET Map Tilesets (World, US, CA, EU)" \

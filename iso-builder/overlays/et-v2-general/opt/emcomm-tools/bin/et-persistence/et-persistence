@@ -2,7 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : EmComm-Tools Persistence Manager
+# Purpose : LiaisonOS Persistence Manager
 #
 # Usage   : et-persistence <command> [options]
 #
@@ -31,7 +31,7 @@ NC='\033[0m' # No Color
 show_banner() {
     echo -e "${BLUE}"
     echo "╔═══════════════════════════════════════════════════════════╗"
-    echo "║         EmComm-Tools Persistence Manager v${VERSION}         ║"
+    echo "║         LiaisonOS Persistence Manager v${VERSION}         ║"
     echo "║                   \"Plug and Communicate\"                  ║"
     echo "╚═══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -43,7 +43,7 @@ show_usage() {
 Usage: et-persistence <command> [options]
 
 Commands:
-  detect              Find EmComm-Tools persistence drive
+  detect              Find LiaisonOS persistence drive
   init <mount-point>  Initialize USB drive for persistence
   save [--app <name>] Save configurations to USB
   restore [--app <name>] Restore configurations from USB
@@ -63,7 +63,7 @@ Examples:
   et-persistence prepare /media/user/VENTOY --quebec
   et-persistence status
 
-For more information: https://emcomm-tools.ca
+For more information: https://liaisonos.com
 EOF
 }
 
@@ -101,7 +101,7 @@ show_status() {
     else
         echo -e "${YELLOW}⚠ No persistence drive detected${NC}"
         echo ""
-        echo "  Insert your EmComm-Tools USB drive, or initialize a new one:"
+        echo "  Insert your LiaisonOS USB drive, or initialize a new one:"
         echo "    et-persistence init /media/your/usb"
         echo ""
     fi

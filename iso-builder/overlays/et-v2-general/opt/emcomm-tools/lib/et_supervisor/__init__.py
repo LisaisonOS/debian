@@ -1,5 +1,5 @@
 """
-et-supervisor: EmComm-Tools Process Supervisor Daemon
+et-supervisor: LiaisonOS Process Supervisor Daemon
 
 Replaces 12 systemd user services and 24+ bash wrapper scripts with a single
 daemon that manages process chains via declarative JSON mode configurations.

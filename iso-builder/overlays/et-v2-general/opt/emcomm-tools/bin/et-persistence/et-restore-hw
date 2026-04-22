@@ -44,7 +44,7 @@ fi
 
 if [[ -z "$PERSISTENCE_PATH" ]]; then
     err "No USB persistence data found."
-    err "Insert a USB drive with EmComm-Tools config and try again."
+    err "Insert a USB drive with LiaisonOS config and try again."
     exit 1
 fi
 

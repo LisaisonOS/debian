@@ -2,7 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : Initialize EmComm-Tools persistence on a USB drive
+# Purpose : Initialize LiaisonOS persistence on a USB drive
 #
 # Usage   : et-persistence-init <mount-point>
 #
@@ -23,7 +23,7 @@ error() {
 show_usage() {
     echo "Usage: et-persistence init <mount-point>"
     echo ""
-    echo "Initialize EmComm-Tools persistence directory on a USB drive."
+    echo "Initialize LiaisonOS persistence directory on a USB drive."
     echo ""
     echo "Arguments:"
     echo "  <mount-point>  Path where USB drive is mounted (e.g., /media/user/MYUSB)"
@@ -70,7 +70,7 @@ if [[ -d "$PERSISTENCE_DIR" ]]; then
     fi
 fi
 
-log "Initializing EmComm-Tools persistence at: ${PERSISTENCE_DIR}"
+log "Initializing LiaisonOS persistence at: ${PERSISTENCE_DIR}"
 
 # Create directory structure
 mkdir -p "${PERSISTENCE_DIR}/configs/pat"
@@ -120,10 +120,10 @@ fi
 # Create README for users
 cat > "${PERSISTENCE_DIR}/README.txt" << 'EOF'
 ===============================================
-  EmComm-Tools Persistence Directory
+  LiaisonOS Persistence Directory
 ===============================================
 
-This directory contains your EmComm-Tools configuration and data.
+This directory contains your LiaisonOS configuration and data.
 
 STRUCTURE:
   user.conf      - Your identity (callsign, grid, etc.)
@@ -133,15 +133,15 @@ STRUCTURE:
   backups/       - Automatic backups of configurations
 
 USAGE:
-  - Boot any computer with EmComm-Tools Live USB
+  - Boot any computer with LiaisonOS Live USB
   - Your settings will be automatically detected and restored
   - Changes are saved back to this drive
 
 BACKUP:
   Simply copy this entire 'emcomm-data' folder to back up
-  all your EmComm-Tools configurations and messages.
+  all your LiaisonOS configurations and messages.
 
-For more information: https://emcomm-tools.ca
+For more information: https://liaisonos.com
 ===============================================
 EOF
 
@@ -155,7 +155,7 @@ fi
 
 echo ""
 echo "=============================================="
-echo "  EmComm-Tools Persistence Initialized!"
+echo "  LiaisonOS Persistence Initialized!"
 echo "=============================================="
 echo ""
 echo "  Location: ${PERSISTENCE_DIR}"
@@ -167,7 +167,7 @@ echo ""
 echo "  2. Run 'et-persistence save' to save your current"
 echo "     configuration to this drive"
 echo ""
-echo "  3. Next time you boot EmComm-Tools Live, your"
+echo "  3. Next time you boot LiaisonOS Live, your"
 echo "     configuration will be automatically detected!"
 echo ""
 echo "=============================================="

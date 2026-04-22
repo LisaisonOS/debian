@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=EmComm Tools Systemd Reload
+Name=LiaisonOS Systemd Reload
 Comment=Reload systemd user services on login (Live Run + HDD)
 Exec=bash -c 'systemctl --user import-environment DISPLAY XAUTHORITY DBUS_SESSION_BUS_ADDRESS && systemctl --user daemon-reload && systemctl --user restart et-supervisor'
 Hidden=false

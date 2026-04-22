@@ -316,7 +316,7 @@ case "${1:-}" in
   *)       echo "Unknown option: $1"; usage; exit 1 ;;
 esac
 
-echo -e "${WHITE}EmComm-Tools USB Diagnostic${NC}"
+echo -e "${WHITE}LiaisonOS USB Diagnostic${NC}"
 echo "Date: $(date '+%Y-%m-%d %H:%M:%S %Z')"
 echo "Host: $(hostname)"
 

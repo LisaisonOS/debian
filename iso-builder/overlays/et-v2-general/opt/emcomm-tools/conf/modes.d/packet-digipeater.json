@@ -23,7 +23,7 @@
             "vars": {
                 "ET_CALLSIGN": {"source": "user.json", "key": "callsign"},
                 "ET_AUDIO_DEVICE": {"source": "detect-audio", "format": "plughw:{card},{device}"},
-                "ET_DIGI_COMMENT": {"source": "literal", "value": "https://emcomm-tools.ca"}
+                "ET_DIGI_COMMENT": {"source": "literal", "value": "https://liaisonos.com"}
             }
         }
     ],

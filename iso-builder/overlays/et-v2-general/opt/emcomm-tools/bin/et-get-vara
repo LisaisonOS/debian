@@ -490,7 +490,7 @@ install_missing() {
 # =============================================================================
 
 show_help() {
-    echo "et-get-vara - VARA/VarAC Installer for EmComm-Tools"
+    echo "et-get-vara - VARA/VarAC Installer for LiaisonOS"
     echo "Version: ${SCRIPT_VERSION}"
     echo ""
     echo "Usage: et-get-vara [command]"
@@ -561,7 +561,7 @@ case "${1:-}" in
         clear
         echo "========================================"
         echo " VARA/VarAC Installer v${SCRIPT_VERSION}"
-        echo " EmComm-Tools Debian Edition"
+        echo " LiaisonOS Debian Edition"
         echo "========================================"
         echo ""
         interactive_menu

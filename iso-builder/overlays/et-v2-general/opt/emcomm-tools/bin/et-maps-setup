@@ -3,7 +3,7 @@
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2025
 # Updated : January 2026
-# Purpose : EmComm-Tools Map Setup Utility
+# Purpose : LiaisonOS Map Setup Utility
 #          Downloads and configures offline maps for field deployment
 #
 # Version: 1.2.0
@@ -102,7 +102,7 @@ Pour monter votre clé USB:
     # Show drive selection menu
     local choice
     choice=$(dialog --title "Select External Drive" \
-        --menu "Choose a drive for EmComm-Tools data:" 15 55 ${#drives[@]} \
+        --menu "Choose a drive for LiaisonOS data:" 15 55 ${#drives[@]} \
         "${menu_items[@]}" 2>&1 >/dev/tty)
     
     local ret=$?
@@ -129,11 +129,11 @@ create_directory_structure() {
     
     # Create README
     cat > "${MOUNT_POINT}/README.txt" << EOF
-EmComm-Tools Data Drive
+LiaisonOS Data Drive
 =======================
 Created: $(date)
 
-This drive contains offline data for EmComm-Tools:
+This drive contains offline data for LiaisonOS:
 
 /mbtiles/    - Pre-rendered map tiles for mbtileserver
 /wikipedia/  - Offline Wikipedia (.zim files)
@@ -519,7 +519,7 @@ show_status() {
     local wiki_links=$(find "${WIKIPEDIA_LOCAL_DIR}" -maxdepth 1 -type l -name "*.zim" 2>/dev/null | wc -l)
     status+="  wikipedia: ${wiki_links} file symlinks\n"
     
-    dialog --title "EmComm-Tools Data Status" --msgbox "$(echo -e "$status")" 26 70
+    dialog --title "LiaisonOS Data Status" --msgbox "$(echo -e "$status")" 26 70
     clear
 }
 
@@ -529,7 +529,7 @@ main_menu() {
         [ -n "$MOUNT_POINT" ] && drive_status="$(basename ${MOUNT_POINT})"
         
         local choice
-        choice=$(dialog --title "EmComm-Tools Map Setup v${SCRIPT_VERSION}" \
+        choice=$(dialog --title "LiaisonOS Map Setup v${SCRIPT_VERSION}" \
             --menu "Drive: ${drive_status}\n\nSelect an option:" 18 55 8 \
             1 "Show Status" \
             2 "Select External Drive" \
@@ -584,4 +584,4 @@ clear
 check_dependencies
 main_menu
 clear
-echo "EmComm-Tools Map Setup closed."
+echo "LiaisonOS Map Setup closed."

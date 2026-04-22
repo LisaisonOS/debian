@@ -1,1 +1,1 @@
-/* EmComm-Tools Repeater Directory - app.js placeholder */
+/* LiaisonOS Repeater Directory - app.js placeholder */

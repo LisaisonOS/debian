@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 SWAP_FILE=""
 SWAP_CREATED=false
 
-# Detect EmComm-Tools persistence USB drive
+# Detect LiaisonOS persistence USB drive
 # Returns the USB path if found, empty otherwise
 detect_emcomm_usb() {
     local search_paths=()
@@ -142,7 +142,7 @@ create_temp_swap() {
 
 echo ""
 echo -e "${CYAN}========================================"
-echo " EmComm-Tools - Navit Map Conversion"
+echo " LiaisonOS - Navit Map Conversion"
 echo "========================================${NC}"
 echo ""
 echo -e "${YELLOW}⚠️  Recommended: External SSD or USB drive 32GB+${NC}"
@@ -150,15 +150,15 @@ echo -e "   Map conversion is memory and storage intensive."
 echo -e "   A basic USB stick may be very slow or fail."
 echo ""
 
-# Step 1: Check for EmComm-Tools persistence drive
+# Step 1: Check for LiaisonOS persistence drive
 EMCOMM_USB=$(detect_emcomm_usb)
 
 if [[ -n "$EMCOMM_USB" ]]; then
-    echo -e "${GREEN}✓ Found EmComm-Tools USB: ${CYAN}$EMCOMM_USB${NC}"
+    echo -e "${GREEN}✓ Found LiaisonOS USB: ${CYAN}$EMCOMM_USB${NC}"
     echo ""
     echo -e "${YELLOW}Where do you want to save Navit maps?${NC}"
     echo ""
-    echo "  1) EmComm-Tools USB drive (recommended)"
+    echo "  1) LiaisonOS USB drive (recommended)"
     echo "  2) Local drive (~/.navit/maps)"
     echo "  3) Other USB/External drive"
     echo ""

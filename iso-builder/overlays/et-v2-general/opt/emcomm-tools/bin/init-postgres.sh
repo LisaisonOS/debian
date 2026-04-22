@@ -15,4 +15,4 @@ fi
 
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'emcomm'" | grep -q 1 || \
     sudo -u postgres createdb emcomm
-echo "PostgreSQL initialized for EmComm-Tools"
+echo "PostgreSQL initialized for LiaisonOS"

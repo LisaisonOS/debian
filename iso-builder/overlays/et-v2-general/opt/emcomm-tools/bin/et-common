@@ -30,7 +30,7 @@ show-err-dialog() {
 
 # Display a notification message as a UI popup in the desktop
 notify-user() {
-  notify-send -t 5000 --app-name="EmComm Tools" "$1"
+  notify-send -t 5000 --app-name="LiaisonOS" "$1"
 }
 
 exit_if_no_sdr() {

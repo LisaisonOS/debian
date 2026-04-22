@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-et-repeater - EmComm-Tools Repeater Directory
+et-repeater - LiaisonOS Repeater Directory
 Date: March 2026
 
 Flask-based web UI for browsing repeaters from RepeaterBook CSV exports.
@@ -188,7 +188,7 @@ def geocode_location(location, state):
 
     try:
         req = urllib.request.Request(url)
-        req.add_header('User-Agent', 'EmComm-Tools')
+        req.add_header('User-Agent', 'LiaisonOS')
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode('utf-8'))
 
@@ -1157,7 +1157,7 @@ if __name__ == '__main__':
             time.sleep(1)
 
             window = webview.create_window(
-                'EmComm-Tools - Repeater Directory',
+                'LiaisonOS - Repeater Directory',
                 f'http://127.0.0.1:{port}',
                 width=win_width,
                 height=win_height,

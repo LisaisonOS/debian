@@ -1,5 +1,5 @@
 [Unit]
-Description=EmComm-Tools First Boot Setup
+Description=LiaisonOS First Boot Setup
 After=multi-user.target
 ConditionPathExists=!/var/lib/emcomm-tools/.firstboot-done
 

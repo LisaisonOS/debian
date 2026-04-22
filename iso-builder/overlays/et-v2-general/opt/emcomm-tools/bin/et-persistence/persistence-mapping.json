@@ -1,9 +1,9 @@
 {
   "version": "2.0.0",
-  "description": "EmComm-Tools config persistence mapping",
+  "description": "LiaisonOS config persistence mapping",
   "apps": {
     "emcomm-tools": {
-      "name": "EmComm-Tools Core",
+      "name": "LiaisonOS Core",
       "persistence_subdir": "",
       "configs": [
         {

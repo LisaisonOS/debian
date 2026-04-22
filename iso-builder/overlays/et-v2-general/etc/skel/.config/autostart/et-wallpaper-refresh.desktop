@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=EmComm-Tools Wallpaper Refresh
+Name=LiaisonOS Wallpaper Refresh
 Comment=Refresh wallpaper after display scaling is applied
 Exec=/opt/emcomm-tools/bin/et-wallpaper-refresh
 Hidden=false

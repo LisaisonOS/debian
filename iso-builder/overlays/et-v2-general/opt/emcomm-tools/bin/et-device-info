@@ -1,8 +1,11 @@
-#!/bin/bash
+#
+# Author   : Gaston Gonzalez!/bin/bash
 #
 # Author   : Gaston Gonzalez
-# Date     : 30 September 2024
-# Purpose  : Capture device information to aid in plug-and-play development.
+#
+# Author   : Gaston Gonzalez Date     : 30 September 2024
+#
+# Author   : Gaston Gonzalez Purpose  : Capture device information to aid in plug-and-play development.
 
 echo
 read -p "1. Enter a short name for the radio with no spaces (i.e. ic-7100): " input
@@ -15,23 +18,27 @@ OUT_DIR_BASE="${RADIO}-${DATE_NOW}"
 echo
 read -p "2. Unplug the USB radio/interface from your computer. Press [enter] when done."
 
-# Capture devices by ID with radio unplugged
+#
+# Author   : Gaston Gonzalez Capture devices by ID with radio unplugged
 find /dev | grep by-id > "${OUT_DIR_BASE}/dev-by-id.before"
 
 
 echo
 read -p "3. Connect the USB radio/interface to your computer. Press [enter] when done." input
 
-# Capture devices by ID with radio plugged in
+#
+# Author   : Gaston Gonzalez Capture devices by ID with radio plugged in
 find /dev | grep by-id > "${OUT_DIR_BASE}/dev-by-id.after"
 
 diff "${OUT_DIR_BASE}/dev-by-id.before" "${OUT_DIR_BASE}/dev-by-id.after" > "${OUT_DIR_BASE}/dev-by-id.diff"
 echo -e "\n4. Found the following new devices:\n"
 cat "${OUT_DIR_BASE}/dev-by-id.diff" | grep ">" | sed 's/> //g' | sort | while read device
 do
-  # skip directories
+  #
+# Author   : Gaston Gonzalez skip directories
   if [ ! -d $device ]; then
-    # Grab the short device name"
+    #
+# Author   : Gaston Gonzalez Grab the short device name"
     SHORT_DEV_NAME=$(udevadm info $device | grep DEVNAME | cut -d"=" -f2)
     SHORT_DEV_FILE=$(echo $SHORT_DEV_NAME | sed 's|/|-|g')
     echo -e "${SHORT_DEV_NAME} = $device\n"

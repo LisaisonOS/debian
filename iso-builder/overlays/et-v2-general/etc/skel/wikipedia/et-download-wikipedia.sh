@@ -96,7 +96,7 @@ for base in $(echo "${!NEWEST_FILES[@]}" | tr ' ' '\n' | sort); do
 done
 
 # Show checklist dialog
-SELECTED=$(dialog --clear --backtitle "EmComm-Tools Wikipedia Downloader" \
+SELECTED=$(dialog --clear --backtitle "LiaisonOS Wikipedia Downloader" \
     --title "Select Wikipedia ZIM Files" \
     --checklist "Use SPACE to select/deselect, ENTER to confirm.\nFiles will be downloaded to: ${ZIM_DIR}\n\nNote: 'maxi' versions include images, 'nopic' versions are text-only (smaller)." \
     30 90 20 \

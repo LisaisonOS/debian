@@ -2,7 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : Install EmComm-Tools persistence system
+# Purpose : Install LiaisonOS persistence system
 #
 # This should be called from your main install.sh or a live-build hook
 #
@@ -11,7 +11,7 @@ set -e
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
-et-log "Installing EmComm-Tools persistence system..."
+et-log "Installing LiaisonOS persistence system..."
 
 # Create symlink for main command
 ln -sf /opt/emcomm-tools/bin/et-persistence/et-persistence /usr/local/bin/et-persistence
@@ -39,7 +39,7 @@ fi
 cat > /etc/skel/.config/autostart/emcomm-persistence-setup.desktop << 'EOF'
 [Desktop Entry]
 Type=Application
-Name=EmComm-Tools Persistence Setup
+Name=LiaisonOS Persistence Setup
 Exec=/opt/emcomm-tools/bin/et-persistence/et-persistence-setup-user
 Hidden=false
 NoDisplay=true

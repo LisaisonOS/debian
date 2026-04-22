@@ -1,4 +1,4 @@
-# EmComm-Tools Data Drive Symlink Service
+# LiaisonOS Data Drive Symlink Service
 # Author: Sylvain Deguire (VA2OPS)
 # Date: December 2025
 #
@@ -8,7 +8,7 @@
 # Install to: /etc/systemd/system/emcomm-data-symlinks@.service
 
 [Unit]
-Description=EmComm-Tools Data Drive Symlink Setup for %i
+Description=LiaisonOS Data Drive Symlink Setup for %i
 After=udisks2.service
 Wants=udisks2.service
 

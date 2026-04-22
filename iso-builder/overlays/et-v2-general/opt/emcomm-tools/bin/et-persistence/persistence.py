@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-EmComm-Tools Persistence Module
+LiaisonOS Persistence Module
 Author: Sylvain Deguire (VA2OPS)
 Date: January 2026
 
-This module provides persistence detection and management for EmComm-Tools.
+This module provides persistence detection and management for LiaisonOS.
 It can be imported by et-firstboot.py or used standalone.
 
 Usage in et-firstboot.py:
@@ -23,7 +23,7 @@ from datetime import datetime
 from typing import Optional, Dict, List, Any
 
 class PersistenceManager:
-    """Manages EmComm-Tools configuration persistence on USB drives."""
+    """Manages LiaisonOS configuration persistence on USB drives."""
     
     PERSISTENCE_MARKER = "emcomm-data"
     SEARCH_PATHS = ["/media", "/run/media", "/mnt"]
@@ -45,7 +45,7 @@ class PersistenceManager:
     
     def detect(self) -> bool:
         """
-        Detect EmComm-Tools persistence on any mounted USB drive.
+        Detect LiaisonOS persistence on any mounted USB drive.
         Returns True if found, False otherwise.
         """
         for base_path in self.SEARCH_PATHS:
@@ -303,7 +303,7 @@ class PersistenceManager:
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="EmComm-Tools Persistence Manager")
+    parser = argparse.ArgumentParser(description="LiaisonOS Persistence Manager")
     parser.add_argument("command", choices=["detect", "summary", "callsign"], help="Command to run")
     args = parser.parse_args()
     

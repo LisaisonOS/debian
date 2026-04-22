@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-EmComm-Tools First Boot Wizard
+LiaisonOS First Boot Wizard
 Author: Claude for Sylvain Deguire (VA2OPS)
 Date: January 2026
 Version: 2.1.0 - 2026-02-08 - Tilesets: seed from /etc/skel/ before USB merge
@@ -126,7 +126,7 @@ KIWIX_URL = "http://download.kiwix.org/zim/wikipedia"
 
 TRANSLATIONS = {
     'en': {
-        'welcome': 'Welcome to EmComm-Tools',
+        'welcome': 'Welcome to LiaisonOS',
         'welcome_msg': 'This wizard will help you configure your emergency communications system.',
         'welcome_back': 'Welcome Back',
         'welcome_back_msg': 'Your configuration was found on USB storage.',
@@ -171,7 +171,7 @@ TRANSLATIONS = {
         'downloading': 'Downloading', 'processing': 'Processing', 'complete': 'Complete',
         'error': 'Error', 'download_complete': 'Download Complete',
         'creating_symlinks': 'Creating Symlinks', 'setup_complete': 'Setup Complete!',
-        'complete_msg': 'Your EmComm-Tools system is ready to use.',
+        'complete_msg': 'Your LiaisonOS system is ready to use.',
         'restart_note': 'Your system is ready! You can run this wizard again anytime from the applications menu.',
         # Data Transfer translations
         'data_transfer': 'Data Transfer',
@@ -218,7 +218,7 @@ TRANSLATIONS = {
         'retry': 'Retry',
     },
     'fr': {
-        'welcome': 'Bienvenue à EmComm-Tools',
+        'welcome': 'Bienvenue à LiaisonOS',
         'welcome_msg': 'Cet assistant vous aidera à configurer votre système de communications d\'urgence.',
         'welcome_back': 'Bon retour',
         'welcome_back_msg': 'Votre configuration a été trouvée sur le stockage USB.',
@@ -263,7 +263,7 @@ TRANSLATIONS = {
         'downloading': 'Téléchargement', 'processing': 'Traitement', 'complete': 'Terminé',
         'error': 'Erreur', 'download_complete': 'Téléchargement terminé',
         'creating_symlinks': 'Création des liens symboliques', 'setup_complete': 'Configuration terminée!',
-        'complete_msg': 'Votre système EmComm-Tools est prêt.',
+        'complete_msg': 'Votre système LiaisonOS est prêt.',
         'restart_note': 'Votre système est prêt! Vous pouvez relancer cet assistant à tout moment depuis le menu des applications.',
         # Data Transfer translations
         'data_transfer': 'Transfert de données',
@@ -381,7 +381,7 @@ def fix_ownership(path, recursive=True):
 
 def fix_usb_ownership(usb_path):
     """
-    Fix ownership of all EmComm-Tools directories on USB drive.
+    Fix ownership of all LiaisonOS directories on USB drive.
     Called when USB drive is selected and when setup completes.
     """
     usb = Path(usb_path)
@@ -903,7 +903,7 @@ def generate_radio_config_document():
         # Build the document
         lines = []
         lines.append("=" * 60)
-        lines.append("  EmComm-Tools - Radio Configuration")
+        lines.append("  LiaisonOS - Radio Configuration")
         lines.append("=" * 60)
         lines.append("")
         lines.append(f"  Callsign:    {callsign}")
@@ -2132,7 +2132,7 @@ def run_flask(port):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description='EmComm-Tools First Boot Wizard')
+    parser = argparse.ArgumentParser(description='LiaisonOS First Boot Wizard')
     parser.add_argument('--port', type=int, default=5000)
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--debug', action='store_true')
@@ -2171,7 +2171,7 @@ def main():
             
             threading.Thread(target=run_flask, args=(args.port,), daemon=True).start()
             time.sleep(1)
-            webview.create_window('EmComm-Tools', f'http://127.0.0.1:{args.port}', width=win_w, height=win_h, resizable=True, min_size=(500, 450), x=x, y=y, frameless=False)
+            webview.create_window('LiaisonOS', f'http://127.0.0.1:{args.port}', width=win_w, height=win_h, resizable=True, min_size=(500, 450), x=x, y=y, frameless=False)
             webview.start()
         except ImportError:
             print("PyWebView not installed")

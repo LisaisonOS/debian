@@ -133,7 +133,7 @@ def kill_bt_processes():
 TRANSLATIONS = {
     'en': {
         'title': 'Radio Selection',
-        'subtitle': 'Choose the radio to use with EmComm Tools',
+        'subtitle': 'Choose the radio to use with LiaisonOS',
         'no_radio': 'No Radio',
         'no_radio_desc': 'Run without a radio connected',
         'select_radio': 'Select Your Radio',
@@ -154,7 +154,7 @@ TRANSLATIONS = {
     },
     'fr': {
         'title': 'Sélection de Radio',
-        'subtitle': 'Choisissez la radio à utiliser avec EmComm Tools',
+        'subtitle': 'Choisissez la radio à utiliser avec LiaisonOS',
         'no_radio': 'Aucune Radio',
         'no_radio_desc': 'Exécuter sans radio connectée',
         'select_radio': 'Sélectionnez Votre Radio',
@@ -369,7 +369,7 @@ if __name__ == '__main__':
             
             # Create native window - with frame for touch support
             window = webview.create_window(
-                'EmComm-Tools',
+                'LiaisonOS',
                 f'http://127.0.0.1:{port}',
                 width=win_width,
                 height=win_height,

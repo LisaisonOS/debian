@@ -2,7 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : Save EmComm-Tools configs to USB persistence
+# Purpose : Save LiaisonOS configs to USB persistence
 #
 # Simple approach: Copy actual config files that exist
 #
@@ -89,19 +89,19 @@ log() {
 error() {
     echo "[$(date '+%H:%M:%S')] ERROR: $1" >&2
     debug "ERROR: $1"
-    plymouth_msg "EmComm-Tools: Error - $1"
+    plymouth_msg "LiaisonOS: Error - $1"
     sleep 10
     exit 1
 }
 
 if [[ -z "$PERSISTENCE_PATH" ]]; then
-    error "No EmComm-Tools persistence drive found (et-config folder). Please insert your USB drive."
+    error "No LiaisonOS persistence drive found (et-config folder). Please insert your USB drive."
 fi
 
 log "Found persistence at: ${PERSISTENCE_PATH}"
 
 # Show initial Plymouth message
-plymouth_msg "EmComm-Tools: Saving your configuration..."
+plymouth_msg "LiaisonOS: Saving your configuration..."
 
 # Create directories
 mkdir -p "${PERSISTENCE_PATH}/configs/pat"
@@ -441,10 +441,10 @@ save_thunderbird_profile() {
 # SAVE ALL CONFIGS
 # ===========================================================================
 
-log "Saving EmComm-Tools configurations..."
-plymouth_msg "EmComm-Tools: Saving user settings..."
+log "Saving LiaisonOS configurations..."
+plymouth_msg "LiaisonOS: Saving user settings..."
 
-# --- EmComm-Tools Core ---
+# --- LiaisonOS Core ---
 # SAFETY CHECK: Don't overwrite a valid callsign with N0CALL/empty!
 LOCAL_USER_JSON="${HOME}/.config/emcomm-tools/user.json"
 USB_USER_JSON="${PERSISTENCE_PATH}/user.json"
@@ -509,7 +509,7 @@ save_file "${HOME}/.config/emcomm-tools/varac/license.flag" "${PERSISTENCE_PATH}
 save_file "${HOME}/.config/emcomm-tools/varac/license-audit.log" "${PERSISTENCE_PATH}/varac/license-audit.log" "VarAC audit log"
 
 # --- Pat Winlink ---
-plymouth_msg "EmComm-Tools: Saving Pat/Winlink..."
+plymouth_msg "LiaisonOS: Saving Pat/Winlink..."
 save_file "${HOME}/.config/pat/config.json" "${PERSISTENCE_PATH}/configs/pat/config.json" "Pat config"
 if [[ -d "${HOME}/.local/share/pat/mailbox" ]]; then
     # Use rsync --delete so emails deleted locally (e.g. failed outbox messages)
@@ -530,7 +530,7 @@ save_file "${HOME}/.config/JS8Call.ini" "${PERSISTENCE_PATH}/configs/js8call/JS8
 save_file "${HOME}/.config/WSJT-X.ini" "${PERSISTENCE_PATH}/configs/wsjtx/WSJT-X.ini" "WSJT-X"
 
 # --- Fldigi (entire directory) ---
-plymouth_msg "EmComm-Tools: Saving Fldigi..."
+plymouth_msg "LiaisonOS: Saving Fldigi..."
 if [[ -d "${HOME}/.fldigi" ]]; then
     mkdir -p "${PERSISTENCE_PATH}/configs/fldigi"
     cp -r "${HOME}/.fldigi/"* "${PERSISTENCE_PATH}/configs/fldigi/" 2>/dev/null
@@ -544,7 +544,7 @@ save_file "${HOME}/.wine32/drive_c/VARA/VARA.ini" "${PERSISTENCE_PATH}/configs/v
 save_file "${HOME}/.wine32/drive_c/VARA FM/VARAFM.ini" "${PERSISTENCE_PATH}/configs/vara/VARAFM.ini" "VARA FM"
 
 # --- VarAC (full directory - ini, db, logs, configs) ---
-plymouth_msg "EmComm-Tools: Saving VarAC..."
+plymouth_msg "LiaisonOS: Saving VarAC..."
 mkdir -p "${PERSISTENCE_PATH}/configs/varac"
 save_file "${HOME}/.wine32/drive_c/VarAC/VarAC.ini" "${PERSISTENCE_PATH}/configs/varac/VarAC.ini" "VarAC ini"
 save_file "${HOME}/.wine32/drive_c/VarAC/VarAC.db" "${PERSISTENCE_PATH}/configs/varac/VarAC.db" "VarAC database"
@@ -561,7 +561,7 @@ if [[ -d "${HOME}/.wine32/drive_c/VarAC/log" ]]; then
 fi
 
 # --- YAAC (entire Java preferences directory) ---
-plymouth_msg "EmComm-Tools: Saving YAAC..."
+plymouth_msg "LiaisonOS: Saving YAAC..."
 YAAC_PREFS_DIR="${HOME}/.java/.userPrefs/org/ka2ddo/yaac"
 if [[ -d "$YAAC_PREFS_DIR" ]]; then
     mkdir -p "${PERSISTENCE_PATH}/configs/yaac"
@@ -598,7 +598,7 @@ fi
 save_file "${HOME}/.config/direwolf/direwolf.conf" "${PERSISTENCE_PATH}/configs/direwolf/direwolf.conf" "Direwolf"
 
 # --- Firefox ---
-plymouth_msg "EmComm-Tools: Saving Firefox (this may take a moment)..."
+plymouth_msg "LiaisonOS: Saving Firefox (this may take a moment)..."
 # Force Firefox to flush data to disk by terminating any lingering processes
 if pgrep -x "firefox-esr" > /dev/null 2>&1 || pgrep -x "firefox" > /dev/null 2>&1; then
     log "Closing Firefox to flush data..."
@@ -610,7 +610,7 @@ save_firefox_profile
 # --- WiFi Networks (NetworkManager) ---
 # NOTE: WiFi save requires sudo access. Works automatically in Live mode.
 #       On installed systems, user needs NOPASSWD sudo or WiFi backup is skipped.
-plymouth_msg "EmComm-Tools: Saving WiFi networks..."
+plymouth_msg "LiaisonOS: Saving WiFi networks..."
 WIFI_SRC="/etc/NetworkManager/system-connections"
 WIFI_DEST="${PERSISTENCE_PATH}/configs/wifi"
 if [[ -d "$WIFI_SRC" ]]; then
@@ -662,7 +662,7 @@ fi
 
 # --- Bluetooth Pairings ---
 # NOTE: Requires sudo (system-level). Same pattern as WiFi.
-plymouth_msg "EmComm-Tools: Saving Bluetooth pairings..."
+plymouth_msg "LiaisonOS: Saving Bluetooth pairings..."
 BT_SRC="/var/lib/bluetooth"
 BT_DEST="${PERSISTENCE_PATH}/configs/bluetooth"
 if [[ -d "$BT_SRC" ]] && [[ -n "$(sudo ls -A "$BT_SRC" 2>/dev/null)" ]]; then
@@ -683,7 +683,7 @@ else
 fi
 
 # --- Thunderbird (LAST - can be large, compressed) ---
-plymouth_msg "EmComm-Tools: Saving Thunderbird (this may take a moment)..."
+plymouth_msg "LiaisonOS: Saving Thunderbird (this may take a moment)..."
 # Force Thunderbird to flush data to disk by terminating any lingering processes
 if pgrep -x "thunderbird" > /dev/null 2>&1; then
     log "Closing Thunderbird to flush data..."
@@ -693,7 +693,7 @@ fi
 save_thunderbird_profile
 
 # --- Documents & Downloads ---
-plymouth_msg "EmComm-Tools: Saving Documents & Downloads..."
+plymouth_msg "LiaisonOS: Saving Documents & Downloads..."
 for user_dir in "Documents" "Downloads" "Pictures"; do
     src_dir="${HOME}/${user_dir}"
     dest_dir="${PERSISTENCE_PATH}/user-data/${user_dir,,}"
@@ -751,7 +751,7 @@ done
 # ===========================================================================
 # FIX ALL FILE OWNERSHIP
 # ===========================================================================
-# Use et-data group for portability between EmComm-Tools users/systems
+# Use et-data group for portability between LiaisonOS users/systems
 # Any user in et-data group can read/write these files
 log "Fixing file ownership (group: et-data)..."
 chown -R :et-data "${PERSISTENCE_PATH}/" 2>/dev/null || true
@@ -786,7 +786,7 @@ log "=========================================="
 log "  Save complete!"
 log "=========================================="
 
-plymouth_msg "EmComm-Tools: Save complete!"
+plymouth_msg "LiaisonOS: Save complete!"
 sleep 1
 
 debug "=== SAVE SCRIPT COMPLETED SUCCESSFULLY ==="

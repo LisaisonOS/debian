@@ -1,14 +1,14 @@
-# EmComm-Tools 2.0 Persistence System
+# LiaisonOS 2.0 Persistence System
 
 **"Plug and Communicate"**
 
-This module provides USB-based configuration persistence for EmComm-Tools,
+This module provides USB-based configuration persistence for LiaisonOS,
 enabling users to boot any computer and have their settings automatically
 restored.
 
 ## Features
 
-- **Automatic detection** of EmComm-Tools USB drives
+- **Automatic detection** of LiaisonOS USB drives
 - **Config persistence** - Save/restore all app configs (JS8Call, Pat, Fldigi, etc.)
 - **Winlink mailbox** persistence
 - **Ready Kit support** - Pre-loaded maps and Wikipedia
@@ -97,7 +97,7 @@ if pm.detect():
 ## Boot Flow
 
 ```
-Boot EmComm-Tools Live
+Boot LiaisonOS Live
          │
          ▼
   et-mount-usb-data    ──► Symlinks maps, wikipedia (no RAM copy!)
@@ -123,7 +123,7 @@ Boot EmComm-Tools Live
 
 ## License
 
-Part of EmComm-Tools Debian Edition
-https://emcomm-tools.ca
+Part of LiaisonOS Debian Edition
+https://liaisonos.com
 
 73 de VA2OPS

@@ -41,7 +41,7 @@ Presentation
         Text {
             anchors.horizontalCenter: background1.horizontalCenter
             anchors.top: background1.bottom
-            text: qsTr("Welcome to Emcomm-Tools OS Debian edition.<br/>"+
+            text: qsTr("Welcome to LiaisonOS Debian edition.<br/>"+
                   "The rest of the installation is automated and should complete in a few minutes.")
             wrapMode: Text.WordWrap
             width: 600

@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
 Version=1.0
-Name=Install EmComm OS
-GenericName=EmComm-Tools Installer
+Name=Install Liaison OS
+GenericName=LiaisonOS Installer
 Exec=calamares-install-debian
-Comment=Install EmComm-Tools OS
+Comment=Install LiaisonOS OS
 Keywords=calamares;system;install;emcomm;installer
 Icon=install-emcomm
 Terminal=false

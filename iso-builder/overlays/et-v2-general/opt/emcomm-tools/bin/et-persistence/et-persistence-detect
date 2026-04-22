@@ -2,7 +2,7 @@
 #
 # Author  : Sylvain Deguire (VA2OPS)
 # Date    : January 2026
-# Purpose : Detect EmComm-Tools persistence data on USB/external drives
+# Purpose : Detect LiaisonOS persistence data on USB/external drives
 #
 # Returns : Path to et-config directory if found, empty string if not
 # Exit    : 0 if found, 1 if not found

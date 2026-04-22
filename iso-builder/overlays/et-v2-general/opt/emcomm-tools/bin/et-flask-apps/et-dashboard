@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-et-dashboard v2 - EmComm-Tools Interactive Dashboard with Integrated Mode Selector
+et-dashboard v2 - LiaisonOS Interactive Dashboard with Integrated Mode Selector
 Author: Sylvain Deguire (VA2OPS)
 Date: January 2026
 Updated: 26 February 2026 - Sylvain Deguire (VA2OPS)
@@ -1037,7 +1037,7 @@ class EmCommDashboard(Gtk.Window):
         version_str = self._read_version()
         if version_str:
             self.version_label = Gtk.Label()
-            self.version_label.set_text(f"EmComm-Tools v{version_str}")
+            self.version_label.set_text(f"LiaisonOS v{version_str}")
             self.version_label.set_halign(Gtk.Align.CENTER)
             self.version_label.set_margin_top(4)
             self.version_label.set_margin_bottom(4)
@@ -1394,7 +1394,7 @@ class EmCommDashboard(Gtk.Window):
         return label
     
     def _read_version(self):
-        """Read EmComm-Tools version from manifest.json, fallback to version.txt."""
+        """Read LiaisonOS version from manifest.json, fallback to version.txt."""
         try:
             import json
             manifest = json.loads(Path("/opt/emcomm-tools/manifest.json").read_text())
@@ -1409,7 +1409,7 @@ class EmCommDashboard(Gtk.Window):
         """Reload version label from manifest.json (triggered by SIGUSR1)."""
         version_str = self._read_version()
         if version_str and hasattr(self, 'version_label'):
-            self.version_label.set_text(f"EmComm-Tools v{version_str}")
+            self.version_label.set_text(f"LiaisonOS v{version_str}")
         return False
 
     def create_separator(self):
@@ -1619,7 +1619,7 @@ class EmCommDashboard(Gtk.Window):
             crash_msg = f"Processus planté : {names}" if self.language == 'fr' else f"Process crashed: {names}"
             subprocess.Popen(
                 ["notify-send", "-u", "critical", "-i", "dialog-error",
-                 "EmComm-Tools", crash_msg])
+                 "LiaisonOS", crash_msg])
     
     def on_delete_event(self, widget, event):
         return True  # Prevent closing

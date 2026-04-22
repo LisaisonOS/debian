@@ -13,7 +13,7 @@
 # 2. rigctld is started
 
 # The DigiRig Lite has no CAT control, but rigctld is started to minimize the configuration needed
-# by the various amateur radio applications. EmComm Tools treats rigctl NET as its abstraction layer.
+# by the various amateur radio applications. LiaisonOS treats rigctl NET as its abstraction layer.
 # A dummy rig control configuration is specified in the DigiRig Lite radio configuration.
 SUBSYSTEM=="sound", ATTRS{idVendor}=="0d8c", ATTRS{idProduct}=="0012", ENV{ET_DEVICE}=="", \
     ACTION=="add", \

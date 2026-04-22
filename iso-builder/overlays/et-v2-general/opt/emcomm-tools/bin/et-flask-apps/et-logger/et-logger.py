@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-et-logger - EmComm-Tools POTA/SOTA Field Logger
+et-logger - LiaisonOS POTA/SOTA Field Logger
 Date: March 2026
 
 Flask-based QSO logger with POTA/SOTA support.
@@ -1580,7 +1580,7 @@ if __name__ == '__main__':
             flask_thread.start()
             time.sleep(1)
             window = webview.create_window(
-                'EmComm-Tools - Field Logger',
+                'LiaisonOS - Field Logger',
                 f'http://127.0.0.1:{port}',
                 width=900, height=700,
                 resizable=True, min_size=(600, 400),

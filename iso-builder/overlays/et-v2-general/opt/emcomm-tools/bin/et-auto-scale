@@ -206,7 +206,7 @@ log_msg "Échelle appliquée avec succès / Scale applied successfully"
 
 # Optional: Show notification to user
 if command -v notify-send &>/dev/null; then
-    notify-send "EmComm-Tools" \
+    notify-send "LiaisonOS" \
         "Échelle d'affichage: ${MULTIPLIER_CLAMPED}x\nDisplay scale: ${MULTIPLIER_CLAMPED}x" \
         --icon=video-display \
         --expire-time=5000

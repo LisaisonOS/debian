@@ -569,7 +569,7 @@ if __name__ == '__main__':
             time.sleep(1)
 
             window = webview.create_window(
-                'EmComm-Tools',
+                'LiaisonOS',
                 f'http://127.0.0.1:{port}',
                 width=win_width, height=win_height,
                 resizable=True, min_size=(450, 500),
