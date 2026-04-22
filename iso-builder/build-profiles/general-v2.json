@@ -8,7 +8,7 @@
     },
     "wallpaper": {
         "mode": "generate",
-        "callsign": "emcomm-tools",
+        "callsign": "LiaisonOS",
         "tagline": "Explore. Connect. Respond. (Explorer. Connecter. Répondre.)",
         "color": 2,
         "center_size": 72,
@@ -18,10 +18,10 @@
     "boot_logo": "callsign",
     "update": {
         "enabled": true,
-        "url": "https://raw.githubusercontent.com/emcomm-tools/updates/main",
+        "url": "https://raw.githubusercontent.com/liaisonos/updates/main",
         "channel": "stable"
     },
-    "motd": "emcomm-motd",
+    "motd": "liaison-motd",
     "iso_type": "complete",
     "wine_prefix": "General"
 }

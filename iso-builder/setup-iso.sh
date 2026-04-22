@@ -1,19 +1,18 @@
 #!/bin/bash
 # =============================================================================
-# EmComm-Tools Debian ISO Builder
+# LiaisonOS Debian ISO Builder
 # https://emcomm-tools.ca
 # 
 # Author: Sylvain Deguire (VA2OPS)
-# Based on EmComm-Tools OS by Gaston Gonzalez ()
 #
 # Directory structure:
-#   ./overlays/          - EmComm-Tools overlay versions (et-v1-general, et-v2-general, etc.)
+#   ./overlays/          - overlay versions ( et-v2-general, etc.)
 #   ./wine-sources/      - Wine prefixes with VarAC, VARA, FT8, etc.
-#   ./backgrounds/       - Wallpaper images (emcomm-base.png for generator)
+#   ./backgrounds/       - Wallpaper images (wallpaper-base.png for generator)
 #   ./motd/              - Custom terminal banners
 #   ./build/             - Build output (auto-created)
 #
-# Usage: ./setup-emcomm-iso-v2.sh [build-profile.json]
+# Usage: ./setup-iso-v2.sh [build-profile.json]
 #   No arguments = interactive mode (dialog prompts)
 #   With profile = headless mode (reads all settings from JSON)
 # =============================================================================
@@ -29,7 +28,7 @@ WINE_SOURCE_DIR="$SCRIPT_DIR/wine-sources"
 WALLPAPER_DIR="$SCRIPT_DIR/backgrounds"
 MOTD_DIR="$SCRIPT_DIR/motd"
 BUILD_DIR="$SCRIPT_DIR/build"
-ISO_DIR="$BUILD_DIR/emcomm-debian-iso"
+ISO_DIR="$BUILD_DIR/debian-iso"
 
 # =============================================================================
 # EmComm-Tools Version Configuration
@@ -256,7 +255,7 @@ set_messages() {
         MSG_USING_OVERLAY="Utilisation de l'overlay:"
         
         # Maps
-        DLG_MAPS_TITLE="Constructeur ISO EmComm-Tools"
+        DLG_MAPS_TITLE="Constructeur ISO LiaisonOS"
         DLG_MAPS_MENU="Configuration des cartes hors-ligne:\n\nVoulez-vous inclure les cartes dans l'ISO?"
         DLG_MAPS_OPT1="Non - Utiliser disque externe (Recommandé, ~2.8Go ISO)"
         DLG_MAPS_OPT2="Oui - Intégrer les cartes dans l'ISO (~5.5Go ISO)"
@@ -288,7 +287,7 @@ set_messages() {
         MSG_WALLPAPER_GENERATED="Fond d'écran généré:"
         MSG_NO_CALLSIGN_DEFAULT="Aucun indicatif entré, utilisation du fond d'écran par défaut."
         MSG_BASE_IMAGE_NOT_FOUND="Image de base non trouvée:"
-        MSG_COPY_BASE_IMAGE="Veuillez copier emcomm-base.png dans le répertoire backgrounds/"
+        MSG_COPY_BASE_IMAGE="Veuillez copier welcome-base.png dans le répertoire backgrounds/"
         MSG_USING_DEFAULT_WALLPAPER="Utilisation du fond d'écran par défaut de l'overlay."
         DLG_WALLPAPER_SELECT_TITLE="Sélection du fond d'écran"
         DLG_WALLPAPER_SELECT_MENU="Sélectionnez le fond d'écran pour l'ISO:"

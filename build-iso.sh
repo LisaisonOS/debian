@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# EmComm-Tools ISO Build Script
+# Debain OS ISO Build Script
 # Version: 1.0.0
 # Author: Sylvain Deguire (VA2OPS)
 #
@@ -9,7 +9,7 @@
 
 set -e
 
-cd ~/emcomm-tools/build/emcomm-debian-iso
+cd ~/liaisonos/build/debian-iso
 sudo lb clean
-cd ~/emcomm-tools
-./setup-emcomm-iso.sh
+cd ~/liaisonos
+./setup-iso.sh
