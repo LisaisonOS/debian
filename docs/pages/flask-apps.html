@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flask Web Apps - EmComm-Tools Docs</title>
+    <title>Flask Web Apps - LiaisonOS Docs</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="layout">
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <h2>EmComm-Tools</h2>
+                <h2>LiaisonOS</h2>
                 <div class="version">Debian Edition v2.1</div>
             </div>
             <nav>
@@ -40,7 +40,7 @@
 
             <h2>Overview</h2>
 
-            <p>EmComm-Tools uses lightweight Flask web applications for user-facing configuration. Each app runs on a dedicated port and opens in a native <strong>PyWebView</strong> window (GTK/WebKitGTK backend). All apps share a consistent dark theme and support bilingual EN/FR interfaces.</p>
+            <p>LiaisonOS uses lightweight Flask web applications for user-facing configuration. Each app runs on a dedicated port and opens in a native <strong>PyWebView</strong> window (GTK/WebKitGTK backend). All apps share a consistent dark theme and support bilingual EN/FR interfaces.</p>
 
             <h2>App Inventory</h2>
 
@@ -99,7 +99,7 @@ python3 et-radio.py --no-browser</code></pre>
 
             <h3>Bilingual Support</h3>
 
-            <p>All apps use a <code>TRANSLATIONS</code> dictionary with EN/FR keys. The language is read from <code>~/.config/emcomm-tools/user.json</code>:</p>
+            <p>All apps use a <code>TRANSLATIONS</code> dictionary with EN/FR keys. The language is read from <code>~/.config/liaisonos/user.json</code>:</p>
 
             <pre><code>TRANSLATIONS = {
     'en': {
@@ -199,13 +199,13 @@ Type=Application
 Name=Radio Configuration
 Name[fr]=Configuration Radio
 Comment=View and edit radio profiles
-Exec=/opt/emcomm-tools/bin/et-flask-apps/et-radio-config/et-radio-config.py
+Exec=/opt/liaisonos/bin/et-flask-apps/et-radio-config/et-radio-config.py
 Icon=preferences-other
 Categories=HamRadio;
 Terminal=false</code></pre>
 
             <div class="footer">
-                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+                <p>LiaisonOS Debian Edition &mdash; 73 de VA2OPS!</p>
             </div>
         </main>
     </div>

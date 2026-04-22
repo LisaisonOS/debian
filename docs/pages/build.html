@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Building the ISO - EmComm-Tools Docs</title>
+    <title>Building the ISO - LiaisonOS Docs</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="layout">
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <h2>EmComm-Tools</h2>
+                <h2>LiaisonOS</h2>
                 <div class="version">Debian Edition v2.1</div>
             </div>
             <nav>
@@ -61,8 +61,8 @@ sudo apt install live-build debootstrap jq dialog
             <p>Build profiles are JSON files in <code>build-profiles/</code> that store all build settings. This allows repeatable, headless builds without dialog prompts:</p>
 
             <pre><code># Clone the repository
-git clone https://github.com/emcomm-tools/debian-dev.git emcomm-tools
-cd emcomm-tools
+git clone https://github.com/liaisonos/debian-dev.git liaisonos
+cd liaisonos
 
 # Build using a profile (headless &mdash; no prompts)
 ./setup-emcomm-iso-v2.sh build-profiles/general-v2.json
@@ -82,7 +82,7 @@ cd emcomm-tools
     },
     "wallpaper": {
         "mode": "generate",
-        "callsign": "emcomm-tools",
+        "callsign": "liaisonos",
         "tagline": "Explore. Connect. Respond.",
         "color": 2,
         "center_size": 72,
@@ -92,7 +92,7 @@ cd emcomm-tools
     "boot_logo": "callsign",
     "update": {
         "enabled": true,
-        "url": "https://raw.githubusercontent.com/emcomm-tools/updates/main",
+        "url": "https://raw.githubusercontent.com/liaisonos/updates/main",
         "channel": "stable"
     },
     "motd": "emcomm-motd",
@@ -135,8 +135,8 @@ cd emcomm-tools
             <pre><code>{
     "version": "2.1.2",
     "codename": "Trixie",
-    "distro_name": "EmComm-Tools Debian Edition",
-    "website": "https://emcomm-tools.ca",
+    "distro_name": "LiaisonOS Debian Edition",
+    "website": "https://liaisonos.ca",
     "author": "Sylvain Deguire - VA2OPS"
 }</code></pre>
 
@@ -204,7 +204,7 @@ sudo dd if=live-image-amd64.hybrid.iso of=/dev/sdX bs=4M status=progress
             </div>
 
             <div class="footer">
-                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+                <p>LiaisonOS Debian Edition &mdash; 73 de VA2OPS!</p>
             </div>
         </main>
     </div>

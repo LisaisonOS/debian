@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Profiles - EmComm-Tools Docs</title>
+    <title>Radio Profiles - LiaisonOS Docs</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="layout">
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <h2>EmComm-Tools</h2>
+                <h2>LiaisonOS</h2>
                 <div class="version">Debian Edition v2.1</div>
             </div>
             <nav>
@@ -40,7 +40,7 @@
 
             <h2>Overview</h2>
 
-            <p>Each supported radio has a JSON profile in <code>conf/radios.d/</code> that defines how EmComm-Tools interfaces with it: CAT control (rigctld), PTT method, VARA FM settings, Bluetooth TNC configuration, and audio setup. The active radio is set via a symlink at <code>conf/radios.d/active-radio.json</code>.</p>
+            <p>Each supported radio has a JSON profile in <code>conf/radios.d/</code> that defines how LiaisonOS interfaces with it: CAT control (rigctld), PTT method, VARA FM settings, Bluetooth TNC configuration, and audio setup. The active radio is set via a symlink at <code>conf/radios.d/active-radio.json</code>.</p>
 
             <h2>Supported Radios (24)</h2>
 
@@ -238,7 +238,7 @@
   },
 
   "audio": {               // Optional ALSA setup script
-    "script": "/opt/emcomm-tools/conf/radios.d/audio/ic705.sh"
+    "script": "/opt/liaisonos/conf/radios.d/audio/ic705.sh"
   },
 
   "notes": [               // User-facing setup instructions
@@ -286,19 +286,19 @@
 
             <div class="callout callout-info">
                 <strong>Custom Radio Storage</strong>
-                Custom/edited radio configs are saved to <code>~/.config/emcomm-tools/radios.d/</code> and symlinked into the system directory. On Live Run, the persistence system saves them to USB and restores them on boot.
+                Custom/edited radio configs are saved to <code>~/.config/liaisonos/radios.d/</code> and symlinked into the system directory. On Live Run, the persistence system saves them to USB and restores them on boot.
             </div>
 
             <h2>Selecting the Active Radio</h2>
 
             <p>The active radio is selected through the <strong>et-radio</strong> Flask app (port 5052) or during first boot. The selection creates a symlink:</p>
 
-            <pre><code>/opt/emcomm-tools/conf/radios.d/active-radio.json -> icom-ic705.json</code></pre>
+            <pre><code>/opt/liaisonos/conf/radios.d/active-radio.json -> icom-ic705.json</code></pre>
 
             <p>The supervisor reads this symlink at mode start to configure rigctld, Direwolf, VARA, and application templates with the correct radio parameters.</p>
 
             <div class="footer">
-                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+                <p>LiaisonOS Debian Edition &mdash; 73 de VA2OPS!</p>
             </div>
         </main>
     </div>

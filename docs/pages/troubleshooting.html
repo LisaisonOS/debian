@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Troubleshooting - EmComm-Tools Docs</title>
+    <title>Troubleshooting - LiaisonOS Docs</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="layout">
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <h2>EmComm-Tools</h2>
+                <h2>LiaisonOS</h2>
                 <div class="version">Debian Edition v2.1</div>
             </div>
             <nav>
@@ -171,13 +171,13 @@ et-system-info
 et-supervisor-ctl status
 
 # Check installed version
-cat /opt/emcomm-tools/version.txt
+cat /opt/liaisonos/version.txt
 
 # Check active radio
-readlink /opt/emcomm-tools/conf/radios.d/active-radio.json
+readlink /opt/liaisonos/conf/radios.d/active-radio.json
 
 # Check user config
-cat ~/.config/emcomm-tools/user.json
+cat ~/.config/liaisonos/user.json
 
 # Check if Live Run or HDD
 findmnt / | grep -q overlay && echo "Live Run" || echo "HDD Install"
@@ -186,7 +186,7 @@ findmnt / | grep -q overlay && echo "Live Run" || echo "HDD Install"
 ps aux | grep -E "et-supervisor|rigctld|direwolf|pat|yaac|js8call" | grep -v grep</code></pre>
 
             <div class="footer">
-                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+                <p>LiaisonOS Debian Edition &mdash; 73 de VA2OPS!</p>
             </div>
         </main>
     </div>

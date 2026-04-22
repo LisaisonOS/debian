@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Architecture - EmComm-Tools Docs</title>
+    <title>Architecture - LiaisonOS Docs</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="layout">
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <h2>EmComm-Tools</h2>
+                <h2>LiaisonOS</h2>
                 <div class="version">Debian Edition v2.1</div>
             </div>
             <nav>
@@ -82,14 +82,14 @@
 
             <h2>Overlay System</h2>
 
-            <p>EmComm-Tools uses <strong>live-build overlays</strong> to inject files into the ISO filesystem. Each overlay maps to <code>/opt/emcomm-tools/</code> on the installed system.</p>
+            <p>LiaisonOS uses <strong>live-build overlays</strong> to inject files into the ISO filesystem. Each overlay maps to <code>/opt/liaisonos/</code> on the installed system.</p>
 
             <div class="file-tree">
 <span class="dir">overlays/</span>
 ├── <span class="dir">et-v2-general/</span>          <span class="highlight"># General edition (no personal data)</span>
 │   └── <span class="dir">overlay/</span>
 │       ├── <span class="dir">etc/skel/</span>         <span class="highlight"># User home template (copied by useradd -m)</span>
-│       ├── <span class="dir">opt/emcomm-tools/</span> <span class="highlight"># Main application tree</span>
+│       ├── <span class="dir">opt/liaisonos/</span> <span class="highlight"># Main application tree</span>
 │       │   ├── <span class="dir">bin/</span>           <span class="highlight"># Scripts, Flask apps, dashboard</span>
 │       │   ├── <span class="dir">conf/</span>          <span class="highlight"># modes.d/, radios.d/, update.conf</span>
 │       │   ├── <span class="dir">lib/</span>           <span class="highlight"># et_supervisor Python package</span>
@@ -191,11 +191,11 @@
                     <th>Description</th>
                 </tr>
                 <tr>
-                    <td><code>/opt/emcomm-tools/</code></td>
+                    <td><code>/opt/liaisonos/</code></td>
                     <td>Main application tree (read-only on Live Run)</td>
                 </tr>
                 <tr>
-                    <td><code>~/.config/emcomm-tools/</code></td>
+                    <td><code>~/.config/liaisonos/</code></td>
                     <td>User configuration (user.json, custom radios)</td>
                 </tr>
                 <tr>
@@ -218,7 +218,7 @@
 
             <h2>Live Run vs HDD Install</h2>
 
-            <p>EmComm-Tools supports both <strong>Live Run</strong> (boot from USB, no install) and <strong>HDD Install</strong> (permanent installation). The key differences affect how data is stored and services are started.</p>
+            <p>LiaisonOS supports both <strong>Live Run</strong> (boot from USB, no install) and <strong>HDD Install</strong> (permanent installation). The key differences affect how data is stored and services are started.</p>
 
             <table>
                 <tr>
@@ -253,18 +253,18 @@
                 </tr>
                 <tr>
                     <td>Custom radios</td>
-                    <td>Saved to <code>~/.config/emcomm-tools/radios.d/</code> + symlinked</td>
+                    <td>Saved to <code>~/.config/liaisonos/radios.d/</code> + symlinked</td>
                     <td>Same approach (works everywhere)</td>
                 </tr>
             </table>
 
             <div class="callout callout-danger">
                 <strong>Live Run Overlay Gotcha</strong>
-                On Live Run, <code>/opt/emcomm-tools/</code> exists in the read-only lower layer. Files can appear writable but changes disappear on reboot. Custom files must be written to the user directory and symlinked into the system path. The <code>et-persistence-save</code> script handles saving critical data to USB before shutdown.
+                On Live Run, <code>/opt/liaisonos/</code> exists in the read-only lower layer. Files can appear writable but changes disappear on reboot. Custom files must be written to the user directory and symlinked into the system path. The <code>et-persistence-save</code> script handles saving critical data to USB before shutdown.
             </div>
 
             <div class="footer">
-                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+                <p>LiaisonOS Debian Edition &mdash; 73 de VA2OPS!</p>
             </div>
         </main>
     </div>

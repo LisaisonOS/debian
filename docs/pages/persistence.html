@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Persistence - EmComm-Tools Docs</title>
+    <title>Persistence - LiaisonOS Docs</title>
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
     <div class="layout">
         <aside class="sidebar">
             <div class="sidebar-brand">
-                <h2>EmComm-Tools</h2>
+                <h2>LiaisonOS</h2>
                 <div class="version">Debian Edition v2.1</div>
             </div>
             <nav>
@@ -55,7 +55,7 @@
 └── <span class="dir">Partition 2: et-config (writable)</span> <span class="highlight"># FAT32/exFAT persistence partition</span>
     └── <span class="dir">et-config/</span>
         ├── <span class="dir">configs/</span>
-        │   ├── <span class="dir">emcomm-tools/</span>       <span class="highlight"># user.json, callsign, grid, language</span>
+        │   ├── <span class="dir">liaisonos/</span>       <span class="highlight"># user.json, callsign, grid, language</span>
         │   ├── <span class="dir">radios/</span>             <span class="highlight"># Custom radio JSON profiles</span>
         │   ├── <span class="file">active-radio</span>        <span class="highlight"># Active radio filename</span>
         │   ├── <span class="dir">pat/</span>                <span class="highlight"># Winlink configuration</span>
@@ -96,7 +96,7 @@
 
             <ol>
                 <li><strong>10%</strong> &mdash; Detecting USB persistence partition</li>
-                <li><strong>20%</strong> &mdash; Saving EmComm-Tools config (user.json)</li>
+                <li><strong>20%</strong> &mdash; Saving LiaisonOS config (user.json)</li>
                 <li><strong>30%</strong> &mdash; Saving active radio selection</li>
                 <li><strong>35%</strong> &mdash; Saving custom radio configs</li>
                 <li><strong>40%</strong> &mdash; Saving Pat/Winlink config</li>
@@ -128,7 +128,7 @@
             <ol>
                 <li>Custom radio configs (copy + symlink into system dir)</li>
                 <li>Active radio selection (recreate symlink)</li>
-                <li>EmComm-Tools config (user.json)</li>
+                <li>LiaisonOS config (user.json)</li>
                 <li>Pat/Winlink, JS8Call, Chattervox settings</li>
                 <li>Documents &amp; Downloads (rsync <strong>without</strong> <code>--delete</code> to merge, not overwrite)</li>
             </ol>
@@ -160,7 +160,7 @@
             </div>
 
             <div class="footer">
-                <p>EmComm-Tools Debian Edition &mdash; 73 de VA2OPS!</p>
+                <p>LiaisonOS Debian Edition &mdash; 73 de VA2OPS!</p>
             </div>
         </main>
     </div>
