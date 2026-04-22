@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://sourceforge.net/projects/emcomm-tools/"><img src="https://img.shields.io/badge/Version-2.1.8-f59e0b?style=for-the-badge" alt="Version 2.1.8"></a>
-  <a href="https://sourceforge.net/projects/emcomm-tools/files/ISO/"><img src="https://img.shields.io/badge/Download-ISO-22c55e?style=for-the-badge&logo=sourceforge" alt="Download ISO"></a>
+  <a href="https://sourceforge.net/projects/liaisonos/"><img src="https://img.shields.io/badge/Version-2.1.8-f59e0b?style=for-the-badge" alt="Version 2.1.8"></a>
+  <a href="https://sourceforge.net/projects/liaisonos/files/ISO/"><img src="https://img.shields.io/badge/Download-ISO-22c55e?style=for-the-badge&logo=sourceforge" alt="Download ISO"></a>
   <a href="https://opensource.org/licenses/MS-PL"><img src="https://img.shields.io/badge/License-Ms--PL-3b82f6?style=for-the-badge" alt="License Ms-PL"></a>
   <a href="https://va2ops.ca"><img src="https://img.shields.io/badge/Author-va2ops.ca-8b5cf6?style=for-the-badge" alt="Author"></a>
 </p>
@@ -26,13 +26,13 @@
 
 <h3>Français</h3>
 
-<p>Distribution Linux EmComm bilingue (FR/EN) basée sur Debian pour radioamateurs.</p>
+<p>Distribution LiaisonOS (FR/EN) basée sur Debian pour radioamateurs.</p>
 
 <p><strong>Mainteneur :</strong> <a href="https://va2ops.ca/fr/">Sylvain Deguire (VA2OPS)</a></p>
 
 <p>
 📖 <a href="FUTURES_fr.md">Documentation</a><br>
-💾 <a href="https://sourceforge.net/projects/emcomm-tools/files/ISO/">Téléchargements ISO</a><br>
+💾 <a href="https://sourceforge.net/projects/liaisonos/files/ISO/">Téléchargements ISO</a><br>
 ⚠️ <a href="DISCLAIMER.md">Avis de non-responsabilité</a>
 </p>
 
@@ -41,13 +41,13 @@
 
 <h3>English</h3>
 
-<p>Bilingual (FR/EN) Debian-based EmComm Linux for Ham Radio.</p>
+<p>LiaisonOS (EN/FR) Debian-based Linux for Ham Radio.</p>
 
 <p><strong>Maintainer:</strong> <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a></p>
 
 <p>
 📖 <a href="FUTURES.md">Documentation</a><br>
-💾 <a href="https://sourceforge.net/projects/emcomm-tools/files/ISO/">ISO Downloads</a><br>
+💾 <a href="https://sourceforge.net/projects/liaisonos/files/ISO/">ISO Downloads</a><br>
 ⚠️ <a href="DISCLAIMER.md">Disclaimer</a>
 </p>
 
