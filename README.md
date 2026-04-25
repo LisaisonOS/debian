@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://sourceforge.net/projects/liaisonos/"><img src="https://img.shields.io/badge/Version-2.2.1-f59e0b?style=for-the-badge" alt="Version 2.2.1"></a>
+  <a href="https://sourceforge.net/projects/liaisonos/"><img src="https://img.shields.io/badge/Version-2.2.2-f59e0b?style=for-the-badge" alt="Version 2.2.2"></a>
   <a href="https://sourceforge.net/projects/liaisonos/files/ISO/"><img src="https://img.shields.io/badge/Download-ISO-22c55e?style=for-the-badge&logo=sourceforge" alt="Download ISO"></a>
   <a href="https://opensource.org/licenses/MS-PL"><img src="https://img.shields.io/badge/License-Ms--PL-3b82f6?style=for-the-badge" alt="License Ms-PL"></a>
   <a href="https://va2ops.ca"><img src="https://img.shields.io/badge/Author-va2ops.ca-8b5cf6?style=for-the-badge" alt="Author"></a>
@@ -57,34 +57,18 @@
 
 ---
 
-## ✨ What's New in 2.1.8
+## ✨ What's New in 2.2.2
 
-### 🏕️ POTA/SOTA Field Logger (et-logger)
+### 🏕️ Pat Winlink — Updated to v1.0.0
 
 New field logging application for Parks on the Air and Summits on the Air activations.
 
-- **Auto-QSY** — Frequency, mode, and band update live when you turn the VFO knob
-- **Callsign lookup** — Merged US/CA license database with autocomplete
-- **Map view** — Leaflet map with contact lines, callsign labels, and distance
-- **Nearest POTA parks** — 87,000 parks in SQLite with bounding-box filter and auto-zoom
-- **Park-to-Park (P2P)** — Multi-park support for 2-fer/3-fer activations
-- **ADIF export** — Per-park files with POTA naming convention
-- **Touch-friendly** — Custom popup pickers for RST, Band, Mode (designed for 7" screens)
-- **GPS position**, duplicate detection, QSO counter (10 for valid activation)
-- **Dark theme, bilingual EN/FR**
+- **Updated to v1.0.0** — Latest upstream release of the Pat Winlink client
 
-### 📡 Persistent Radio Connection (rig-client)
+### 📡 QtTermTCP — BBS Session Cache
 
-All radio communication now goes through a single persistent TCP connection to rigctld — no more subprocess spawning, reducing relay clicks on older rigs like the FT-897D.
-
-- **Background polling** — Radio state refreshed every 2 seconds silently
-- **QSY callback** — Applications notified instantly when you change frequency
-- **Wine mode switching fix** — Eliminates CAT control errors when switching from Wine modes to JS8Call/FT8
-
-### 🐛 Bug Fixes
-
-- **JS8Call & WSJT-X** — Save path fix for HDD installs (crash-on-launch resolved)
-- **Repeater Directory** — FM mode programming fix for radios rejecting passband parameters
+- **BBS session cache** — Sessions with packet BBS nodes are now cached locally by callsign using SQLite. Bulletin lists and message bodies are stored automatically during your session
+- **Offline browsing** — Browse cached bulletins and read messages anytime via the BBS Cache dialog, even without a radio connection
 
 ---
 
