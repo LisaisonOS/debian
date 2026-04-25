@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://sourceforge.net/projects/liaisonos/"><img src="https://img.shields.io/badge/Version-2.2.2-f59e0b?style=for-the-badge" alt="Version 2.2.2"></a>
+  <a href="https://sourceforge.net/projects/liaisonos/"><img src="https://img.shields.io/badge/Version-2.2.3-f59e0b?style=for-the-badge" alt="Version 2.2.3"></a>
   <a href="https://sourceforge.net/projects/liaisonos/files/ISO/"><img src="https://img.shields.io/badge/Download-ISO-22c55e?style=for-the-badge&logo=sourceforge" alt="Download ISO"></a>
   <a href="https://opensource.org/licenses/MS-PL"><img src="https://img.shields.io/badge/License-Ms--PL-3b82f6?style=for-the-badge" alt="License Ms-PL"></a>
   <a href="https://va2ops.ca"><img src="https://img.shields.io/badge/Author-va2ops.ca-8b5cf6?style=for-the-badge" alt="Author"></a>
@@ -56,6 +56,12 @@
 </table>
 
 ---
+
+## ✨ What's New in 2.2.3
+
+### 🏕️ Bug Fix — Overlay Scripts
+
+A script error in v2.2.2 corrupted several overlay files (wrapper-rigctld.sh, wrapper-gpsd.sh, et-audio, et-log, radio audio profiles, and others), breaking rigctld, gpsd and et-supervisor on startup. All affected files have been restored.
 
 ## ✨ What's New in 2.2.2
 
