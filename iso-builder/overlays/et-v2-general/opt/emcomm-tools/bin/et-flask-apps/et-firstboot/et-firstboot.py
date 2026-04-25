@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 LiaisonOS First Boot Wizard
-Author: Claude for Sylvain Deguire (VA2OPS)
+Author: Sylvain Deguire (VA2OPS)
 Date: January 2026
 Version: 2.1.0 - 2026-02-08 - Tilesets: seed from /etc/skel/ before USB merge
 
