@@ -1,29 +1,22 @@
-#
-# Author   : Gaston Gonzalez!/bin/bash
+#!/bin/bash
 #
 # Author   : Gaston Gonzalez
-#
-# Author   : Gaston Gonzalez Date     : 1 January 2025
-#
-# Author   : Gaston Gonzalez Updated  : 17 March 2025
-#
-# Author   : Gaston Gonzalez Purpose  : Utility for accessing the Bluetooth TNC on the BTECH UV PRO.           
+# Date     : 1 January 2025
+# Updated  : 17 March 2025
+# Purpose  : Utility for accessing the Bluetooth TNC on the BTECH UV PRO.           
 source /opt/emcomm-tools/bin/et-common
 
 CLEAN_UP=1
 
 cleanup() {
-  #
-# Author   : Gaston Gonzalez Note: We need to reconnect to the Bluetooth device on every mode change. 
-  #
-# Author   : Gaston Gonzalez       As such, we need kill all the rfcomm and kiss process on exit.
+  # Note: We need to reconnect to the Bluetooth device on every mode change. 
+  #       As such, we need kill all the rfcomm and kiss process on exit.
   if [[ ${CLEAN_UP} -eq 1 ]]; then
     sudo /opt/emcomm-tools/bin/et-kill-bt
   fi
 }
 
-#
-# Author   : Gaston Gonzalez Kill all Bluetooth TNC services on exit
+# Kill all Bluetooth TNC services on exit
 trap cleanup EXIT
 
 ACTIVE_RADIO="${ET_HOME}/conf/radios.d/btech-uvpro.bt.json"
@@ -41,8 +34,7 @@ function usage() {
   CLEAN_UP=0
 }
 
-if [[ $#
-# Author   : Gaston Gonzalez -ne 1 ]]; then
+if [[ $# -ne 1 ]]; then
   usage
   exit 1
 fi
@@ -87,12 +79,9 @@ update_ax25_conf() {
 
   GREP_OUT=$(grep ${AX25_PORT} ${AX25_CONF_FILE})
   if [ $? -eq 0 ]; then
-    #
-# Author   : Gaston Gonzalez Delete all existing AX.25 port  entries. Note: we can't use sed here
-    #
-# Author   : Gaston Gonzalez since we do not have permission to create a temporary file with
-    #
-# Author   : Gaston Gonzalez inline replacement. ed modifies the file directly.
+    # Delete all existing AX.25 port  entries. Note: we can't use sed here
+    # since we do not have permission to create a temporary file with
+    # inline replacement. ed modifies the file directly.
     printf "g/^${AX25_PORT}/d\nw\nq\n" | ed ${AX25_CONF_FILE} > /dev/null 2>&1
 
   fi
@@ -154,17 +143,14 @@ case $1 in
 
 	MAC=$(echo ${HCI_OUT} | awk '{print $1}')
 
-    #
-# Author   : Gaston Gonzalez Update configuration file detected MAC address
+    # Update configuration file detected MAC address
     sed -i "s|.*mac.*|    \"mac\": \"${MAC}\"|g" ${ACTIVE_RADIO}
 
-    #
-# Author   : Gaston Gonzalez Generate an expect script to automatically pair our device.
+    # Generate an expect script to automatically pair our device.
     PAIR_SCRIPT="${HOME}/pair"
 
 cat <<EOF > ${PAIR_SCRIPT}
-#
-# Author   : Gaston Gonzalez!/usr/bin/expect -f
+#!/usr/bin/expect -f
 
 set device "${MAC}"
 set timeout 60
@@ -263,8 +249,7 @@ EOF
           echo -e "sudo axlisten -a -tttt -c     Monitor inbound and outbound traffic"
           echo -e "${NC}"
 
-          #
-# Author   : Gaston Gonzalez We can't have the rfcomm and kiss processes killed.
+          # We can't have the rfcomm and kiss processes killed.
           CLEAN_UP=0
           break
           ;;

@@ -1,13 +1,9 @@
-#
-# Author  : Gaston Gonzalez!/bin/bash
+#!/bin/bash
 #
 # Author  : Gaston Gonzalez
-#
-# Author  : Gaston Gonzalez Date    : 23 May 2023
-#
-# Author  : Gaston Gonzalez Updated : 12 November 2025
-#
-# Author  : Gaston Gonzalez Purpose : Offline HF prediction using voacapl
+# Date    : 23 May 2023
+# Updated : 12 November 2025
+# Purpose : Offline HF prediction using voacapl
 set -e
 set -o pipefail
 trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
@@ -16,10 +12,8 @@ trap 'echo -e "${RED}\"${last_command}\" command failed with exit code $?.${NC}"
 source /opt/emcomm-tools/bin/et-common
 
 lookup_station() {
-  local type="$1"   #
-# Author  : Gaston Gonzalez call | grid | latlon
-  local value="$2"  #
-# Author  : Gaston Gonzalez callsign | grid | "lat,lon"
+  local type="$1"   # call | grid | latlon
+  local value="$2"  # callsign | grid | "lat,lon"
   local json_file="$3"
 
   case "$type" in
@@ -49,8 +43,7 @@ lookup_station() {
       fi
       ;;
     latlon)
-      #
-# Author  : Gaston Gonzalez Write directly to JSON for consistency
+      # Write directly to JSON for consistency
       local lat lon
       IFS=',' read -r lat lon <<< "$value"
       if [[ -z $lat || -z $lon ]]; then
@@ -65,8 +58,7 @@ lookup_station() {
       ;;
   esac
 
-  #
-# Author  : Gaston Gonzalez Extract lat/lon regardless of type
+  # Extract lat/lon regardless of type
   local lat lon
   lat=$(jq .lat "$json_file")
   lon=$(jq .lon "$json_file")
@@ -93,8 +85,7 @@ validate_latitude() {
     return 1
   }
 
-  #
-# Author  : Gaston Gonzalez Check range: -90 <= lat <= 90
+  # Check range: -90 <= lat <= 90
   if (( $(echo "$latf < -90" | bc -l) )) || (( $(echo "$latf > 90" | bc -l) )); then
     echo -e "${RED}Latitude must be in range between -90 and 90 degrees${NC}" >&2
     return 1
@@ -120,8 +111,7 @@ validate_longitude() {
     return 1
   }
 
-  #
-# Author  : Gaston Gonzalez Check range: -180 <= lat <= 1800
+  # Check range: -180 <= lat <= 1800
   if (( $(echo "$lon < -180" | bc -l) )) || (( $(echo "$lon > 180" | bc -l) )); then
     echo -e "${RED}Longitude must be in range between -180 and 180 degrees${NC}" >&2
     return 1
@@ -167,8 +157,7 @@ rx_value=""
 power="" 
 mode=""
 
-while [[ $#
-# Author  : Gaston Gonzalez -gt 0 ]]; do
+while [[ $# -gt 0 ]]; do
   case "$1" in
     --tx-call)   tx_type="call";   tx_value="$2"; shift 2 ;;
     --tx-grid)   tx_type="grid";   tx_value="$2"; shift 2 ;;
@@ -183,35 +172,27 @@ while [[ $#
   esac
 done
 
-#
-# Author  : Gaston Gonzalez Use local ETC user position if TX station not defined
+# Use local ETC user position if TX station not defined
 if [[ -z $tx_type ]]; then
    tx_type="gps"
 fi
 
-#
-# Author  : Gaston Gonzalez Validate required args
+# Validate required args
 [[ -z $rx_type || -z $power || -z $mode ]] && usage
 
-#
-# Author  : Gaston Gonzalezecho "TX ($tx_type): $tx_value"
-#
-# Author  : Gaston Gonzalezecho "RX ($rx_type): $rx_value"
-#
-# Author  : Gaston Gonzalezecho "Power: $power"
-#
-# Author  : Gaston Gonzalezecho "Mode: $mode"
+#echo "TX ($tx_type): $tx_value"
+#echo "RX ($rx_type): $rx_value"
+#echo "Power: $power"
+#echo "Mode: $mode"
 
-#
-# Author  : Gaston Gonzalez Allow for case-insensitve match of the user-defined operating mode
+# Allow for case-insensitve match of the user-defined operating mode
 MODE=$mode
 case "${MODE,,}" in
   js8-slow)
     MD="10.0"
     ;;
   js8)
-    #
-# Author  : Gaston Gonzalez normal speed
+    # normal speed
     MD="14.0"
     ;;
   js8-fast)
@@ -253,21 +234,16 @@ ET_VOA_REPORT=${ET_VOA_WORKING_DIR}/voacapl.txt
 INP=${ET_VOA_WORKING_DIR}/voacapx.dat
 OUT=${ET_VOA_WORKING_DIR}/voacapx.out
 
-#
-# Author  : Gaston Gonzalez Year = 2023
+# Year = 2023
 YEAR=$(echo $(date '+%Y'))
 
-#
-# Author  : Gaston Gonzalez Month (May) = 5.00
+# Month (May) = 5.00
 MONTH=$(date +'%m')
 MONTH_FMT=$(date +'%-m.00')
 
-#
-# Author  : Gaston Gonzalez######################################################################
-#
-# Author  : Gaston Gonzalez TX Antenna
-#
-# Author  : Gaston Gonzalez######################################################################
+#######################################################################
+# TX Antenna
+#######################################################################
 
 if ! result=$(lookup_station "$tx_type" "$tx_value" tx-station.json); then
   if [[ "$tx_type" == "call" ]]; then
@@ -284,23 +260,18 @@ validate_longitude "$TK" || exit 1
 
 TL1=$( awk -v n1=$TL -v n2=90 -v n3=-90 'BEGIN {if (n1<n3 || n1>n2) printf ("%s", "a"); else printf ("%.2f", n1);}' )
 
-#
-# Author  : Gaston Gonzalez add North or South (N/S)
+# add North or South (N/S)
 TLA=$( awk -v n1=$TL1 -v n2=0 'BEGIN {if (n1<n2) { n1=substr(n1,2); printf ("%6sS", n1); } else printf ("%6sN", n1);}' )
 
 TK1=$( awk -v n1=$TK -v n2=180 -v n3=-180 'BEGIN {if (n1<n3 || n1>n2) printf ("%s", "a"); else printf ("%.2f", n1);}' )
 		    
-#
-# Author  : Gaston Gonzalez add East or West (E/W)
+# add East or West (E/W)
 TLO=$( awk -v n1=$TK1 -v n2=0 'BEGIN {if (n1<n2) { n1=substr(n1,2); printf ("%7sW", n1); } else printf ("%7sE", n1);}' )
 
 
-#
-# Author  : Gaston Gonzalez######################################################################
-#
-# Author  : Gaston Gonzalez RX Antenna
-#
-# Author  : Gaston Gonzalez######################################################################
+#######################################################################
+# RX Antenna
+#######################################################################
 
 if ! result=$(lookup_station "$rx_type" "$rx_value" rx-station.json); then
   if [[ "$rx_type" == "call" ]]; then
@@ -317,28 +288,20 @@ validate_longitude "$RK" || exit 1
 
 RL1=$( awk -v n1=$RL -v n2=90 -v n3=-90 'BEGIN {if (n1<n3 || n1>n2) printf ("%s", "a"); else printf ("%.2f", n1);}' )
 
-#
-# Author  : Gaston Gonzalez add North or South
+# add North or South
 RLA=$( awk -v n1=$RL1 -v n2=0 'BEGIN {if (n1<n2) { n1=substr(n1,2); printf ("%6sS", n1); } else printf ("%6sN", n1);}' )
 
 RK1=$( awk -v n1=$RK -v n2=180 -v n3=-180 'BEGIN {if (n1<n3 || n1>n2) printf ("%s", "a"); else printf ("%.2f", n1);}' )
 
-#
-# Author  : Gaston Gonzalez add East or West
+# add East or West
 RLO=$( awk -v n1=$RK1 -v n2=0 'BEGIN {if (n1<n2) { n1=substr(n1,2); printf ("%7sW", n1); } else printf ("%7sE", n1);}' )
 
+# Power settings 
+# Use 80% of user-defined power and express it in killiwatts since VOACAP's
+# power setting is the power at the feedpoint not the transmitter.
 #
-# Author  : Gaston Gonzalez Power settings 
+# PW=(PWR×0.8)/1000
 #
-# Author  : Gaston Gonzalez Use 80% of user-defined power and express it in killiwatts since VOACAP's
-#
-# Author  : Gaston Gonzalez power setting is the power at the feedpoint not the transmitter.
-#
-# Author  : Gaston Gonzalez
-#
-# Author  : Gaston Gonzalez PW=(PWR×0.8)/1000
-#
-# Author  : Gaston Gonzalez
 PWR=$power
 PW="0.0800"
 echo "TX Power: ${PWR} watts"
@@ -362,32 +325,21 @@ else
   exit 1
 fi
 
-#
-# Author  : Gaston Gonzalez TODO: Add as an argument to R6
-#
-# Author  : Gaston Gonzalez Man-made Noise
-#
-# Author  : Gaston Gonzalez 140. industrial
-#
-# Author  : Gaston Gonzalez 144. residential
-#
-# Author  : Gaston Gonzalez 150. rural
-#
-# Author  : Gaston Gonzalez 163. remote
+# TODO: Add as an argument to R6
+# Man-made Noise
+# 140. industrial
+# 144. residential
+# 150. rural
+# 163. remote
 MMN="144."
 
-#
-# Author  : Gaston Gonzalez Format for 117
-#
-# Author  : Gaston Gonzalez NOTE: The card requires <SSN>. (117.)
+# Format for 117
+# NOTE: The card requires <SSN>. (117.)
 ssn=`grep "$YEAR $MONTH" ${ET_SSN} | awk '{print $5}' | cut -d"." -f1`
 
-#
-# Author  : Gaston Gonzalez read more about fine-tuning your input file:
-#
-# Author  : Gaston Gonzalez http://www.voacap.com/voacapw.html
-#
-# Author  : Gaston Gonzalez http://www.voacap.com/frequency.html
+# read more about fine-tuning your input file:
+# http://www.voacap.com/voacapw.html
+# http://www.voacap.com/frequency.html
 
 echo -e "\n"
 

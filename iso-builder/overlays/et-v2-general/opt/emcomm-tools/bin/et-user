@@ -1,61 +1,37 @@
-#
-# Author : Gaston Gonzalez!/bin/bash
-#
-# Author : Gaston Gonzalez
-#
-# Author : Gaston Gonzalez Date   : 25 October 2024
-#
-# Author : Gaston Gonzalez Updated: 4 November 2024 
-#
-# Author : Gaston Gonzalez Purpose: Set user-specific settings for LiaisonOS.
+#!/bin/bash
 #
 # Author : Gaston Gonzalez
+# Date   : 25 October 2024
+# Updated: 4 November 2024 
+# Purpose: Set user-specific settings for EmComm Tools.
 #
-# Author : Gaston Gonzalez Modified by: Sylvain Deguire - VA2OPS
+# Modified by: Sylvain Deguire - VA2OPS
+# Date       : 16 November 2025
+# Changes    : Added bilingual French/English support and password security improvements
 #
-# Author : Gaston Gonzalez Date       : 16 November 2025
+# Modified by: Sylvain Deguire - VA2OPS
+# Date       : 1 December 2025
+# Changes    : Added PostgreSQL user creation with superuser rights
 #
-# Author : Gaston Gonzalez Changes    : Added bilingual French/English support and password security improvements
+# Modified by: Sylvain Deguire - VA2OPS
+# Date       : January 2026
+# Changes    : Fixed password status display after user input, fixed NOPASS detection
 #
-# Author : Gaston Gonzalez
-#
-# Author : Gaston Gonzalez Modified by: Sylvain Deguire - VA2OPS
-#
-# Author : Gaston Gonzalez Date       : 1 December 2025
-#
-# Author : Gaston Gonzalez Changes    : Added PostgreSQL user creation with superuser rights
-#
-# Author : Gaston Gonzalez
-#
-# Author : Gaston Gonzalez Modified by: Sylvain Deguire - VA2OPS
-#
-# Author : Gaston Gonzalez Date       : January 2026
-#
-# Author : Gaston Gonzalez Changes    : Fixed password status display after user input, fixed NOPASS detection
-#
-# Author : Gaston Gonzalez
 . /opt/emcomm-tools/bin/et-common
 
 USER_CONF=~/.config/emcomm-tools/user.json
 
-#
-# Author : Gaston Gonzalez-----------------------------------------------------------
-#
-# Author : Gaston Gonzalez Function: create_postgres_user
-#
-# Author : Gaston Gonzalez Purpose : Create or update PostgreSQL user with superuser rights
-#
-# Author : Gaston Gonzalez           Uses callsign as username and Winlink password
-#
-# Author : Gaston Gonzalez-----------------------------------------------------------
+#-----------------------------------------------------------
+# Function: create_postgres_user
+# Purpose : Create or update PostgreSQL user with superuser rights
+#           Uses callsign as username and Winlink password
+#-----------------------------------------------------------
 create_postgres_user() {
-    local callsign="${1,,}"  #
-# Author : Gaston Gonzalez lowercase for PostgreSQL username
+    local callsign="${1,,}"  # lowercase for PostgreSQL username
     local password="$2"
     local lang="$3"
     
-    #
-# Author : Gaston Gonzalez Skip if PostgreSQL is not installed or not running
+    # Skip if PostgreSQL is not installed or not running
     if ! command -v psql &> /dev/null; then
         return 0
     fi
@@ -69,8 +45,7 @@ create_postgres_user() {
         return 0
     fi
     
-    #
-# Author : Gaston Gonzalez Validate inputs
+    # Validate inputs
     if [ -z "$callsign" ] || [ "$callsign" == "null" ]; then
         return 0
     fi
@@ -84,8 +59,7 @@ create_postgres_user() {
         return 0
     fi
     
-    #
-# Author : Gaston Gonzalez Create or update PostgreSQL user with superuser rights
+    # Create or update PostgreSQL user with superuser rights
     sudo -u postgres psql -q -c "DO \$\$
     BEGIN
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${callsign}') THEN
@@ -95,13 +69,11 @@ create_postgres_user() {
         END IF;
     END \$\$;" 2>/dev/null
     
-    #
-# Author : Gaston Gonzalez Create user's personal database if not exists
+    # Create user's personal database if not exists
     sudo -u postgres psql -q -tc "SELECT 1 FROM pg_database WHERE datname = '${callsign}'" 2>/dev/null | grep -q 1 || \
         sudo -u postgres createdb -O "${callsign}" "${callsign}" 2>/dev/null
     
-    #
-# Author : Gaston Gonzalez Grant access to shared emcomm database if it exists
+    # Grant access to shared emcomm database if it exists
     sudo -u postgres psql -q -tc "SELECT 1 FROM pg_database WHERE datname = 'emcomm'" 2>/dev/null | grep -q 1 && \
         sudo -u postgres psql -q -c "GRANT ALL PRIVILEGES ON DATABASE emcomm TO ${callsign};" 2>/dev/null
     
@@ -112,31 +84,25 @@ create_postgres_user() {
     fi
 }
 
-#
-# Author : Gaston Gonzalez-----------------------------------------------------------
-#
-# Author : Gaston Gonzalez Main script
-#
-# Author : Gaston Gonzalez-----------------------------------------------------------
+#-----------------------------------------------------------
+# Main script
+#-----------------------------------------------------------
 
 if [ ! -f ${USER_CONF} ]; then
     mkdir -p $(dirname ${USER_CONF})
     cp /etc/skel/.config/emcomm-tools/user.json ${USER_CONF}
 fi
 
-#
-# Author : Gaston Gonzalez Read current language (default to English if not set)
+# Read current language (default to English if not set)
 LANGUAGE=$(jq -r '.language // "en"' ${USER_CONF})
 
-#
-# Author : Gaston Gonzalez STEP 1: Ask for interface language FIRST
+# STEP 1: Ask for interface language FIRST
 echo ""
 echo "EmComm menu language / Langue du menu EmComm:"
 read -p "(E)nglish or (F)rançais [${LANGUAGE}]: " lang_input
 lang_input=${lang_input:-$LANGUAGE}
 
-#
-# Author : Gaston Gonzalez Normalize input
+# Normalize input
 case "${lang_input,,}" in
     f|fr|french|français)
         LANGUAGE="fr"
@@ -145,19 +111,16 @@ case "${lang_input,,}" in
         LANGUAGE="en"
         ;;
     *)
-        LANGUAGE="en"  #
-# Author : Gaston Gonzalez Default to English
+        LANGUAGE="en"  # Default to English
         ;;
 esac
 
-#
-# Author : Gaston Gonzalez Read other current values
+# Read other current values
 CALLSIGN=$(jq -r '.callsign' ${USER_CONF})
 GRID=$(jq -r '.grid' ${USER_CONF})
 WINLINK_PASSWORD=$(jq -r '.winlinkPasswd' ${USER_CONF})
 
-#
-# Author : Gaston Gonzalez Check password status for secure display
+# Check password status for secure display
 if [ "$WINLINK_PASSWORD" == "null" ] || [ "$WINLINK_PASSWORD" == "" ] || [ -z "$WINLINK_PASSWORD" ] || [ "$WINLINK_PASSWORD" == "NOPASS" ]; then
     PASSWORD_STATUS="not set"
     PASSWORD_STATUS_FR="non défini"
@@ -166,11 +129,9 @@ else
     PASSWORD_STATUS_FR="***configuré***"
 fi
 
-#
-# Author : Gaston Gonzalez STEP 2: Display prompts in selected language
+# STEP 2: Display prompts in selected language
 if [ "$LANGUAGE" == "fr" ]; then
-    #
-# Author : Gaston Gonzalez French prompts
+    # French prompts
     echo ""
     echo "Configuration actuelle:"
     echo "  Indicatif: ${CALLSIGN}"
@@ -188,8 +149,7 @@ if [ "$LANGUAGE" == "fr" ]; then
     WINLINK_PASSWORD=${input:-$WINLINK_PASSWORD}
     echo ""
 
-    #
-# Author : Gaston Gonzalez Update password status after user input
+    # Update password status after user input
     if [ -n "$input" ]; then
         PASSWORD_STATUS_FR="***sera défini***"
     fi
@@ -207,8 +167,7 @@ if [ "$LANGUAGE" == "fr" ]; then
     saved_msg="Configuration sauvegardée."
     not_saved_msg="Configuration non sauvegardée."
 else
-    #
-# Author : Gaston Gonzalez English prompts
+    # English prompts
     echo ""
     echo "Current configuration:"
     echo "  Callsign: ${CALLSIGN}"
@@ -226,8 +185,7 @@ else
     WINLINK_PASSWORD=${input:-$WINLINK_PASSWORD}
     echo ""
 
-    #
-# Author : Gaston Gonzalez Update password status after user input
+    # Update password status after user input
     if [ -n "$input" ]; then
         PASSWORD_STATUS="***will be set***"
     fi
@@ -246,8 +204,7 @@ else
     not_saved_msg="Configuration not saved."
 fi
 
-#
-# Author : Gaston Gonzalez STEP 3: Save with language field included
+# STEP 3: Save with language field included
 if [ "$confirm" == "$confirm_yes" ]; then
     jq --arg language "$LANGUAGE" \
        --arg callsign "$CALLSIGN" \
@@ -257,8 +214,7 @@ if [ "$confirm" == "$confirm_yes" ]; then
        ${USER_CONF} > ${USER_CONF}.tmp && mv ${USER_CONF}.tmp ${USER_CONF}
     echo "$saved_msg"
     
-    #
-# Author : Gaston Gonzalez Create/update PostgreSQL user
+    # Create/update PostgreSQL user
     create_postgres_user "$CALLSIGN" "$WINLINK_PASSWORD" "$LANGUAGE"
 else
     echo "$not_saved_msg"
