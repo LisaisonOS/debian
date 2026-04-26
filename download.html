@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiaisonOS — Download</title>
+  <meta name="description" content="Download LiaisonOS — Debian 13 live ISO for ham radio emergency digital communications.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1a13;
+      --bg2: #16231a;
+      --bg3: #1e2f24;
+      --border: rgba(125, 232, 176, 0.12);
+      --border2: rgba(125, 232, 176, 0.22);
+      --green: #7de8b0;
+      --green-dim: #5ab887;
+      --green-dark: #1a3a2a;
+      --text: #e8f5ee;
+      --text2: #9dbfad;
+      --text3: #6a9a7a;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      border-bottom: 0.5px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(15, 26, 19, 0.92);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo-icon {
+      width: 32px;
+      height: 32px;
+      background: var(--green-dark);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 0.5px solid var(--border2);
+    }
+    .nav-logo-text {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .nav-links a {
+      font-size: 13px;
+      color: var(--text2);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--green); }
+    .lang-toggle {
+      display: flex;
+      gap: 4px;
+    }
+    .lang-btn {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 0.5px solid var(--border);
+      background: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: all 0.15s;
+    }
+    .lang-btn.active {
+      background: var(--green-dark);
+      color: var(--green);
+      border-color: var(--border2);
+    }
+
+    /* HERO */
+    .hero {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 3rem 2rem 2rem;
+    }
+    .hero-eyebrow {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--green-dim);
+      margin-bottom: 0.75rem;
+    }
+    .hero-title {
+      font-size: 32px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      line-height: 1.2;
+    }
+    .hero-title span { color: var(--green); }
+    .hero-sub {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    /* NOTICE BANNER */
+    .notice {
+      background: rgba(125, 232, 176, 0.06);
+      border: 0.5px solid var(--border2);
+      border-left: 3px solid var(--green-dim);
+      border-radius: var(--radius-sm);
+      padding: 0.875rem 1rem;
+      font-size: 13px;
+      color: var(--text2);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+    }
+    .notice strong { color: var(--green); font-weight: 500; }
+
+    /* BIG DOWNLOAD BUTTON */
+    .dl-primary {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: var(--green-dark);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      text-decoration: none;
+      transition: background 0.15s, border-color 0.15s;
+      margin-bottom: 1rem;
+    }
+    .dl-primary:hover {
+      background: #1f4432;
+      border-color: var(--green-dim);
+    }
+    .dl-primary-icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(125, 232, 176, 0.1);
+      border-radius: 8px;
+      border: 0.5px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+    }
+    .dl-primary-meta { flex: 1; }
+    .dl-primary-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--green-dim);
+      margin-bottom: 3px;
+    }
+    .dl-primary-filename {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--green);
+      margin-bottom: 2px;
+    }
+    .dl-primary-info {
+      font-size: 12px;
+      color: var(--text3);
+    }
+    .dl-primary-arrow {
+      font-size: 22px;
+      color: var(--green-dim);
+      flex-shrink: 0;
+    }
+
+    /* STATS ROW */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text3);
+      margin-bottom: 3px;
+    }
+    .stat-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* FILE TABLE */
+    .section-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text3);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    .file-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+    .file-table thead tr {
+      border-bottom: 0.5px solid var(--border2);
+    }
+    .file-table th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text3);
+      font-weight: 500;
+      padding: 0 0 8px;
+      text-align: left;
+    }
+    .file-table th:nth-child(2),
+    .file-table th:nth-child(3) { text-align: center; }
+    .file-table th:last-child { text-align: right; }
+    .file-table tbody tr {
+      border-bottom: 0.5px solid var(--border);
+      transition: background 0.1s;
+    }
+    .file-table tbody tr:last-child { border-bottom: none; }
+    .file-table tbody tr:hover { background: rgba(125, 232, 176, 0.03); }
+    .file-table td {
+      padding: 11px 0;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .file-table td:nth-child(2),
+    .file-table td:nth-child(3) {
+      text-align: center;
+      color: var(--text3);
+      font-size: 12px;
+    }
+    .file-table td:last-child { text-align: right; }
+    .fname {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--text);
+    }
+    .badge-latest {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: rgba(125, 232, 176, 0.12);
+      color: var(--green);
+      border: 0.5px solid var(--border2);
+      margin-left: 6px;
+      vertical-align: middle;
+      font-family: var(--sans);
+    }
+    .dl-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--green-dim);
+      text-decoration: none;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 5px 11px;
+      background: var(--green-dark);
+      transition: all 0.15s;
+      white-space: nowrap;
+      font-family: var(--sans);
+    }
+    .dl-btn:hover {
+      background: #1f4432;
+      color: var(--green);
+      border-color: var(--green-dim);
+    }
+
+    /* CHECKSUM */
+    .checksum-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-bottom: 2rem;
+    }
+    .checksum-label {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text3);
+      white-space: nowrap;
+    }
+    .checksum-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .copy-btn {
+      font-size: 11px;
+      color: var(--green-dim);
+      cursor: pointer;
+      background: none;
+      border: 0.5px solid var(--border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-family: var(--sans);
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .copy-btn:hover {
+      color: var(--green);
+      border-color: var(--border2);
+    }
+
+    /* FOOTER LINKS */
+    .footer-links {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text2);
+      text-decoration: none;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 5px 11px;
+      transition: all 0.15s;
+    }
+    .footer-link:hover {
+      color: var(--green);
+      border-color: var(--border2);
+      background: var(--green-dark);
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 0.5px solid var(--border);
+      padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text3);
+    }
+    footer a { color: var(--text3); text-decoration: none; }
+    footer a:hover { color: var(--green); }
+
+    /* LANG SWITCH */
+    .lang-en, .lang-fr { display: none; }
+    body.lang-en .lang-en { display: block; }
+    body.lang-en .lang-fr { display: none; }
+    body.lang-fr .lang-fr { display: block; }
+    body.lang-fr .lang-en { display: none; }
+    .inline-lang { display: inline; }
+    body.lang-en .inline-fr { display: none; }
+    body.lang-fr .inline-en { display: none; }
+
+    @media (max-width: 600px) {
+      nav { padding: 0.875rem 1rem; }
+      .hero { padding: 2rem 1rem 1.5rem; }
+      .hero-title { font-size: 24px; }
+      .nav-links { gap: 1rem; }
+      .dl-primary { padding: 1rem; }
+      .dl-primary-filename { font-size: 12px; }
+    }
+  </style>
+</head>
+<body class="lang-en">
+
+<nav>
+  <a class="nav-logo" href="https://liaisonos.com">
+    <div class="nav-logo-icon">
+      <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="10" stroke="#7de8b0" stroke-width="1.5"/>
+        <path d="M9 14 L14 9 L19 14 L14 19 Z" fill="#7de8b0" opacity="0.7"/>
+        <circle cx="14" cy="14" r="2.5" fill="#7de8b0"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">LiaisonOS</span>
+  </a>
+  <div class="nav-links">
+    <a href="https://liaisonos.com" class="lang-en inline-lang">Home</a>
+    <a href="https://liaisonos.com" class="lang-fr inline-lang">Accueil</a>
+    <a href="https://va2ops.ca">VA2OPS</a>
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('fr')">FR</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="hero">
+
+    <!-- ENGLISH -->
+    <div class="lang-en">
+      <p class="hero-eyebrow">Downloads / ISO</p>
+      <h1 class="hero-title">Download <span>LiaisonOS</span></h1>
+      <p class="hero-sub">Debian 13 (Trixie) live and installable ISO · Ham radio emergency digital communications · Bilingual EN/FR · Created by Sylvain Deguire (VA2OPS)</p>
+
+      <div class="notice">
+        <strong>Continuous development notice —</strong> LiaisonOS uses an agile, continuous-release model. Each version is fully functional. <strong>Always boot and test from USB first</strong> before committing to a permanent install.
+      </div>
+    </div>
+
+    <!-- FRENCH -->
+    <div class="lang-fr">
+      <p class="hero-eyebrow">Téléchargements / ISO</p>
+      <h1 class="hero-title">Télécharger <span>LiaisonOS</span></h1>
+      <p class="hero-sub">ISO Debian 13 (Trixie) live et installable · Communications numériques d'urgence pour radioamateurs · Bilingue FR/EN · Créé par Sylvain Deguire (VA2OPS)</p>
+
+      <div class="notice">
+        <strong>Avis de développement continu —</strong> LiaisonOS utilise un modèle de publication agile. Chaque version est pleinement fonctionnelle. <strong>Démarrez toujours depuis USB d'abord</strong> avant une installation permanente.
+      </div>
+    </div>
+
+    <!-- DOWNLOAD BUTTON -->
+    <a class="dl-primary" href="https://releases.liaisonos.com/ISO/latest.iso">
+      <div class="dl-primary-icon">⬇</div>
+      <div class="dl-primary-meta">
+        <p class="dl-primary-label">
+          <span class="lang-en inline-lang">Latest release</span>
+          <span class="lang-fr inline-lang">Dernière version</span>
+        </p>
+        <p class="dl-primary-filename">liaisonos-debian13-v2.2.3.iso</p>
+        <p class="dl-primary-info">
+          4.7 GB &nbsp;·&nbsp;
+          <span class="lang-en inline-lang">Released April 25, 2026</span>
+          <span class="lang-fr inline-lang">Publiée le 25 avril 2026</span>
+        </p>
+      </div>
+      <span class="dl-primary-arrow">→</span>
+    </a>
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat-card">
+        <p class="stat-label">Version</p>
+        <p class="stat-val">2.2.3</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Base</p>
+        <p class="stat-val">Debian 13</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Architecture</p>
+        <p class="stat-val">x86_64</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">License</p>
+        <p class="stat-val">GPL v3</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">
+          <span class="lang-en inline-lang">Released</span>
+          <span class="lang-fr inline-lang">Publiée</span>
+        </p>
+        <p class="stat-val">2026-04-25</p>
+      </div>
+    </div>
+
+    <!-- FILE TABLE -->
+    <p class="section-label">
+      <span class="lang-en inline-lang">All files</span>
+      <span class="lang-fr inline-lang">Tous les fichiers</span>
+    </p>
+    <table class="file-table">
+      <thead>
+        <tr>
+          <th>
+            <span class="lang-en inline-lang">Filename</span>
+            <span class="lang-fr inline-lang">Fichier</span>
+          </th>
+          <th>
+            <span class="lang-en inline-lang">Size</span>
+            <span class="lang-fr inline-lang">Taille</span>
+          </th>
+          <th>
+            <span class="lang-en inline-lang">Date</span>
+            <span class="lang-fr inline-lang">Date</span>
+          </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <span class="fname">liaisonos-debian13-v2.2.3.iso</span>
+            <span class="badge-latest">latest</span>
+          </td>
+          <td>4.7 GB</td>
+          <td>2026-04-25</td>
+          <td>
+            <a class="dl-btn" href="https://releases.liaisonos.com/ISO/latest.iso">⬇
+              <span class="lang-en inline-lang">Download</span>
+              <span class="lang-fr inline-lang">Télécharger</span>
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="fname">README.md</span></td>
+          <td>32.9 kB</td>
+          <td>2026-04-25</td>
+          <td>
+            <a class="dl-btn" href="https://releases.liaisonos.com/ISO/README.md">⬇
+              <span class="lang-en inline-lang">Download</span>
+              <span class="lang-fr inline-lang">Télécharger</span>
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="fname">LISEZMOI.md</span></td>
+          <td>37.4 kB</td>
+          <td>2026-04-25</td>
+          <td>
+            <a class="dl-btn" href="https://releases.liaisonos.com/ISO/LISEZMOI.md">⬇
+              <span class="lang-en inline-lang">Download</span>
+              <span class="lang-fr inline-lang">Télécharger</span>
+            </a>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- CHECKSUM -->
+    <div class="checksum-row">
+      <span class="checksum-label">SHA256</span>
+      <span class="checksum-val" id="hashval">— run: sha256sum liaisonos-debian13-v2.2.3.iso —</span>
+      <button class="copy-btn" onclick="copyHash()">
+        <span class="lang-en inline-lang">Copy</span>
+        <span class="lang-fr inline-lang">Copier</span>
+      </button>
+    </div>
+
+    <!-- FOOTER LINKS -->
+    <div class="footer-links">
+      <a class="footer-link" href="https://liaisonos.com">🌐 liaisonos.com</a>
+      <a class="footer-link" href="https://va2ops.ca">📡 va2ops.ca</a>
+      <a class="footer-link" href="https://sourceforge.net/projects/liaisonos/">📦
+        <span class="lang-en inline-lang">SourceForge mirror</span>
+        <span class="lang-fr inline-lang">Miroir SourceForge</span>
+      </a>
+      <a class="footer-link" href="mailto:info@liaisonos.com">✉
+        <span class="lang-en inline-lang">Contact</span>
+        <span class="lang-fr inline-lang">Nous joindre</span>
+      </a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <p>LiaisonOS · Created by <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a> · Original concept by Gaston Gonzalez (KT7RUN) · <a href="https://liaisonos.com">liaisonos.com</a></p>
+</footer>
+
+<script>
+  function setLang(lang) {
+    document.body.className = 'lang-' + lang;
+    document.querySelectorAll('.lang-btn').forEach(function(btn) {
+      btn.classList.toggle('active', btn.textContent.toLowerCase() === lang);
+    });
+    localStorage.setItem('liaison-lang', lang);
+  }
+
+  function copyHash() {
+    var val = document.getElementById('hashval').textContent;
+    navigator.clipboard.writeText(val).then(function() {
+      var btn = document.querySelector('.copy-btn');
+      var orig = btn.innerHTML;
+      btn.textContent = '✓';
+      setTimeout(function() { btn.innerHTML = orig; }, 1500);
+    });
+  }
+
+  var saved = localStorage.getItem('liaison-lang');
+  if (saved) setLang(saved);
+</script>
+
+</body>
+</html>
