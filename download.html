@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiaisonOS — Download</title>
+  <meta name="description" content="Download LiaisonOS — Debian 13 live ISO for ham radio emergency digital communications.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'IBM Plex Sans', sans-serif; background: #0f1a13; color: #e8f5ee; min-height: 100vh; }
+
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem; border-bottom: 1px solid rgba(125,232,176,0.12);
+      position: sticky; top: 0; background: rgba(15,26,19,0.96);
+      backdrop-filter: blur(8px); z-index: 10;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #e8f5ee; }
+    .nav-logo-icon {
+      width: 32px; height: 32px; background: #1a3a2a; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(125,232,176,0.25);
+    }
+    .nav-logo-text { font-size: 15px; font-weight: 500; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { font-size: 13px; color: #9dbfad; text-decoration: none; }
+    .nav-links a:hover { color: #7de8b0; }
+    .lang-toggle { display: flex; gap: 4px; }
+    .lang-btn {
+      font-size: 11px; padding: 3px 8px; border-radius: 4px;
+      border: 1px solid rgba(125,232,176,0.12); background: none;
+      color: #6a9a7a; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .lang-btn.active { background: #1a3a2a; color: #7de8b0; border-color: rgba(125,232,176,0.25); }
+
+    .hero { max-width: 760px; margin: 0 auto; padding: 3rem 2rem 4rem; }
+
+    .hero-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #5ab887; margin-bottom: 0.75rem; }
+    .hero-title { font-size: 32px; font-weight: 500; margin-bottom: 0.5rem; line-height: 1.2; }
+    .hero-title span { color: #7de8b0; }
+    .hero-sub { font-size: 14px; color: #9dbfad; line-height: 1.6; margin-bottom: 2rem; }
+
+    .notice {
+      background: rgba(125,232,176,0.06); border: 1px solid rgba(125,232,176,0.2);
+      border-left: 3px solid #5ab887; border-radius: 6px;
+      padding: 0.875rem 1rem; font-size: 13px; color: #9dbfad;
+      margin-bottom: 2rem; line-height: 1.6;
+    }
+    .notice strong { color: #7de8b0; font-weight: 500; }
+
+    .whats-new {
+      background: rgba(125,232,176,0.04); border: 1px solid rgba(125,232,176,0.18);
+      border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 2rem;
+    }
+    .whats-new-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #5ab887; margin-bottom: 0.75rem; font-weight: 500; }
+    .whats-new ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .whats-new li { font-size: 13px; color: #9dbfad; padding-left: 1rem; position: relative; line-height: 1.5; }
+    .whats-new li::before { content: '→'; position: absolute; left: 0; color: #5ab887; }
+    .whats-new li strong { color: #e8f5ee; font-weight: 500; }
+
+    .dl-primary {
+      display: flex; align-items: center; gap: 16px;
+      background: #1a3a2a; border: 1px solid rgba(125,232,176,0.25);
+      border-radius: 10px; padding: 1.25rem 1.5rem; text-decoration: none;
+      margin-bottom: 1rem; transition: background 0.15s;
+    }
+    .dl-primary:hover { background: #1f4432; }
+    .dl-primary-icon {
+      width: 44px; height: 44px; background: rgba(125,232,176,0.1);
+      border-radius: 8px; border: 1px solid rgba(125,232,176,0.2);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 20px;
+    }
+    .dl-primary-meta { flex: 1; }
+    .dl-primary-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #5ab887; margin-bottom: 3px; }
+    .dl-primary-filename { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 500; color: #7de8b0; margin-bottom: 2px; }
+    .dl-primary-info { font-size: 12px; color: #6a9a7a; }
+    .dl-primary-arrow { font-size: 22px; color: #5ab887; flex-shrink: 0; }
+
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 2rem; }
+    .stat-card { background: #16231a; border: 1px solid rgba(125,232,176,0.1); border-radius: 6px; padding: 10px 12px; }
+    .stat-label { font-size: 11px; color: #6a9a7a; margin-bottom: 3px; }
+    .stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; color: #e8f5ee; }
+
+    .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #6a9a7a; margin-bottom: 8px; font-weight: 500; }
+
+    .file-table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; }
+    .file-table thead tr { border-bottom: 1px solid rgba(125,232,176,0.2); }
+    .file-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6a9a7a; font-weight: 500; padding: 0 0 8px; text-align: left; }
+    .file-table th:nth-child(2), .file-table th:nth-child(3) { text-align: center; }
+    .file-table th:last-child { text-align: right; }
+    .file-table tbody tr { border-bottom: 1px solid rgba(125,232,176,0.08); }
+    .file-table tbody tr:last-child { border-bottom: none; }
+    .file-table tbody tr:hover { background: rgba(125,232,176,0.03); }
+    .file-table td { padding: 11px 0; font-size: 13px; vertical-align: middle; }
+    .file-table td:nth-child(2), .file-table td:nth-child(3) { text-align: center; color: #6a9a7a; font-size: 12px; }
+    .file-table td:last-child { text-align: right; }
+    .fname { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #e8f5ee; }
+    .badge-latest {
+      display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px;
+      background: rgba(125,232,176,0.12); color: #7de8b0;
+      border: 1px solid rgba(125,232,176,0.25); margin-left: 6px; vertical-align: middle;
+    }
+    .dl-btn {
+      display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+      color: #5ab887; text-decoration: none; border: 1px solid rgba(125,232,176,0.22);
+      border-radius: 6px; padding: 5px 11px; background: #1a3a2a;
+      white-space: nowrap; font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .dl-btn:hover { background: #1f4432; color: #7de8b0; }
+
+    .checksum-row {
+      display: flex; align-items: center; gap: 10px;
+      background: #16231a; border: 1px solid rgba(125,232,176,0.1);
+      border-radius: 6px; padding: 10px 14px; margin-bottom: 2rem;
+    }
+    .checksum-label { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #6a9a7a; white-space: nowrap; }
+    .checksum-val { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9dbfad; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .copy-btn {
+      font-size: 11px; color: #5ab887; cursor: pointer; background: none;
+      border: 1px solid rgba(125,232,176,0.15); border-radius: 4px;
+      padding: 3px 8px; font-family: 'IBM Plex Sans', sans-serif; white-space: nowrap;
+    }
+    .copy-btn:hover { color: #7de8b0; }
+
+    .instructions { background: #16231a; border: 1px solid rgba(125,232,176,0.1); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+    .instructions h3 { font-size: 14px; font-weight: 500; color: #e8f5ee; margin-bottom: 1rem; }
+    .steps { display: flex; flex-direction: column; gap: 10px; }
+    .step { display: flex; gap: 12px; align-items: flex-start; }
+    .step-num {
+      width: 22px; height: 22px; border-radius: 50%; background: #1a3a2a;
+      border: 1px solid rgba(125,232,176,0.25); display: flex; align-items: center;
+      justify-content: center; font-size: 11px; font-weight: 500; color: #7de8b0;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .step-text { font-size: 13px; color: #9dbfad; line-height: 1.5; }
+    .step-text a { color: #5ab887; text-decoration: none; }
+    .step-text a:hover { color: #7de8b0; }
+    .step-text strong { color: #e8f5ee; font-weight: 500; }
+
+    .usb-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 0.75rem; margin-bottom: 2rem; }
+    .usb-card { background: #1e2f24; border: 1px solid rgba(125,232,176,0.1); border-radius: 6px; padding: 10px 12px; }
+    .usb-card-title { font-size: 12px; font-weight: 500; color: #e8f5ee; margin-bottom: 6px; }
+    .usb-card ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+    .usb-card li { font-size: 12px; color: #9dbfad; }
+    .usb-card a { color: #5ab887; text-decoration: none; }
+    .usb-card a:hover { color: #7de8b0; }
+
+    .footer-links { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 3rem; margin-top: 2rem; }
+    .footer-link {
+      display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+      color: #9dbfad; text-decoration: none; border: 1px solid rgba(125,232,176,0.12);
+      border-radius: 6px; padding: 5px 11px;
+    }
+    .footer-link:hover { color: #7de8b0; border-color: rgba(125,232,176,0.25); background: #1a3a2a; }
+
+    footer { border-top: 1px solid rgba(125,232,176,0.1); padding: 1.5rem 2rem; text-align: center; font-size: 12px; color: #6a9a7a; }
+    footer a { color: #6a9a7a; text-decoration: none; }
+    footer a:hover { color: #7de8b0; }
+
+    .lang-fr { display: none; }
+    
+    body.lang-fr .lang-fr { display: block; }
+    .il { display: inline; }
+    body.lang-en .il-fr { display: none; }
+    body.lang-fr .il-en { display: none; }
+
+    @media (max-width: 600px) {
+      nav { padding: 0.875rem 1rem; }
+      .hero { padding: 2rem 1rem 3rem; }
+      .hero-title { font-size: 24px; }
+      .dl-primary { padding: 1rem; }
+      .dl-primary-filename { font-size: 12px; }
+    }
+  </style>
+</head>
+<body class="lang-en">
+
+<nav>
+  <a class="nav-logo" href="https://liaisonos.com">
+    <div class="nav-logo-icon">
+      <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="10" stroke="#7de8b0" stroke-width="1.5"/>
+        <path d="M9 14 L14 9 L19 14 L14 19 Z" fill="#7de8b0" opacity="0.7"/>
+        <circle cx="14" cy="14" r="2.5" fill="#7de8b0"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">LiaisonOS</span>
+  </a>
+  <div class="nav-links">
+    <a href="https://liaisonos.com"><span class="il il-en">Home</span><span class="il il-fr">Accueil</span></a>
+    <a href="https://va2ops.ca">VA2OPS</a>
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('fr')">FR</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="hero">
+
+    <div class="lang-en">
+      <p class="hero-eyebrow">Downloads / ISO</p>
+      <h1 class="hero-title">Download <span>LiaisonOS</span></h1>
+      <p class="hero-sub">Debian 13 (Trixie) live and installable ISO &middot; Ham radio emergency digital communications &middot; Bilingual EN/FR &middot; By Sylvain Deguire (VA2OPS)</p>
+      <div class="notice">
+        <strong>Continuous development notice —</strong> LiaisonOS uses an agile, continuous-release model. Each version is fully functional. <strong>Always boot and test from USB first</strong> before committing to a permanent install.
+      </div>
+      <div class="whats-new">
+        <p class="whats-new-title">What's new in v2.2.4</p>
+        <ul>
+          <li><strong>QtTermTCP — BBS Directory</strong> — Filterable list of known BBS stations with auto QSY on select</li>
+          <li><strong>Auto-add unknown stations</strong> — Connecting to an unknown callsign offers to add it with current rig frequency pre-filled</li>
+          <li><strong>Station editor</strong> — Add, edit, and delete BBS stations directly from the directory dialog</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="lang-fr">
+      <p class="hero-eyebrow">Téléchargements / ISO</p>
+      <h1 class="hero-title">Télécharger <span>LiaisonOS</span></h1>
+      <p class="hero-sub">ISO Debian 13 (Trixie) live et installable &middot; Communications numériques d'urgence pour radioamateurs &middot; Bilingue FR/EN &middot; Par Sylvain Deguire (VA2OPS)</p>
+      <div class="notice">
+        <strong>Avis de développement continu —</strong> LiaisonOS utilise un modèle de publication agile. Chaque version est pleinement fonctionnelle. <strong>Démarrez toujours depuis USB d'abord</strong> avant une installation permanente.
+      </div>
+      <div class="whats-new">
+        <p class="whats-new-title">Nouveautés de la v2.2.4</p>
+        <ul>
+          <li><strong>QtTermTCP — Répertoire BBS</strong> — Liste filtrable des stations BBS connues avec QSY automatique à la sélection</li>
+          <li><strong>Ajout automatique</strong> — La connexion à un indicatif inconnu propose de l'ajouter avec la fréquence pré-remplie</li>
+          <li><strong>Éditeur de stations</strong> — Ajouter, modifier et supprimer des stations BBS depuis le répertoire</li>
+        </ul>
+      </div>
+    </div>
+
+    <a class="dl-primary" href="https://releases.liaisonos.com/ISO/liaisonos-debian13-v2.2.4.iso">
+      <div class="dl-primary-icon">⬇</div>
+      <div class="dl-primary-meta">
+        <p class="dl-primary-label"><span class="il il-en">Latest release</span><span class="il il-fr">Dernière version</span></p>
+        <p class="dl-primary-filename">liaisonos-debian13-v2.2.4.iso</p>
+        <p class="dl-primary-info">~4.7 GB &nbsp;&middot;&nbsp; <span class="il il-en">Released</span><span class="il il-fr">Publiée</span> <span id="rel-date"></span></p>
+      </div>
+      <span class="dl-primary-arrow">→</span>
+    </a>
+
+    <div class="stats">
+      <div class="stat-card"><p class="stat-label">Version</p><p class="stat-val">2.2.4</p></div>
+      <div class="stat-card"><p class="stat-label">Base</p><p class="stat-val">Debian 13</p></div>
+      <div class="stat-card"><p class="stat-label">Architecture</p><p class="stat-val">x86_64</p></div>
+      <div class="stat-card"><p class="stat-label">License</p><p class="stat-val">GPL v3</p></div>
+      <div class="stat-card">
+        <p class="stat-label"><span class="il il-en">Released</span><span class="il il-fr">Publiée</span></p>
+        <p class="stat-val" id="stat-date"></p>
+      </div>
+    </div>
+
+    <p class="section-label"><span class="il il-en">All files</span><span class="il il-fr">Tous les fichiers</span></p>
+    <table class="file-table">
+      <thead>
+        <tr>
+          <th><span class="il il-en">Filename</span><span class="il il-fr">Fichier</span></th>
+          <th><span class="il il-en">Size</span><span class="il il-fr">Taille</span></th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="fname">liaisonos-debian13-v2.2.4.iso</span><span class="badge-latest">latest</span></td>
+          <td>~4.7 GB</td>
+          <td id="tbl-date"></td>
+          <td><a class="dl-btn" href="https://releases.liaisonos.com/ISO/liaisonos-debian13-v2.2.4.iso">⬇ <span class="il il-en">Download</span><span class="il il-fr">Télécharger</span></a></td>
+        </tr>
+        <tr>
+          <td><span class="fname">README.md</span></td>
+          <td>~33 kB</td>
+          <td id="tbl-date2"></td>
+          <td><a class="dl-btn" href="https://releases.liaisonos.com/ISO/README.md">⬇ <span class="il il-en">Download</span><span class="il il-fr">Télécharger</span></a></td>
+        </tr>
+        <tr>
+          <td><span class="fname">LISEZMOI.md</span></td>
+          <td>~37 kB</td>
+          <td id="tbl-date3"></td>
+          <td><a class="dl-btn" href="https://releases.liaisonos.com/ISO/LISEZMOI.md">⬇ <span class="il il-en">Download</span><span class="il il-fr">Télécharger</span></a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="checksum-row">
+      <span class="checksum-label">SHA256</span>
+      <span class="checksum-val" id="hashval">— run: sha256sum liaisonos-debian13-v2.2.4.iso —</span>
+      <button class="copy-btn" onclick="copyHash()"><span class="il il-en">Copy</span><span class="il il-fr">Copier</span></button>
+    </div>
+
+    <div class="lang-en">
+      <div class="instructions">
+        <h3>How to install</h3>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Download</strong> the ISO file using the button above.</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Verify</strong> the SHA256 checksum to confirm the file was not corrupted during download.</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Write</strong> to a USB drive using <a href="https://etcher.balena.io" target="_blank" rel="noopener">balenaEtcher</a> (recommended for beginners) or <a href="https://ventoy.net" target="_blank" rel="noopener">Ventoy</a> (multi-boot capable).</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Boot</strong> from USB — press F12, F2, or ESC at startup to access your boot menu. On Mac, hold Option.</div></div>
+          <div class="step"><div class="step-num">5</div><div class="step-text"><strong>Select your language</strong> (EN/FR) at first boot, configure your callsign and radio, and you are on the air.</div></div>
+          <div class="step"><div class="step-num">6</div><div class="step-text"><strong>Optional:</strong> Install permanently to your hard drive using Calamares (installer icon on the desktop).</div></div>
+        </div>
+      </div>
+      <p class="section-label">USB boot creator tools</p>
+      <div class="usb-grid">
+        <div class="usb-card">
+          <p class="usb-card-title">Windows</p>
+          <ul>
+            <li><a href="https://rufus.ie" target="_blank" rel="noopener">Rufus</a> — fast, reliable, open-source</li>
+            <li><a href="https://etcher.balena.io" target="_blank" rel="noopener">balenaEtcher</a> — simple 3-step</li>
+            <li><a href="https://ventoy.net" target="_blank" rel="noopener">Ventoy</a> — multi-boot capable</li>
+          </ul>
+        </div>
+        <div class="usb-card">
+          <p class="usb-card-title">macOS</p>
+          <ul>
+            <li><a href="https://etcher.balena.io" target="_blank" rel="noopener">balenaEtcher</a> — best for Mac</li>
+            <li><a href="https://unetbootin.github.io" target="_blank" rel="noopener">UNetbootin</a> — cross-platform</li>
+            <li>dd (Terminal) — built-in</li>
+          </ul>
+        </div>
+        <div class="usb-card">
+          <p class="usb-card-title">Linux</p>
+          <ul>
+            <li><a href="https://etcher.balena.io" target="_blank" rel="noopener">balenaEtcher</a> — AppImage</li>
+            <li><a href="https://ventoy.net" target="_blank" rel="noopener">Ventoy</a> — copy ISOs to USB</li>
+            <li>GNOME Disks — pre-installed</li>
+            <li>dd — classic, fast</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="lang-fr">
+      <div class="instructions">
+        <h3>Comment installer</h3>
+        <div class="steps">
+          <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Téléchargez</strong> le fichier ISO avec le bouton ci-dessus.</div></div>
+          <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Vérifiez</strong> la somme SHA256 pour confirmer que le fichier n'a pas été corrompu.</div></div>
+          <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Écrivez</strong> sur une clé USB avec <a href="https://etcher.balena.io" target="_blank" rel="noopener">balenaEtcher</a> (recommandé) ou <a href="https://ventoy.net" target="_blank" rel="noopener">Ventoy</a> (multi-démarrage).</div></div>
+          <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Démarrez</strong> depuis USB — appuyez sur F12, F2 ou Échap au démarrage. Sur Mac, maintenez Option.</div></div>
+          <div class="step"><div class="step-num">5</div><div class="step-text"><strong>Sélectionnez votre langue</strong> (FR/EN) au premier démarrage, configurez votre indicatif et votre radio.</div></div>
+          <div class="step"><div class="step-num">6</div><div class="step-text"><strong>Optionnel :</strong> Installez de façon permanente via Calamares (icône sur le bureau).</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a class="footer-link" href="https://liaisonos.com">🌐 liaisonos.com</a>
+      <a class="footer-link" href="https://va2ops.ca">📡 va2ops.ca</a>
+      <a class="footer-link" href="https://github.com/liaisonos/debian/" target="_blank" rel="noopener">🐙 GitHub</a>
+      <a class="footer-link" href="https://sourceforge.net/projects/liaisonos/" target="_blank" rel="noopener">📦 <span class="il il-en">SourceForge mirror</span><span class="il il-fr">Miroir SourceForge</span></a>
+      <a class="footer-link" href="mailto:info@liaisonos.com">✉ <span class="il il-en">Contact</span><span class="il il-fr">Nous joindre</span></a>
+      <a class="footer-link" href="https://buymeacoffee.com/liaisonos" target="_blank" rel="noopener">☕ <span class="il il-en">Buy me a coffee</span><span class="il il-fr">Offrez-moi un café</span></a>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <p>LiaisonOS &middot; <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a> &middot; Original concept by Gaston Gonzalez (KT7RUN) &middot; Quebec, Canada &middot; 73</p>
+</footer>
+
+<script>
+  function setLang(lang) {
+    document.body.className = 'lang-' + lang;
+    document.querySelectorAll('.lang-btn').forEach(function(b) {
+      b.classList.toggle('active', b.textContent.toLowerCase() === lang);
+    });
+    localStorage.setItem('liaison-lang', lang);
+  }
+
+  function copyHash() {
+    var val = document.getElementById('hashval').textContent;
+    navigator.clipboard.writeText(val).then(function() {
+      var btn = document.querySelector('.copy-btn');
+      var orig = btn.innerHTML;
+      btn.textContent = '✓';
+      setTimeout(function() { btn.innerHTML = orig; }, 1500);
+    });
+  }
+
+  var saved = localStorage.getItem('liaison-lang');
+  if (saved) setLang(saved);
+
+  var today = new Date().toISOString().split('T')[0];
+  ['rel-date','stat-date','tbl-date','tbl-date2','tbl-date3'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = today;
+  });
+</script>
+
+</body>
+</html>
