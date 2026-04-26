@@ -28,12 +28,8 @@
     .nav-links a { font-size: 13px; color: #9dbfad; text-decoration: none; }
     .nav-links a:hover { color: #7de8b0; }
     .lang-toggle { display: flex; gap: 4px; }
-    .lang-btn {
-      font-size: 11px; padding: 3px 8px; border-radius: 4px;
-      border: 1px solid rgba(125,232,176,0.12); background: none;
-      color: #6a9a7a; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif;
-    }
-    .lang-btn.active { background: #1a3a2a; color: #7de8b0; border-color: rgba(125,232,176,0.25); }
+    .lang-link { font-size: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid rgba(125,232,176,0.22); background: #1a3a2a; color: #7de8b0 !important; text-decoration: none; }
+    .lang-link:hover { background: #1f4432; }
 
     .hero { max-width: 760px; margin: 0 auto; padding: 3rem 2rem 4rem; }
 
@@ -192,10 +188,7 @@
   <div class="nav-links">
     <a href="https://liaisonos.com"><span class="il il-en">Home</span><span class="il il-fr">Accueil</span></a>
     <a href="https://va2ops.ca">VA2OPS</a>
-    <div class="lang-toggle">
-      <button class="lang-btn active" onclick="setLang('en')">EN</button>
-      <button class="lang-btn" onclick="setLang('fr')">FR</button>
-    </div>
+    <a href="download_fr.html" class="lang-link">🇫🇷 FR</a>
   </div>
 </nav>
 
@@ -364,7 +357,7 @@
 </main>
 
 <footer>
-  <p>LiaisonOS &middot; <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a> &middot; Original concept by Gaston Gonzalez (KT7RUN) &middot; Quebec, Canada &middot; 73</p>
+  <p>LiaisonOS &middot; <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a> &middot; Quebec, Canada &middot; 73</p>
 </footer>
 
 <script>
