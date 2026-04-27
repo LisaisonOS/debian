@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiaisonOS — Ham Radio Emergency Communications</title>
+  <meta name="description" content="LiaisonOS — Bilingual Debian 13 Linux distribution purpose-built for amateur radio emergency digital communications.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'IBM Plex Sans', sans-serif; background: #0f1a13; color: #e8f5ee; min-height: 100vh; }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 2rem; border-bottom: 1px solid rgba(125,232,176,0.12);
+      position: sticky; top: 0; background: rgba(15,26,19,0.96);
+      backdrop-filter: blur(8px); z-index: 10;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #e8f5ee; }
+    .nav-logo-icon {
+      width: 32px; height: 32px; background: #1a3a2a; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(125,232,176,0.25);
+    }
+    .nav-logo-text { font-size: 15px; font-weight: 500; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { font-size: 13px; color: #9dbfad; text-decoration: none; transition: color 0.15s; }
+    .nav-links a:hover, .nav-links a.active { color: #7de8b0; }
+    .lang-toggle { display: flex; gap: 4px; }
+    .lang-link {
+      font-size: 12px; padding: 3px 10px; border-radius: 4px;
+      border: 1px solid rgba(125,232,176,0.22); background: #1a3a2a;
+      color: #7de8b0; text-decoration: none; font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .lang-link:hover { background: #1f4432; color: #7de8b0; }
+
+    /* HERO */
+    .hero-section {
+      max-width: 760px; margin: 0 auto; padding: 4rem 2rem 3rem;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+      color: #5ab887; margin-bottom: 1rem;
+    }
+    .hero-title { font-size: 42px; font-weight: 500; line-height: 1.15; margin-bottom: 0.5rem; }
+    .hero-title span { color: #7de8b0; }
+    .hero-tagline {
+      font-size: 14px; color: #6a9a7a; font-style: italic;
+      letter-spacing: 0.05em; margin-bottom: 1.5rem;
+    }
+    .hero-sub { font-size: 15px; color: #9dbfad; line-height: 1.7; margin-bottom: 2.5rem; max-width: 580px; margin-left: auto; margin-right: auto; }
+    .hero-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #1a3a2a; color: #7de8b0; text-decoration: none;
+      border: 1px solid rgba(125,232,176,0.35); border-radius: 8px;
+      padding: 10px 20px; font-size: 14px; font-weight: 500;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #1f4432; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: none; color: #9dbfad; text-decoration: none;
+      border: 1px solid rgba(125,232,176,0.15); border-radius: 8px;
+      padding: 10px 20px; font-size: 14px;
+      transition: all 0.15s;
+    }
+    .btn-secondary:hover { color: #7de8b0; border-color: rgba(125,232,176,0.3); background: #1a3a2a; }
+
+    /* BADGES ROW */
+    .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+      background: #16231a; border: 1px solid rgba(125,232,176,0.15);
+      border-radius: 4px; padding: 4px 10px; color: #9dbfad;
+    }
+    .badge span { color: #7de8b0; font-weight: 500; }
+
+    /* CONTENT */
+    .content { max-width: 760px; margin: 0 auto; padding: 0 2rem 4rem; }
+
+    .section { margin-bottom: 3rem; }
+    .section-title {
+      font-size: 18px; font-weight: 500; color: #e8f5ee;
+      margin-bottom: 1rem; padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(125,232,176,0.12);
+    }
+    .section-title span { color: #7de8b0; }
+    p { font-size: 14px; color: #9dbfad; line-height: 1.7; margin-bottom: 0.75rem; }
+    p:last-child { margin-bottom: 0; }
+    a { color: #5ab887; text-decoration: none; }
+    a:hover { color: #7de8b0; }
+    strong { color: #e8f5ee; font-weight: 500; }
+
+    /* FEATURE GRID */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 8px; margin-top: 1rem;
+    }
+    .feature-card {
+      background: #16231a; border: 1px solid rgba(125,232,176,0.1);
+      border-radius: 8px; padding: 12px 14px;
+    }
+    .feature-card-icon { font-size: 16px; margin-bottom: 6px; }
+    .feature-card-title { font-size: 13px; font-weight: 500; color: #e8f5ee; margin-bottom: 3px; }
+    .feature-card-desc { font-size: 12px; color: #6a9a7a; line-height: 1.5; }
+
+    /* MODES TABLE */
+    .modes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 6px; margin-top: 1rem;
+    }
+    .mode-group { background: #16231a; border: 1px solid rgba(125,232,176,0.1); border-radius: 8px; padding: 12px 14px; }
+    .mode-group-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #5ab887; margin-bottom: 6px; font-weight: 500; }
+    .mode-group ul { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+    .mode-group li { font-size: 12px; color: #9dbfad; }
+
+    /* RADIOS TABLE */
+    .radio-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 13px; }
+    .radio-table thead tr { border-bottom: 1px solid rgba(125,232,176,0.2); }
+    .radio-table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6a9a7a; font-weight: 500; padding: 0 8px 8px 0; text-align: left; }
+    .radio-table tbody tr { border-bottom: 1px solid rgba(125,232,176,0.07); }
+    .radio-table tbody tr:last-child { border-bottom: none; }
+    .radio-table td { padding: 7px 8px 7px 0; color: #9dbfad; vertical-align: top; }
+    .radio-table td:first-child { color: #e8f5ee; font-weight: 500; width: 80px; }
+    .radio-table td:nth-child(2) { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+
+    /* CARDS */
+    .card {
+      background: #16231a; border: 1px solid rgba(125,232,176,0.1);
+      border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 8px;
+    }
+    .card h3 { font-size: 14px; font-weight: 500; color: #e8f5ee; margin-bottom: 0.5rem; }
+    .card p { font-size: 13px; }
+
+    /* WHATS NEW */
+    .new-badge {
+      display: inline-block; font-size: 10px; padding: 2px 7px;
+      border-radius: 20px; background: rgba(125,232,176,0.12);
+      color: #7de8b0; border: 1px solid rgba(125,232,176,0.25);
+      margin-left: 8px; vertical-align: middle; font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    /* ACKS */
+    .ack-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 0.75rem; }
+    .ack-list li { font-size: 13px; color: #9dbfad; padding-left: 1rem; position: relative; }
+    .ack-list li::before { content: '·'; position: absolute; left: 0; color: #5ab887; font-size: 18px; line-height: 1; top: -1px; }
+
+    /* LINKS ROW */
+    .links-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+    .link-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; color: #9dbfad; text-decoration: none;
+      border: 1px solid rgba(125,232,176,0.12); border-radius: 6px;
+      padding: 6px 12px; transition: all 0.15s;
+    }
+    .link-btn:hover { color: #7de8b0; border-color: rgba(125,232,176,0.3); background: #1a3a2a; }
+
+    /* DIVIDER */
+    hr { border: none; border-top: 1px solid rgba(125,232,176,0.1); margin: 2rem 0; }
+
+    /* FOOTER */
+    footer { border-top: 1px solid rgba(125,232,176,0.1); padding: 1.5rem 2rem; text-align: center; font-size: 12px; color: #6a9a7a; }
+    footer a { color: #6a9a7a; }
+    footer a:hover { color: #7de8b0; }
+
+    /* LANG */
+    .lang-fr { display: none; }
+    body.lang-fr .lang-fr { display: block; }
+    body.lang-fr .lang-en { display: none; }
+    .il { display: inline; }
+    body.lang-en .il-fr { display: none; }
+    body.lang-fr .il-en { display: none; }
+
+    @media (max-width: 600px) {
+      nav { padding: 0.875rem 1rem; }
+      .hero-section { padding: 2.5rem 1rem 2rem; }
+      .hero-title { font-size: 30px; }
+      .content { padding: 0 1rem 3rem; }
+      .nav-links { gap: 0.75rem; }
+    }
+  </style>
+</head>
+<body class="lang-en">
+
+<nav>
+  <a class="nav-logo" href="https://liaisonos.com">
+    <div class="nav-logo-icon">
+      <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="10" stroke="#7de8b0" stroke-width="1.5"/>
+        <path d="M9 14 L14 9 L19 14 L14 19 Z" fill="#7de8b0" opacity="0.7"/>
+        <circle cx="14" cy="14" r="2.5" fill="#7de8b0"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">LiaisonOS</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html" class="active"><span class="il il-en">Home</span><span class="il il-fr">Accueil</span></a>
+    <a href="download.html"><span class="il il-en">Download</span><span class="il il-fr">Télécharger</span></a>
+    <a href="https://va2ops.ca">VA2OPS</a>
+    <a href="index_fr.html" class="lang-link">🇫🇷 FR</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero-section">
+
+  <div class="lang-en">
+    <p class="hero-eyebrow">Ham Radio · Emergency Communications · Debian Linux</p>
+    <h1 class="hero-title"><span>Liaison</span>OS</h1>
+    <p class="hero-tagline">Explore. Connect. Respond.</p>
+    <p class="hero-sub">A bilingual (FR/EN) Debian 13 Linux distribution purpose-built for amateur radio emergency digital communications. Boot from USB, connect your radio, and you are on the air.</p>
+  </div>
+
+  <div class="lang-fr">
+    <p class="hero-eyebrow">Radioamateurisme · Communications d'urgence · Linux Debian</p>
+    <h1 class="hero-title"><span>Liaison</span>OS</h1>
+    <p class="hero-tagline">Explorer. Connecter. Répondre.</p>
+    <p class="hero-sub">Une distribution Linux Debian 13 bilingue (FR/EN) conçue pour les communications numériques d'urgence en radioamateurisme. Démarrez depuis USB, connectez votre radio, et vous êtes sur les ondes.</p>
+  </div>
+
+  <div class="hero-actions">
+    <a class="btn-primary" href="download.html">⬇ <span class="il il-en">Download ISO</span><span class="il il-fr">Télécharger l'ISO</span></a>
+    <a class="btn-secondary" href="https://github.com/liaisonos/debian/" target="_blank" rel="noopener">🐙 GitHub</a>
+    <a class="btn-secondary" href="https://va2ops.ca">📡 VA2OPS</a>
+    <a class="btn-secondary" href="mailto:info@liaisonos.com">✉ <span class="il il-en">Contact</span><span class="il il-fr">Nous joindre</span></a>
+  </div>
+
+  <div class="badges">
+    <span class="badge"><span>v2.2.4</span></span>
+    <span class="badge">Debian <span>13</span></span>
+    <span class="badge">x86_64</span>
+    <span class="badge">Ms-PL <span>License</span></span>
+    <span class="badge"><span>EN</span> / FR</span>
+  </div>
+
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- WHAT IT IS -->
+  <div class="section">
+    <div class="lang-en">
+      <h2 class="section-title">What it is</h2>
+      <p>LiaisonOS is a ready-to-deploy Linux operating system that comes pre-loaded with everything a ham radio operator needs for digital emergency communications. Boot from a USB drive and you're operational — no installation required.</p>
+      <p>Built on <strong>Debian 13 (Trixie)</strong> for longer support cycles, no trademark restrictions on ISO redistribution, and direct access to Debian's extensive package repositories.</p>
+      <p>Two deployment modes: <strong>USB Live Boot</strong> (boot any PC from a USB drive with full persistence) or <strong>permanent installation</strong> via Calamares.</p>
+    </div>
+    <div class="lang-fr">
+      <h2 class="section-title">Ce que c'est</h2>
+      <p>LiaisonOS est un système d'exploitation Linux prêt à déployer, pré-chargé avec tout ce dont un radioamateur a besoin pour les communications numériques d'urgence. Démarrez depuis une clé USB et vous êtes opérationnel.</p>
+      <p>Basé sur <strong>Debian 13 (Trixie)</strong> pour des cycles de support plus longs, sans restrictions de marque sur la redistribution d'images ISO, et avec accès direct aux dépôts de paquets Debian.</p>
+      <p>Deux modes de déploiement : <strong>démarrage USB live</strong> (avec persistance complète) ou <strong>installation permanente</strong> via Calamares.</p>
+    </div>
+  </div>
+
+  <!-- KEY FEATURES -->
+  <div class="section">
+    <div class="lang-en">
+      <h2 class="section-title">Key features</h2>
+    </div>
+    <div class="lang-fr">
+      <h2 class="section-title">Fonctionnalités principales</h2>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-card-icon">🌐</div>
+        <div class="feature-card-title"><span class="il il-en">Bilingual</span><span class="il il-fr">Bilingue</span></div>
+        <div class="feature-card-desc"><span class="il il-en">French and English with language selection at first boot</span><span class="il il-fr">Français et anglais avec sélection à la langue au premier démarrage</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">📧</div>
+        <div class="feature-card-title">Pat-Winlink</div>
+        <div class="feature-card-desc"><span class="il il-en">Email over RF with VARA HF/FM and ARDOP</span><span class="il il-fr">Courriel par radio avec VARA HF/FM et ARDOP</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">💬</div>
+        <div class="feature-card-title">JS8Call / VarAC</div>
+        <div class="feature-card-desc"><span class="il il-en">HF keyboard messaging and chat</span><span class="il il-fr">Messagerie clavier HF et clavardage</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">📡</div>
+        <div class="feature-card-title">APRS (YAAC)</div>
+        <div class="feature-card-desc"><span class="il il-en">Position tracking with SAR plugin for field evidence marking</span><span class="il il-fr">Suivi de position avec plugin SAR pour marquage de preuves terrain</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">📟</div>
+        <div class="feature-card-title">BBS / Packet</div>
+        <div class="feature-card-desc">LinBPQ server, QtTermTCP, Paracon</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">🔭</div>
+        <div class="feature-card-title">WSJT-X / fldigi</div>
+        <div class="feature-card-desc">FT8, FT4, PSK, RTTY, CW <span class="il il-en">and more</span><span class="il il-fr">et plus</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">🏕️</div>
+        <div class="feature-card-title">POTA/SOTA <span class="il il-en">Logger</span><span class="il il-fr">Carnet</span></div>
+        <div class="feature-card-desc"><span class="il il-en">Built-in field logger with voice keyer and ADIF export</span><span class="il il-fr">Carnet de terrain avec manipulateur vocal et export ADIF</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">🗺️</div>
+        <div class="feature-card-title"><span class="il il-en">Offline Maps</span><span class="il il-fr">Cartes hors-ligne</span></div>
+        <div class="feature-card-desc"><span class="il il-en">Navit navigation + MBTile server for offline mapping</span><span class="il il-fr">Navigation Navit + serveur MBTile pour cartographie hors-ligne</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">💾</div>
+        <div class="feature-card-title">USB <span class="il il-en">Persistence</span><span class="il il-fr">Persistance</span></div>
+        <div class="feature-card-desc"><span class="il il-en">Complete environment saved and restored across reboots</span><span class="il il-fr">Environnement complet sauvegardé et restauré entre les redémarrages</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">🖥️</div>
+        <div class="feature-card-title"><span class="il il-en">Web Dashboard</span><span class="il il-fr">Tableau de bord</span></div>
+        <div class="feature-card-desc"><span class="il il-en">16 one-click operational modes</span><span class="il il-fr">16 modes opérationnels en un clic</span></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">🔌</div>
+        <div class="feature-card-title">24+ <span class="il il-en">Radios</span><span class="il il-fr">Radios</span></div>
+        <div class="feature-card-desc">Icom, Yaesu, Kenwood, Xiegu, Elecraft, QRP Labs</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">📖</div>
+        <div class="feature-card-title"><span class="il il-en">Offline Reference</span><span class="il il-fr">Référence hors-ligne</span></div>
+        <div class="feature-card-desc">Kiwix + Wikipedia ZIM <span class="il il-en">files</span><span class="il il-fr">fichiers</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHATS NEW -->
+  <div class="section">
+    <div class="lang-en">
+      <h2 class="section-title">What's new <span class="new-badge">v2.2.4</span></h2>
+      <div class="card">
+        <h3>QtTermTCP — BBS Directory</h3>
+        <p>Filterable list of known BBS stations (TPRFN network and others). Filters automatically by current band, VARA bandwidth setting, and UTC operating hours. QSY on select via rigctld or FLRig. Auto-add unknown stations with current rig frequency pre-filled. Station editor for add/edit/delete directly from the directory dialog.</p>
+      </div>
+      <div class="card" style="margin-top: 8px;">
+        <h3>Previous — v2.2.3</h3>
+        <p><strong>Bug fix</strong> — A script error in v2.2.2 corrupted several overlay files (wrapper-rigctld.sh, wrapper-gpsd.sh, et-audio, et-log, radio audio profiles), breaking rigctld, gpsd and et-supervisor on startup. All affected files have been restored.</p>
+      </div>
+      <div class="card" style="margin-top: 8px;">
+        <h3>Previous — v2.2.2</h3>
+        <p><strong>Pat Winlink updated to v1.0.0.</strong> QtTermTCP BBS session cache — sessions cached locally by callsign using SQLite for offline browsing.</p>
+      </div>
+    </div>
+    <div class="lang-fr">
+      <h2 class="section-title">Nouveautés <span class="new-badge">v2.2.4</span></h2>
+      <div class="card">
+        <h3>QtTermTCP — Répertoire BBS</h3>
+        <p>Liste filtrable des stations BBS connues (réseau TPRFN et autres). Filtre automatiquement par bande courante, paramètre de largeur de bande VARA et heures d'opération UTC. QSY automatique à la sélection. Ajout automatique des stations inconnues avec fréquence pré-remplie. Éditeur de stations pour ajouter, modifier et supprimer.</p>
+      </div>
+      <div class="card" style="margin-top: 8px;">
+        <h3>Précédente — v2.2.3</h3>
+        <p><strong>Correction de bogue</strong> — Une erreur de script dans la v2.2.2 avait corrompu plusieurs fichiers overlay, brisant rigctld, gpsd et et-supervisor au démarrage. Tous les fichiers affectés ont été restaurés.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- VARA -->
+  <div class="section">
+    <div class="lang-en">
+      <h2 class="section-title">VARA HF/FM &amp; VarAC</h2>
+      <div class="card">
+        <h3>VARA HF/FM — Pre-installed</h3>
+        <p>VARA HF and VARA FM modems are pre-installed with written permission from José Alberto Nieto Ros (EA5HVK). Users must purchase their own license from <a href="https://rosmodem.wordpress.com" target="_blank" rel="noopener">rosmodem.wordpress.com</a> to unlock full speed. The pre-installed version runs in demo mode until registered.</p>
+      </div>
+      <div class="card" style="margin-top: 8px;">
+        <h3>VarAC — Pre-installed</h3>
+        <p>VarAC is pre-installed and ready to use at first boot. It runs through Wine alongside VARA HF/FM for a complete digital communications setup out of the box. License presented on first launch (Limited Distribution Agreement with 4Z1AC).</p>
+      </div>
+    </div>
+    <div class="lang-fr">
+      <h2 class="section-title">VARA HF/FM &amp; VarAC</h2>
+      <div class="card">
+        <h3>VARA HF/FM — Pré-installé</h3>
+        <p>VARA HF et VARA FM sont pré-installés avec la permission écrite de José Alberto Nieto Ros (EA5HVK). Les utilisateurs doivent acheter leur propre licence sur <a href="https://rosmodem.wordpress.com" target="_blank" rel="noopener">rosmodem.wordpress.com</a> pour débloquer la pleine vitesse.</p>
+      </div>
+      <div class="card" style="margin-top: 8px;">
+        <h3>VarAC — Pré-installé</h3>
+        <p>VarAC est pré-installé et prêt à l'emploi au premier démarrage via Wine. Licence présentée au premier lancement (accord de distribution limitée avec 4Z1AC).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPERATIONAL MODES -->
+  <div class="section">
+    <div class="lang-en"><h2 class="section-title">16 operational modes</h2></div>
+    <div class="lang-fr"><h2 class="section-title">16 modes opérationnels</h2></div>
+    <div class="modes-grid">
+      <div class="mode-group">
+        <p class="mode-group-title">Winlink</p>
+        <ul>
+          <li>VARA HF</li><li>VARA FM</li><li>Packet</li><li>ARDOP</li>
+        </ul>
+      </div>
+      <div class="mode-group">
+        <p class="mode-group-title">Chat</p>
+        <ul>
+          <li>JS8Call</li><li>VarAC</li><li>Fldigi</li><li>Chattervox</li><li>Chattervox BT</li>
+        </ul>
+      </div>
+      <div class="mode-group">
+        <p class="mode-group-title">BBS</p>
+        <ul>
+          <li>Paracon</li><li>QtTermTCP</li><li>BBS Server (LinBPQ)</li>
+        </ul>
+      </div>
+      <div class="mode-group">
+        <p class="mode-group-title">APRS</p>
+        <ul>
+          <li>YAAC Client</li><li>YAAC BT</li><li>APRS Digipeater</li>
+        </ul>
+      </div>
+      <div class="mode-group">
+        <p class="mode-group-title"><span class="il il-en">Other</span><span class="il il-fr">Autre</span></p>
+        <ul>
+          <li>FT8/FT4 (WSJT-X)</li><li>Direwolf KISS TNC</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPORTED RADIOS -->
+  <div class="section">
+    <div class="lang-en"><h2 class="section-title">Supported radios</h2></div>
+    <div class="lang-fr"><h2 class="section-title">Radios supportées</h2></div>
+    <table class="radio-table">
+      <thead><tr><th><span class="il il-en">Vendor</span><span class="il il-fr">Fabricant</span></th><th><span class="il il-en">Models</span><span class="il il-fr">Modèles</span></th><th><span class="il il-en">Interface</span><span class="il il-fr">Interface</span></th></tr></thead>
+      <tbody>
+        <tr><td>Icom</td><td>IC-705, IC-7100, IC-7200, IC-7300, IC-9700</td><td>USB CAT + audio</td></tr>
+        <tr><td>Yaesu</td><td>FT-710, FT-891, FT-991A, FTX-1</td><td>USB CAT + audio</td></tr>
+        <tr><td>Xiegu</td><td>X6100, G90</td><td>USB / DigiRig</td></tr>
+        <tr><td>Elecraft</td><td>KX-2</td><td>DigiRig Mobile</td></tr>
+        <tr><td>QRP Labs</td><td>QMX</td><td>USB CAT</td></tr>
+        <tr><td>BG2FX</td><td>FX-4CR</td><td>USB CAT + audio</td></tr>
+        <tr><td>Kenwood</td><td>TH-D74, TH-D75</td><td>Bluetooth KISS TNC</td></tr>
+        <tr><td>BTECH</td><td>UV-PRO</td><td>Bluetooth KISS TNC</td></tr>
+        <tr><td>VGC</td><td>VR-N76</td><td>Bluetooth KISS TNC</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr>
+
+  <!-- WHY DEBIAN -->
+  <div class="section">
+    <div class="lang-en">
+      <h2 class="section-title">Why Debian?</h2>
+      <p>No trademark restrictions — we can freely distribute pre-built ISO images. Longer, more stable release cycles (3–5 years LTS). Direct access to Debian's extensive package repositories including the <strong>Debian Ham Radio Pure Blend</strong> — JS8Call, WSJTX, fldigi, Direwolf all properly packaged. Community-driven without corporate overhead.</p>
+    </div>
+    <div class="lang-fr">
+      <h2 class="section-title">Pourquoi Debian ?</h2>
+      <p>Aucune restriction de marque — nous pouvons distribuer librement des images ISO pré-construites. Cycles de publication plus longs et stables (3 à 5 ans LTS). Accès direct aux dépôts Debian incluant le <strong>Debian Ham Radio Pure Blend</strong> — JS8Call, WSJTX, fldigi, Direwolf tous correctement empaquetés. Communauté sans contraintes corporatives.</p>
+    </div>
+  </div>
+
+  <!-- HAM SPIRIT -->
+  <div class="section">
+    <div class="lang-en">
+      <h2 class="section-title">The ham radio spirit</h2>
+      <p>This project isn't a closed product. It's a vanilla starting point — a reusable, customizable foundation that radio clubs, regional groups, emergency organizations, and individual operators can fork and adapt to their own needs. <strong>Share the knowledge, build the community.</strong></p>
+    </div>
+    <div class="lang-fr">
+      <h2 class="section-title">L'esprit radioamateur</h2>
+      <p>Ce projet n'est pas un produit fermé. C'est un point de départ — une base réutilisable et personnalisable que les clubs radio, groupes régionaux, organisations d'urgence et opérateurs individuels peuvent forker et adapter à leurs besoins. <strong>Partagez les connaissances, bâtissez la communauté.</strong></p>
+    </div>
+  </div>
+
+  <!-- CONTRIBUTING -->
+  <div class="section">
+    <div class="lang-en"><h2 class="section-title">Contributing</h2><p>Open-source project. Contributions, bug reports, and feature requests are welcome.</p></div>
+    <div class="lang-fr"><h2 class="section-title">Contribuer</h2><p>Projet open-source. Les contributions, rapports de bogues et demandes de fonctionnalités sont les bienvenus.</p></div>
+    <div class="links-row">
+      <a class="link-btn" href="download.html">⬇ <span class="il il-en">Download ISO</span><span class="il il-fr">Télécharger l'ISO</span></a>
+      <a class="link-btn" href="https://github.com/liaisonos/debian/" target="_blank" rel="noopener">🐙 GitHub</a>
+      <a class="link-btn" href="https://va2ops.ca">🌐 va2ops.ca</a>
+      <a class="link-btn" href="mailto:info@liaisonos.com">✉ info@liaisonos.com</a>
+      <a class="link-btn" href="https://buymeacoffee.com/liaisonos" target="_blank" rel="noopener">☕ <span class="il il-en">Buy me a coffee</span><span class="il il-fr">Offrez-moi un café</span></a>
+    </div>
+  </div>
+
+  <!-- ACKNOWLEDGMENTS -->
+  <div class="section">
+    <div class="lang-en"><h2 class="section-title">Acknowledgments</h2></div>
+    <div class="lang-fr"><h2 class="section-title">Remerciements</h2></div>
+    <ul class="ack-list">
+      <li><strong>The Debian Ham Radio Team</strong> — Maintaining excellent ham radio packages</li>
+      <li><strong>José Alberto Nieto Ros (EA5HVK)</strong> — VARA HF/FM modem development</li>
+      <li><strong>Irad Deutsch (4Z1AC) and the VarAC Development Team</strong> — VarAC chat application</li>
+      <li><strong>Andrew Pavlin (KA2DDO)</strong> — YAAC (Yet Another APRS Client)</li>
+      <li><strong>Martin Hebnes Pedersen (LA5NTA)</strong> — Pat Winlink</li>
+      <li><strong>John Wiseman (G8BPQ)</strong> — LinBPQ / QtTermTCP</li>
+      <li><strong>Martin F N Cooper</strong> — Paracon</li>
+      <li><strong>David Freese (W1HKJ)</strong> — fldigi</li>
+      <li><strong>Joe Taylor (K1JT) and the WSJT Development Team</strong> — WSJT-X</li>
+      <li><strong>Gaston Gonzalez (KT7RUN)</strong> — Original EmComm Tools OS Community concept</li>
+    </ul>
+  </div>
+
+  <!-- LICENSE -->
+  <div class="section">
+    <div class="lang-en">
+      <h2 class="section-title">License</h2>
+      <p>This project is a derivative work of EmComm Tools OS Community, licensed under the <strong>Microsoft Public License (Ms-PL)</strong>. In compliance with Ms-PL Section 3(C), we retain all copyright, patent, trademark, and attribution notices from the original software. The switch from Ubuntu to Debian eliminates the Ubuntu trademark restrictions that previously prevented distribution of pre-built images.</p>
+    </div>
+    <div class="lang-fr">
+      <h2 class="section-title">Licence</h2>
+      <p>Ce projet est une œuvre dérivée d'EmComm Tools OS Community, licenciée sous la <strong>Microsoft Public License (Ms-PL)</strong>. Conformément à la section 3(C) de la Ms-PL, nous conservons tous les avis de droit d'auteur, de brevet, de marque et d'attribution du logiciel original.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>LiaisonOS &middot; <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a> &middot; Quebec, Canada &middot; 73</p>
+</footer>
+
+<script>
+  function setLang(lang) {
+    document.body.className = 'lang-' + lang;
+    document.querySelectorAll('.lang-btn').forEach(function(b) {
+      b.classList.toggle('active', b.textContent.toLowerCase() === lang);
+    });
+    localStorage.setItem('liaison-lang', lang);
+  }
+  var saved = localStorage.getItem('liaison-lang');
+  if (saved) setLang(saved);
+</script>
+
+</body>
+</html>
