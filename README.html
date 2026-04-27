@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiaisonOS — Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: #0f1a13; color: #e8f5ee; min-height: 100vh; line-height: 1.7; }
+nav { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; border-bottom: 1px solid rgba(125,232,176,0.12); position: sticky; top: 0; background: rgba(15,26,19,0.96); backdrop-filter: blur(8px); z-index: 10; }
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #e8f5ee; }
+.nav-logo-icon { width: 32px; height: 32px; background: #1a3a2a; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(125,232,176,0.25); }
+.nav-logo-text { font-size: 15px; font-weight: 500; }
+.nav-links { display: flex; align-items: center; gap: 1.5rem; }
+.nav-links a { font-size: 13px; color: #9dbfad; text-decoration: none; }
+.nav-links a:hover { color: #7de8b0; }
+.lang-link { font-size: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid rgba(125,232,176,0.22); background: #1a3a2a; color: #7de8b0 !important; text-decoration: none; }
+.lang-link:hover { background: #1f4432; }
+.content { max-width: 860px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+h1 { font-size: 28px; font-weight: 500; color: #7de8b0; margin-bottom: 0.5rem; margin-top: 0; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(125,232,176,0.2); }
+h2 { font-size: 18px; font-weight: 500; color: #e8f5ee; margin-top: 2.5rem; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(125,232,176,0.1); }
+h3 { font-size: 14px; font-weight: 500; color: #7de8b0; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+h4 { font-size: 13px; font-weight: 500; color: #9dbfad; margin-top: 1rem; margin-bottom: 0.4rem; }
+p { font-size: 14px; color: #9dbfad; margin-bottom: 0.75rem; }
+a { color: #5ab887; text-decoration: none; }
+a:hover { color: #7de8b0; }
+strong { color: #e8f5ee; font-weight: 500; }
+em { color: #6a9a7a; font-style: italic; }
+ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+li { font-size: 14px; color: #9dbfad; margin-bottom: 4px; }
+li strong { color: #e8f5ee; }
+code { font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #1a3a2a; color: #7de8b0; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(125,232,176,0.15); }
+pre { background: #16231a; border: 1px solid rgba(125,232,176,0.15); border-radius: 8px; padding: 1rem 1.25rem; overflow-x: auto; margin-bottom: 1rem; }
+pre code { background: none; border: none; padding: 0; font-size: 12px; color: #9dbfad; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 13px; }
+thead tr { border-bottom: 1px solid rgba(125,232,176,0.25); }
+th { text-align: left; padding: 8px 12px 8px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6a9a7a; font-weight: 500; }
+tbody tr { border-bottom: 1px solid rgba(125,232,176,0.07); }
+tbody tr:last-child { border-bottom: none; }
+td { padding: 8px 12px 8px 0; color: #9dbfad; vertical-align: top; }
+td:first-child { color: #e8f5ee; font-weight: 500; }
+td code { font-size: 11px; }
+blockquote { border-left: 3px solid #5ab887; background: rgba(125,232,176,0.06); border-radius: 0 6px 6px 0; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+blockquote p { margin-bottom: 0; color: #9dbfad; font-size: 13px; }
+hr { border: none; border-top: 1px solid rgba(125,232,176,0.12); margin: 2rem 0; }
+footer { border-top: 1px solid rgba(125,232,176,0.1); padding: 1.5rem 2rem; text-align: center; font-size: 12px; color: #6a9a7a; }
+footer a { color: #6a9a7a; }
+footer a:hover { color: #7de8b0; }
+@media (max-width: 600px) { nav { padding: 0.875rem 1rem; } .content { padding: 2rem 1rem 3rem; } h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="https://liaisonos.com">
+    <div class="nav-logo-icon">
+      <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="10" stroke="#7de8b0" stroke-width="1.5"/>
+        <path d="M9 14 L14 9 L19 14 L14 19 Z" fill="#7de8b0" opacity="0.7"/>
+        <circle cx="14" cy="14" r="2.5" fill="#7de8b0"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">LiaisonOS</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="download.html">Download</a>
+    <a href="https://va2ops.ca">VA2OPS</a>
+    <a href="LISEZMOI.html" class="lang-link">🇫🇷 FR</a>
+  </div>
+</nav>
+<div class="content">
+<h1>LiaisonOS — Emergency Communications for Ham Radio</h1>
+<p><em>Version 2.2.3 — April 2026</em>
+<em>Debian 13 (Trixie) Live/Installable ISO</em></p>
+<blockquote>
+<p>⚠️ <strong>Continuous Development Notice</strong></p>
+<p>LiaisonOS is developed using an <strong>agile, continuous-release</strong> model — meaning updates are published frequently as features and fixes are completed, rather than waiting for a large "final" release. Each version is fully functional, but recent changes may occasionally introduce unexpected issues in other areas.</p>
+<p><strong>Always boot and test from USB first.</strong> A permanent installation gives you the best experience, but installing software that has not been tested for your specific use case and hardware may result in functionality issues. Testing from USB before committing to a permanent install is always the recommended approach.</p>
+<p><strong>Français?</strong> Voir <a href="LISEZMOI.md">LISEZMOI.md</a> pour la version française.</p>
+</blockquote>
+<hr />
+<h2>Coming in Version 2.2.4</h2>
+<h3>QtTermTCP — BBS Directory</h3>
+<ul>
+<li><strong>BBS Directory</strong> — Filterable list of known BBS stations (TPRFN network and others). Filters automatically by current band (detected from rigctld/FLRig), VARA bandwidth setting, and UTC operating hours</li>
+<li><strong>QSY on select</strong> — Selecting a station QSYs the rig automatically via rigctld or FLRig</li>
+<li><strong>Auto-add unknown stations</strong> — When connecting to a callsign not in the directory, QtTermTCP offers to add it with the current rig frequency pre-filled</li>
+<li><strong>Station editor</strong> — Add, edit, and delete BBS stations directly from the directory dialog. Supports multiple bands per station and multiple bandwidths (500/2300)</li>
+</ul>
+<hr />
+<h2>What's New in Version 2.2.3</h2>
+<h3>Bug Fix — Overlay Scripts</h3>
+<ul>
+<li><strong>Fixed</strong> — A script error in v2.2.2 corrupted several overlay files (<code>wrapper-rigctld.sh</code>, <code>wrapper-gpsd.sh</code>, <code>et-audio</code>, <code>et-log</code>, radio audio profiles, and others), breaking rigctld, gpsd and et-supervisor on startup. All affected files have been restored</li>
+</ul>
+<hr />
+<h2>What's New in Version 2.2.2</h2>
+<h3>Pat Winlink — Updated to v1.0.0</h3>
+<ul>
+<li><strong>Updated to v1.0.0</strong> — Latest upstream release of the Pat Winlink client</li>
+</ul>
+<h3>QtTermTCP — BBS Session Cache</h3>
+<ul>
+<li><strong>BBS session cache</strong> — Sessions with packet BBS nodes are now cached locally by callsign using SQLite. Bulletin lists and message bodies are stored automatically during your session</li>
+<li><strong>Offline browsing</strong> — Browse cached bulletins and read messages anytime via the BBS Cache dialog, even without a radio connection</li>
+</ul>
+<hr />
+<h2>What is LiaisonOS?</h2>
+<p>LiaisonOS is a <strong>Debian 13 (Trixie) live and installable Linux ISO</strong> purpose-built for ham radio emergency digital communications. It includes a complete suite of pre-configured digital mode software, offline maps, and a web-based dashboard for one-click operation. Two deployment modes: <strong>USB Live Run</strong> (boot any PC from a USB drive) or <strong>HDD install</strong> (permanent installation with Calamares). Bilingual English/French interface throughout. Created by Sylvain Deguire (VA2OPS), original concept by Gaston Gonzalez (KT7RUN).</p>
+<hr />
+<h2>Pre-Installed: Wine, VARA &amp; VarAC</h2>
+<p><strong>LiaisonOS is the only ham radio Linux distribution that ships VARA and VarAC ready to run.</strong> No manual Wine configuration, no downloading installers, no troubleshooting DLL issues.</p>
+<ul>
+<li><strong>Wine 32-bit</strong> — Pre-configured <code>.wine32</code> prefix, ready to launch Windows ham radio applications</li>
+<li><strong>VARA HF &amp; VARA FM</strong> — High-performance modems pre-installed (included with permission from EA5HVK)</li>
+<li><strong>VarAC</strong> — HF chat client for VARA, pre-installed (Limited Distribution Agreement with 4Z1AC — license presented on first launch)</li>
+<li><strong>Complete vs Lite ISO</strong> — The build system offers both: the Complete ISO includes Wine/VARA/VarAC, the Lite ISO omits them for a smaller download</li>
+<li><strong>Zero configuration</strong> — VARA and VarAC launch from the Dashboard like any native Linux application</li>
+</ul>
+<hr />
+<h2>Bundled Software</h2>
+<h3>Radio Control</h3>
+<ul>
+<li><strong>Hamlib / rigctld</strong> — CAT control with udev auto-detection for 24+ radios</li>
+<li><strong>Direwolf</strong> — Software TNC (AX.25 packet modem)</li>
+<li><strong>Flrig</strong> — Rig control GUI</li>
+</ul>
+<h3>Winlink Email</h3>
+<ul>
+<li><strong>Pat</strong> — Winlink client (custom LiaisonOS build)</li>
+<li><strong>ARDOP modem</strong> — HF Winlink transport</li>
+<li><strong>VARA HF / VARA FM</strong> — High-performance Winlink modems (via Wine)</li>
+</ul>
+<h3>HF Chat</h3>
+<ul>
+<li><strong>VarAC</strong> — HF chat client over VARA modem (via Wine)</li>
+<li><strong>Chattervox</strong> — Signed AX.25 text chat (built from source, LiaisonOS fork)</li>
+</ul>
+<h3>APRS</h3>
+<ul>
+<li><strong>YAAC</strong> — APRS client with mapping</li>
+</ul>
+<h3>BBS (Bulletin Board System)</h3>
+<ul>
+<li><strong>LinBPQ</strong> — Packet BBS server with web admin interface</li>
+<li><strong>QtTermTCP</strong> — BBS terminal client</li>
+<li><strong>Paracon</strong> — BBS / Telnet terminal client</li>
+</ul>
+<h3>Digital Modes</h3>
+<ul>
+<li><strong>WSJT-X</strong> — FT8, FT4, and other weak-signal modes</li>
+<li><strong>JS8Call</strong> — HF keyboard-to-keyboard messaging</li>
+<li><strong>JS8Spotter</strong> — JS8Call activity monitor</li>
+<li><strong>Fldigi / Flmsg / Flamp / Flwrap</strong> — Multi-mode digital suite (PSK, RTTY, CW, NBEMS)</li>
+</ul>
+<h3>Repeater Directory</h3>
+<ul>
+<li><strong>et-repeater</strong> — Offline repeater browser with RepeaterBook CSV import, distance filtering, favorites, and one-click radio programming via rigctld</li>
+</ul>
+<h3>Field Logging</h3>
+<ul>
+<li><strong>et-logger</strong> — POTA/SOTA field logger with auto-QSY, callsign lookup (US/CA), nearest parks, map view, ADIF export, touch-friendly UI</li>
+</ul>
+<h3>Mapping &amp; Navigation</h3>
+<ul>
+<li><strong>Navit</strong> — Offline GPS turn-by-turn navigation with OpenStreetMap</li>
+<li><strong>MBTile server</strong> — Local map tile server for offline mapping</li>
+<li><strong>OpenStreetMap tiles</strong> — Pre-loadable offline map data</li>
+</ul>
+<h3>Offline Reference</h3>
+<ul>
+<li><strong>Kiwix</strong> — Offline Wikipedia / encyclopedia reader</li>
+<li><strong>ZIM files</strong> — Downloadable offline content packages</li>
+</ul>
+<h3>HF Propagation</h3>
+<ul>
+<li><strong>ET-Predict</strong> — HF propagation prediction with VOACAP engine and interactive offline maps, by KT7RUN</li>
+</ul>
+<h3>General Applications</h3>
+<ul>
+<li><strong>QGIS</strong> — Geographic Information System</li>
+<li><strong>Thunderbird</strong> — Email client</li>
+<li><strong>Firefox ESR</strong> — Web browser</li>
+<li><strong>Audacity</strong> — Audio editor</li>
+<li><strong>GnuPG</strong> — Encryption and signing</li>
+</ul>
+<h3>System</h3>
+<ul>
+<li><strong>Calamares</strong> — Graphical installer (live USB to HDD)</li>
+<li><strong>Auto-scaling</strong> — Automatic UI scaling for 7" to 10" screens</li>
+</ul>
+<hr />
+<h2>Operational Modes</h2>
+<p>The Dashboard provides 16 one-click operational modes:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Mode</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Winlink</td>
+<td>Winlink (VARA HF)</td>
+<td>Email over VARA HF modem</td>
+</tr>
+<tr>
+<td>Winlink</td>
+<td>Winlink (VARA FM)</td>
+<td>Email over VARA FM modem</td>
+</tr>
+<tr>
+<td>Winlink</td>
+<td>Winlink (Packet)</td>
+<td>Email over AX.25 packet radio</td>
+</tr>
+<tr>
+<td>Winlink</td>
+<td>Winlink (ARDOP)</td>
+<td>Email over ARDOP modem</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>JS8Call</td>
+<td>HF keyboard messaging</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>VarAC</td>
+<td>HF chat via VARA modem (Wine)</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>Fldigi</td>
+<td>Multi-mode digital (SSB/CW/PSK/RTTY)</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>Chattervox</td>
+<td>Signed packet text chat</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>Chattervox (BT)</td>
+<td>Signed chat via Bluetooth TNC</td>
+</tr>
+<tr>
+<td>BBS</td>
+<td>BBS Client (Paracon)</td>
+<td>Connect to packet/Telnet BBS</td>
+</tr>
+<tr>
+<td>BBS</td>
+<td>BBS Client (QtTermTCP)</td>
+<td>Connect to packet BBS</td>
+</tr>
+<tr>
+<td>BBS</td>
+<td>BBS Server</td>
+<td>LinBPQ server with web interface</td>
+</tr>
+<tr>
+<td>APRS</td>
+<td>APRS Client (YAAC)</td>
+<td>Position tracking &amp; messaging</td>
+</tr>
+<tr>
+<td>APRS</td>
+<td>APRS Client (BT)</td>
+<td>APRS via Bluetooth TNC</td>
+</tr>
+<tr>
+<td>APRS</td>
+<td>APRS Digipeater</td>
+<td>Fill-in digipeater with position beacon</td>
+</tr>
+<tr>
+<td>Other</td>
+<td>FT8/FT4 (WSJT-X)</td>
+<td>Weak signal digital modes</td>
+</tr>
+<tr>
+<td>Other</td>
+<td>Direwolf KISS TNC</td>
+<td>Network TNC on TCP 8001</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Web Dashboard &amp; Supervisor</h2>
+<ul>
+<li><strong>One-click mode launch</strong> from an integrated web dashboard</li>
+<li><strong>Real-time status</strong>: process health, audio devices, CAT control, GPS, Bluetooth TNC</li>
+<li><strong>Automatic prechecks</strong>: callsign, audio devices, radio connection verified before launch</li>
+<li><strong>Modem selection</strong>: BBS modes prompt for modem type (1200/9600/300 baud, VARA HF, VARA FM)</li>
+<li><strong>Single supervisor daemon</strong> (<code>et-supervisor</code>) replaces 12 individual systemd services</li>
+<li><strong>Crash recovery</strong> with automatic retry (handles PulseAudio timing on USB Live Boot)</li>
+<li><strong>Clean shutdown</strong>: processes stopped in reverse order on mode switch</li>
+<li><strong>Bilingual EN/FR</strong> interface based on language preference</li>
+</ul>
+<hr />
+<h2>Persistence System</h2>
+<p>When running from USB, the persistence system saves and restores your complete environment:</p>
+<ul>
+<li><strong>User files</strong>: ~/Documents, ~/Downloads (rsync incremental sync)</li>
+<li><strong>Application configs</strong>: Pat Winlink, JS8Call, WSJT-X, Fldigi, VarAC, YAAC, Navit, Direwolf, Chattervox, Repeater Directory</li>
+<li><strong>Browser data</strong>: Firefox profile, Thunderbird (full profile compressed)</li>
+<li><strong>System settings</strong>: WiFi networks, Bluetooth pairings, active radio selection, VarAC license</li>
+<li><strong>Save &amp; menu</strong>: Save &amp; Reboot / Save &amp; Shutdown / Save &amp; Suspend with progress bar</li>
+<li><strong>Hardware restore</strong>: WiFi and Bluetooth configs restorable to HDD installs via <code>et-restore-hw</code></li>
+</ul>
+<hr />
+<h2>Offline Capabilities</h2>
+<p>LiaisonOS is designed to operate with no internet connection:</p>
+<ul>
+<li><strong>Navit</strong> — Offline GPS navigation with OpenStreetMap data</li>
+<li><strong>Kiwix</strong> — Offline Wikipedia and encyclopedia reader</li>
+<li><strong>MBTile server</strong> — Local map tile server for offline mapping</li>
+<li><strong>Repeater Directory</strong> — Offline repeater browser (import CSV once, use offline forever)</li>
+<li><strong>Offline patch system</strong> — USB-based updates with backup and rollback</li>
+<li><strong>ET-Predict</strong> — HF propagation prediction with VOACAP and offline maps (no internet needed)</li>
+</ul>
+<hr />
+<h2>Supported Radios</h2>
+<p>LiaisonOS includes pre-configured radio profiles with udev auto-detection, rigctld integration, and documented setup notes for each model.</p>
+<h3>USB Direct (built-in USB serial)</h3>
+<table>
+<thead>
+<tr>
+<th>Vendor</th>
+<th>Model</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BG2FX</td>
+<td>FX-4CR</td>
+<td>USB CAT + audio</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-705</td>
+<td>USB CAT + audio</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-7100</td>
+<td>USB CAT + audio</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-7200</td>
+<td>USB CAT + audio</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-7300</td>
+<td>USB CAT + audio, CP210x dual-port</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-9700</td>
+<td>USB CAT + audio, CP210x dual-port, VHF/UHF</td>
+</tr>
+<tr>
+<td>QRP Labs</td>
+<td>QMX</td>
+<td>USB CAT</td>
+</tr>
+<tr>
+<td>Xiegu</td>
+<td>X6100</td>
+<td>USB CAT + audio</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-710</td>
+<td>USB CAT + audio, CP2105 dual-port (best effort)</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-891</td>
+<td>Via DigiRig DR-891 interface</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-991A</td>
+<td>USB CAT + audio, CP2105 dual-port</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FTX-1</td>
+<td>USB audio + PTT only (no CAT — Yaesu has not published spec)</td>
+</tr>
+</tbody>
+</table>
+<h3>Via DigiRig Interface</h3>
+<p>These radios require an external <a href="https://digirig.net/">DigiRig</a> or DigiRig Lite sound card interface for audio and PTT.</p>
+<table>
+<thead>
+<tr>
+<th>Vendor</th>
+<th>Model</th>
+<th>Interface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Elecraft</td>
+<td>KX-2</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Lab599</td>
+<td>TX-500MP</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Xiegu</td>
+<td>G90</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-818ND</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-857D</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-897D</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>—</td>
+<td>(Any radio)</td>
+<td>DigiRig Mobile (no CAT)</td>
+</tr>
+<tr>
+<td>—</td>
+<td>(Any radio)</td>
+<td>DigiRig Lite</td>
+</tr>
+</tbody>
+</table>
+<h3>Bluetooth TNC (KISS over Bluetooth)</h3>
+<p>These radios have a built-in hardware TNC and connect via Bluetooth serial (rfcomm). No sound card or Direwolf needed.</p>
+<table>
+<thead>
+<tr>
+<th>Vendor</th>
+<th>Model</th>
+<th>Modes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BTECH</td>
+<td>UV-PRO</td>
+<td>YAAC, Chattervox</td>
+</tr>
+<tr>
+<td>Kenwood</td>
+<td>TH-D74</td>
+<td>YAAC, Chattervox</td>
+</tr>
+<tr>
+<td>Kenwood</td>
+<td>TH-D75</td>
+<td>YAAC, Chattervox</td>
+</tr>
+<tr>
+<td>VGC</td>
+<td>VR-N76</td>
+<td>YAAC, Chattervox</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Persistence (introduced in 1.5.2)</h2>
+<p>When you boot LiaisonOS from a USB drive, any changes you make — radio configurations, callsign settings, Winlink credentials, custom scripts, desktop preferences — are normally <strong>lost when you shut down</strong>. You start fresh every time.</p>
+<p><strong>Persistence changes that.</strong> Your entire user environment is saved to a dedicated partition on the USB drive (EMCOMM-DATA). The next time you boot, everything is exactly as you left it: your radio profiles, your Pat Winlink mailbox, your JS8Call settings, your bookmarks — everything.</p>
+<h3>Three Ways to Use Persistence</h3>
+<p><strong>1. USB Live Boot (Primary Use Case)</strong></p>
+<p>Boot any PC from your USB drive and pick up right where you left off. Configure your station once, then carry it in your pocket. Plug it into any computer — your complete EmComm station is ready in minutes.</p>
+<p><strong>2. Backup Your Permanent Installation</strong></p>
+<p>Even if you run LiaisonOS installed on a dedicated PC, you can export your entire configuration to a USB drive. If your main system fails during an emergency, boot from the USB on any available computer — your settings, credentials, and radio profiles are all there.</p>
+<p><strong>3. Migrate Between Devices</strong></p>
+<p>Setting up a new laptop or replacing a damaged Toughpad? Instead of reconfiguring everything from scratch, export your persistence data from the old device and import it on the new one. Your complete station configuration moves with you — callsign, radio profiles, Winlink setup, digital mode settings, everything transfers in one step.</p>
+<h3>Why This Matters for Emergency Communications</h3>
+<p>In a real emergency, you don't have time to reconfigure software. Persistence means your USB drive becomes a <strong>complete, portable EmComm station</strong> that works on any available hardware. Lose your laptop? Borrow any PC, plug in your USB, and you're back on the air with your full configuration.</p>
+<hr />
+<h2>Important: Choosing the Right Installation Method</h2>
+<p>Before proceeding, understand when to use USB boot versus permanent installation.</p>
+<h3>Permanent Installation (Recommended for Operations)</h3>
+<p><strong>A dedicated PC or laptop with LiaisonOS installed on the internal drive is always the best solution for serious emergency communications work.</strong></p>
+<ul>
+<li><strong>Maximum reliability</strong> — No USB drive to fail, lose, or forget</li>
+<li><strong>Full performance</strong> — Native disk speed, no USB bottleneck</li>
+<li><strong>Persistence built-in</strong> — All configurations saved automatically</li>
+<li><strong>Ready when needed</strong> — Power on and operate immediately</li>
+<li><strong>Professional deployments</strong> — Field hospitals, EOCs, shelters</li>
+</ul>
+<p><strong>Use permanent installation when:</strong>
+- Operating a fixed EmComm station
+- Running 24/7 BBS or gateway services
+- Supporting critical emergency operations
+- Maximum reliability is essential</p>
+<h3>USB Boot with Ventoy (Recommended for Testing &amp; Backup)</h3>
+<p><strong>USB boot is ideal for testing, training, demonstrations, and as a backup deployment option.</strong></p>
+<ul>
+<li><strong>Rapid testing</strong> — Try new ISO builds without touching your main system</li>
+<li><strong>Portability</strong> — Carry LiaisonOS in your pocket</li>
+<li><strong>Multi-boot</strong> — Keep multiple ISO versions on one drive</li>
+<li><strong>Emergency backup</strong> — Boot any available PC in a crisis</li>
+<li><strong>Training</strong> — Let students practice without permanent changes</li>
+</ul>
+<p><strong>Use USB boot when:</strong>
+- Testing new ISO releases before deployment
+- Training new operators
+- Demonstrating LiaisonOS at events
+- Backup option when primary system fails
+- Temporarily converting any PC to an EmComm station</p>
+<blockquote>
+<p><strong>USB Speed Matters:</strong> Use a USB 3.x drive for Live Boot. USB 2.0 drives cause noticeably slower boot times, application launches, and persistence save/restore operations. A quality USB 3.0+ drive on a USB 3.0 port makes a significant difference in overall responsiveness.</p>
+</blockquote>
+<hr />
+<h2>Standard USB Boot (Quick Method)</h2>
+<p>The simplest way to create a bootable USB is to write the ISO directly to a drive. This is the recommended method for most users who just need to boot or install LiaisonOS.</p>
+<p>The only software you need is a USB boot creator. Here are the most reliable options by platform:</p>
+<h3>Windows</h3>
+<ul>
+<li><strong>Rufus</strong> — Fast, reliable, open-source. The gold standard for Windows. <a href="https://rufus.ie">rufus.ie</a></li>
+<li><strong>balenaEtcher</strong> — Simple 3-step process, validates writes, cross-platform. <a href="https://etcher.balena.io">etcher.balena.io</a></li>
+<li><strong>Ventoy</strong> — Multi-boot capable, put multiple ISOs on one USB. <a href="https://ventoy.net">ventoy.net</a></li>
+</ul>
+<h3>macOS</h3>
+<ul>
+<li><strong>balenaEtcher</strong> — Best choice for Mac, simple, reliable, native app. <a href="https://etcher.balena.io">etcher.balena.io</a></li>
+<li><strong>UNetbootin</strong> — Cross-platform, works well for Linux ISOs. <a href="https://unetbootin.github.io">unetbootin.github.io</a></li>
+<li><strong>dd (Terminal)</strong> — Built-in, powerful but requires care. <code>sudo dd if=image.iso of=/dev/diskN bs=4M</code></li>
+</ul>
+<h3>Linux</h3>
+<ul>
+<li><strong>balenaEtcher</strong> — Same simple interface as other platforms. AppImage available.</li>
+<li><strong>Ventoy</strong> — Install once, then just copy ISO files to USB. <a href="https://ventoy.net">ventoy.net</a></li>
+<li><strong>GNOME Disks</strong> — Built into most GNOME desktops, "Restore Disk Image" feature. Pre-installed.</li>
+<li><strong>dd</strong> — Classic Unix tool, fast and reliable. <code>sudo dd if=image.iso of=/dev/sdX bs=4M status=progress</code></li>
+</ul>
+<h3>Recommendation</h3>
+<p><strong>For beginners:</strong> <strong>balenaEtcher</strong> — Works on all platforms, impossible to accidentally overwrite your hard drive, validates the write.</p>
+<p><strong>For advanced users:</strong> <strong>Ventoy</strong> — Install it once on your USB drive, then simply copy ISO files to it. You can have LiaisonOS, a Windows installer, and system rescue tools all on one USB. See the detailed Ventoy guide below.</p>
+<hr />
+<h2>Why Ventoy? The Recommended USB Strategy</h2>
+<p>Traditional USB boot methods (dd, Rufus, balenaEtcher) write the ISO directly to the drive, which has significant limitations.</p>
+<p><strong>Traditional vs Ventoy:</strong>
+- One ISO per drive → Multiple ISOs on same drive
+- Must reflash entire drive for updates → Just copy/delete ISO files
+- All drive space used for boot → Dedicated data partition available
+- Data lost with each reflash → Data partition survives ISO updates
+- Complex process each time → Simple file copy operation</p>
+<h3>The Ventoy Advantage</h3>
+<p><strong>Ventoy transforms your USB drive into a boot manager</strong> that can launch any ISO file simply by copying it to the drive. This is revolutionary for LiaisonOS users:</p>
+<ol>
+<li><strong>Test new builds instantly</strong> — Download a new LiaisonOS ISO, copy it to USB, reboot. No reflashing, no data loss.</li>
+<li><strong>Keep multiple versions</strong> — Maintain the current stable release alongside beta versions for testing.</li>
+<li><strong>Separate boot from data</strong> — Your maps, Wikipedia ZIM files, and configurations live on a separate partition that survives ISO updates.</li>
+<li><strong>Emergency flexibility</strong> — In a real emergency, boot the proven stable ISO. For testing, try the latest build.</li>
+</ol>
+<hr />
+<h2>Partition Strategy Overview</h2>
+<p>This guide creates a USB drive optimized for LiaisonOS with the following layout:</p>
+<pre><code>┌─────────────────────────────────────────────────────────────────────┐
+│                    64 GB USB Drive Layout                           │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────┐  ┌──────┐  ┌────────────────────────────────┐  │
+│  │  EMCOMM-ISO     │  │ EFI  │  │        EMCOMM-DATA             │  │
+│  │    ~12 GB       │  │ 32MB │  │          ~46 GB                │  │
+│  │                 │  │      │  │                                │  │
+│  │  • ISO files    │  │ Boot │  │  • Maps (.mbtiles)             │  │
+│  │  • Ventoy       │  │ sys  │  │  • Wikipedia (.zim)            │  │
+│  │                 │  │      │  │  • Documents                   │  │
+│  │  exFAT          │  │FAT16 │  │  • Config backups              │  │
+│  └─────────────────┘  └──────┘  └────────────────────────────────┘  │
+│       Partition 1      Part 2           Partition 3                 │
+└─────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Partition 1</strong> — EMCOMM-ISO, ~12 GB, exFAT — Bootable ISOs via Ventoy</li>
+<li><strong>Partition 2</strong> — (EFI), 32 MB, FAT16 — Boot system (automatic)</li>
+<li><strong>Partition 3</strong> — EMCOMM-DATA, ~46 GB, ext4/exFAT — Maps, ZIM files, offline data</li>
+</ul>
+<h3>Why This Layout?</h3>
+<ul>
+<li><strong>ISO partition sized for multiple versions</strong> — 12 GB holds 3-4 LiaisonOS ISOs</li>
+<li><strong>Data partition maximized</strong> — Maps and Wikipedia files can be several gigabytes each</li>
+<li><strong>Cross-platform compatible</strong> — exFAT on boot partition works with Windows/Mac/Linux</li>
+<li><strong>Linux-optimized data</strong> — ext4 provides better reliability (or exFAT if Windows access needed)</li>
+</ul>
+<hr />
+<h2>Prerequisites</h2>
+<ul>
+<li>64 GB (or larger) USB drive</li>
+<li>LiaisonOS ISO file</li>
+<li>Administrator/root access</li>
+</ul>
+<p><strong>WARNING:</strong> This process will erase all data on the USB drive. Back up any important files first!</p>
+<hr />
+<h2>Step 1: Download Ventoy</h2>
+<p>Download the latest Ventoy release:
+- <strong>Official website:</strong> <a href="https://ventoy.net">https://ventoy.net</a>
+- <strong>GitHub:</strong> <a href="https://github.com/ventoy/Ventoy/releases">https://github.com/ventoy/Ventoy/releases</a></p>
+<p>Downloads:
+- <strong>Windows:</strong> <code>ventoy-x.x.xx-windows.zip</code>
+- <strong>Linux:</strong> <code>ventoy-x.x.xx-linux.tar.gz</code>
+- <strong>macOS:</strong> See macOS section below</p>
+<hr />
+<h2>Step 2: Identify Your USB Drive</h2>
+<p><strong>CRITICAL:</strong> Identifying the correct drive is essential. Using the wrong device will destroy data on that device!</p>
+<h3>Windows</h3>
+<ol>
+<li>Open <strong>Disk Management</strong> (press <code>Win + X</code>, select "Disk Management")</li>
+<li>Locate your USB drive by size (~58 GB for a 64 GB drive)</li>
+<li>Note the disk number (e.g., "Disk 2")</li>
+</ol>
+<p>Or use Command Prompt:</p>
+<pre><code class="language-cmd">diskpart
+list disk
+exit
+</code></pre>
+<h3>Linux</h3>
+<pre><code class="language-bash">lsblk
+</code></pre>
+<p>Look for your USB drive by size. It will typically be <code>/dev/sdb</code> or <code>/dev/sdc</code>.</p>
+<pre><code>NAME   SIZE TYPE MOUNTPOINTS
+sda    500G disk
+├─sda1 512M part /boot/efi
+└─sda2 499G part /
+sdb   58.2G disk              ← Your 64 GB USB
+└─sdb1 58.2G part /media/user/USB
+</code></pre>
+<h3>macOS</h3>
+<pre><code class="language-bash">diskutil list
+</code></pre>
+<p>Look for your USB drive (e.g., <code>/dev/disk2</code>). Verify by size (~58 GB for 64 GB drive).</p>
+<hr />
+<h2>Step 3: Back Up Existing Data</h2>
+<p>If your USB drive contains important data, copy it to a safe location first.</p>
+<h3>Windows</h3>
+<p>Use File Explorer to copy files to your computer.</p>
+<h3>Linux</h3>
+<pre><code class="language-bash">mkdir -p ~/usb-backup
+cp -av /media/$USER/YOUR_USB/* ~/usb-backup/
+</code></pre>
+<h3>macOS</h3>
+<pre><code class="language-bash">mkdir -p ~/usb-backup
+cp -av /Volumes/YOUR_USB/* ~/usb-backup/
+</code></pre>
+<hr />
+<h2>Step 4: Install Ventoy</h2>
+<h3>Windows</h3>
+<ol>
+<li>Extract <code>ventoy-x.x.xx-windows.zip</code></li>
+<li>Run <code>Ventoy2Disk.exe</code> as Administrator</li>
+<li>Select your USB drive from the dropdown menu</li>
+<li>Click <strong>Options</strong> → <strong>Partition Configuration</strong></li>
+<li>Check "Preserve some space at the end of the disk"</li>
+<li>Enter <code>47000</code> MB (47 GB for your data partition)</li>
+<li>Click <strong>Install</strong></li>
+<li>Confirm the warning (this will erase the drive)</li>
+<li>Wait for completion</li>
+</ol>
+<h3>Linux</h3>
+<ol>
+<li>Extract and navigate to Ventoy:</li>
+</ol>
+<pre><code class="language-bash">cd ~/Downloads
+tar -xzf ventoy-x.x.xx-linux.tar.gz
+cd ventoy-x.x.xx
+</code></pre>
+<ol>
+<li>Unmount the USB drive:</li>
+</ol>
+<pre><code class="language-bash">sudo umount /dev/sdb1 2&gt;/dev/null
+sudo umount /dev/sdb2 2&gt;/dev/null
+</code></pre>
+<ol>
+<li>(Optional) Wipe existing partition table:</li>
+</ol>
+<pre><code class="language-bash">sudo wipefs -a /dev/sdb
+</code></pre>
+<ol>
+<li>Install Ventoy with reserved space for data partition:</li>
+</ol>
+<pre><code class="language-bash">sudo ./Ventoy2Disk.sh -i -g -r 47000 /dev/sdb
+</code></pre>
+<p><strong>Options explained:</strong>
+- <code>-i</code> : Install Ventoy
+- <code>-g</code> : Use GPT partition table (recommended for UEFI)
+- <code>-r 47000</code> : Reserve 47000 MB (47 GB) for data partition</p>
+<ol>
+<li>Confirm with <code>y</code> when prompted.</li>
+</ol>
+<p><strong>Example output:</strong></p>
+<pre><code>Ventoy: /dev/sdb will be formatted as GPT style.
+Reserve 47000 MB disk space at the end of the disk.
+Disk: /dev/sdb Size: 58.2 GB
+Partition Style: GPT
+Install Ventoy to /dev/sdb? (y/n) y
+...
+Install Ventoy to /dev/sdb successfully finished.
+</code></pre>
+<h3>macOS</h3>
+<p>Ventoy does not have a native macOS GUI. Use one of these methods:</p>
+<p><strong>Option A:</strong> Boot into a Linux environment (VM or Live USB) and follow Linux instructions.</p>
+<p><strong>Option B:</strong> Use the Ventoy Web UI (experimental):</p>
+<pre><code class="language-bash">cd ventoy-x.x.xx
+sudo ./VentoyWeb.sh
+</code></pre>
+<p>Then open <code>http://127.0.0.1:24680</code> in your browser.</p>
+<p><strong>Option C:</strong> Prepare the USB drive on a Windows or Linux computer.</p>
+<hr />
+<h2>Step 5: Create the EMCOMM-DATA Partition</h2>
+<p>After Ventoy installation, you'll have two partitions and a block of <strong>free space</strong> at the end of the drive:</p>
+<ul>
+<li><code>sdb1</code>: Ventoy boot partition (~12 GB, exFAT)</li>
+<li><code>sdb2</code>: EFI system partition (32 MB, FAT16)</li>
+<li><strong>Free space: ~47 GB — no partition exists yet!</strong></li>
+</ul>
+<p>You must <strong>create a new partition</strong> in that free space and then format it. Simply running <code>mkfs</code> won't work — the partition must be created first.</p>
+<h3>Windows</h3>
+<ol>
+<li>Open <strong>Disk Management</strong> (press <code>Win + X</code>, select "Disk Management")</li>
+<li>Find your USB drive — you'll see the Ventoy partitions and an <strong>Unallocated</strong> block</li>
+<li>Right-click the <strong>Unallocated</strong> space → <strong>New Simple Volume</strong></li>
+<li>Click <strong>Next</strong>, use all available space</li>
+<li>Assign a drive letter, click <strong>Next</strong></li>
+<li>Format as <strong>exFAT</strong>, volume label: <code>EMCOMM-DATA</code></li>
+<li>Click <strong>Finish</strong></li>
+</ol>
+<h3>Linux — GNOME Disks (Recommended)</h3>
+<p>GNOME Disks is the easiest way to create the partition on Linux. It is pre-installed on most desktops including LiaisonOS.</p>
+<ol>
+<li>Open <strong>Disks</strong> from the application menu (or run <code>gnome-disks</code> in a terminal)</li>
+<li>Select your USB drive in the left panel (identify it by size, e.g. 64 GB)</li>
+<li>You'll see a visual bar showing the partitions. Look for the large block of <strong>Free Space</strong> at the end (~47 GB)</li>
+<li>Click on the <strong>Free Space</strong> block to select it</li>
+<li>Click the <strong>+</strong> (plus) button below the partition bar</li>
+<li>In the dialog that appears:</li>
+<li><strong>Partition Size</strong>: Use the full available space (default)</li>
+<li><strong>Volume Name</strong>: <code>EMCOMM-DATA</code></li>
+<li><strong>Type</strong>: Select <strong>Ext4</strong> (recommended) or <strong>Other → exFAT</strong> if you need Windows access</li>
+<li>Click <strong>Create</strong></li>
+<li>The partition is created and formatted — you're done!</li>
+</ol>
+<h3>Linux — Command Line (Alternative)</h3>
+<p>If you prefer the command line, use these two steps — first create the partition, then format it:</p>
+<pre><code class="language-bash"># Step 1: Create partition 3 in the free space
+sudo sgdisk -n 3:0:0 -t 3:8300 -c 3:&quot;EMCOMM-DATA&quot; /dev/sdb
+
+# Step 2: Format as ext4 (recommended)
+sudo mkfs.ext4 -L EMCOMM-DATA /dev/sdb3
+</code></pre>
+<p><strong>Options explained:</strong>
+- <code>sgdisk -n 3:0:0</code> : Create partition 3 using all remaining space
+- <code>-t 3:8300</code> : Set type to Linux filesystem
+- <code>-c 3:"EMCOMM-DATA"</code> : Set the partition name</p>
+<p><strong>For exFAT</strong> (if you need Windows access):</p>
+<pre><code class="language-bash">sudo mkfs.exfat -n EMCOMM-DATA /dev/sdb3
+</code></pre>
+<p>Verify the final layout:</p>
+<pre><code class="language-bash">lsblk /dev/sdb
+</code></pre>
+<pre><code>NAME   SIZE TYPE
+sdb   58.2G disk
+├─sdb1 12.3G part    ← Ventoy (EMCOMM-ISO)
+├─sdb2   32M part    ← EFI
+└─sdb3 45.9G part    ← EMCOMM-DATA (new!)
+</code></pre>
+<p><strong>Important:</strong> After creating the partition, set ownership so your user can write to it:</p>
+<pre><code class="language-bash"># Mount, set ownership, then it's ready to use
+sudo mount /dev/sdb3 /mnt
+sudo chown $USER:$USER /mnt
+sudo umount /mnt
+</code></pre>
+<h3>macOS</h3>
+<ol>
+<li>Open <strong>Disk Utility</strong></li>
+<li>Select your USB drive in the sidebar</li>
+<li>Click <strong>Partition</strong></li>
+<li>Click the <strong>+</strong> button to add a partition in the free space</li>
+<li>Name: <code>EMCOMM-DATA</code></li>
+<li>Format: <strong>ExFAT</strong></li>
+<li>Click <strong>Apply</strong></li>
+</ol>
+<hr />
+<h2>Step 6: Rename Ventoy Partition (Optional)</h2>
+<p>Rename "Ventoy" to "EMCOMM-ISO" for clarity:</p>
+<h3>Windows</h3>
+<p>Right-click the Ventoy drive in File Explorer → <strong>Rename</strong> → <code>EMCOMM-ISO</code></p>
+<h3>Linux</h3>
+<pre><code class="language-bash">sudo umount /dev/sdb1
+sudo exfatlabel /dev/sdb1 EMCOMM-ISO
+</code></pre>
+<h3>macOS</h3>
+<p>Right-click in Finder → <strong>Rename</strong></p>
+<hr />
+<h2>Step 7: Copy Your Files</h2>
+<h3>Copy LiaisonOS ISO to Boot Partition</h3>
+<p>Simply copy your ISO file to the <code>EMCOMM-ISO</code> partition:</p>
+<p><strong>Windows / macOS:</strong> Drag and drop the ISO file using File Explorer / Finder.</p>
+<p><strong>Linux:</strong></p>
+<pre><code class="language-bash">cp liaisonos-debian.iso /media/$USER/EMCOMM-ISO/
+</code></pre>
+<p><strong>Pro tip:</strong> You can keep multiple ISOs on the same partition. Ventoy will show a menu to choose which one to boot.</p>
+<h3>Copy Data Files to Data Partition</h3>
+<p>Copy your maps, ZIM files, and other offline resources to <code>EMCOMM-DATA</code>.</p>
+<p><strong>Recommended folder structure:</strong></p>
+<pre><code>EMCOMM-DATA/
+├── Maps/
+│   ├── osm-ca-zoom0to10-20251120.mbtiles
+│   ├── osm-us-zoom0to11-20251120.mbtiles
+│   └── osm-world-zoom0to7-20251121.mbtiles
+├── Wikipedia/
+│   ├── wikipedia_en_simple_all_nopic.zim
+│   ├── wikipedia_en_medicine_nopic.zim
+│   └── wikipedia_fr_simple_all_nopic.zim
+├── Documents/
+│   ├── emergency-procedures.pdf
+│   └── frequency-plans.pdf
+├── HamRadioEncyclopedia/
+│   └── ham-radio-encyclopedia.zim
+└── Backups/
+    └── config-backup.tar.gz
+</code></pre>
+<hr />
+<h2>Step 8: Boot from USB</h2>
+<ol>
+<li>Insert the USB drive into your computer</li>
+<li>Restart and enter the boot menu:</li>
+<li><strong>Common keys:</strong> F12, F2, F10, ESC, or DEL (varies by manufacturer)</li>
+<li><strong>Mac:</strong> Hold Option key during startup</li>
+<li>Select your USB drive from the boot menu</li>
+<li>Ventoy will display a menu of available ISOs</li>
+<li>Select your LiaisonOS ISO and press Enter</li>
+</ol>
+<h3>BIOS/UEFI Settings</h3>
+<p>If USB boot doesn't work, check these settings:</p>
+<ul>
+<li><strong>Secure Boot</strong> — Disabled</li>
+<li><strong>Boot Mode</strong> — UEFI (or try Legacy/CSM)</li>
+<li><strong>Fast Boot</strong> — Disabled</li>
+<li><strong>USB Boot</strong> — Enabled</li>
+</ul>
+<hr />
+<h2>Updating Your ISO</h2>
+<p>One of the biggest advantages of Ventoy: to test a new ISO build, simply:</p>
+<ol>
+<li>Delete the old ISO from <code>EMCOMM-ISO</code> (optional — you can keep both)</li>
+<li>Copy the new ISO to <code>EMCOMM-ISO</code></li>
+<li>Reboot and select the new ISO from Ventoy menu</li>
+</ol>
+<p><strong>Your data on <code>EMCOMM-DATA</code> remains untouched!</strong></p>
+<hr />
+<h2>Updating Ventoy</h2>
+<p>To update Ventoy without losing your ISOs or data:</p>
+<h3>Windows</h3>
+<ol>
+<li>Run the new <code>Ventoy2Disk.exe</code></li>
+<li>Select your USB drive</li>
+<li>Click <strong>Update</strong> (not Install)</li>
+</ol>
+<h3>Linux</h3>
+<pre><code class="language-bash">cd ventoy-x.x.xx
+sudo ./Ventoy2Disk.sh -u /dev/sdb
+</code></pre>
+<hr />
+<h2>Linking Data Partition to LiaisonOS</h2>
+<p>When booted into LiaisonOS, you can create symlinks to use data from your USB data partition:</p>
+<pre><code class="language-bash"># Mount the data partition (if not auto-mounted)
+sudo mount /dev/sdb3 /mnt/usb-data
+
+# Create symlinks to map files
+ln -s /mnt/usb-data/Maps/*.mbtiles ~/.local/share/liaisonos/mbtileserver/tilesets/
+
+# Create symlinks to Wikipedia files
+ln -s /mnt/usb-data/Wikipedia/*.zim ~/wikipedia/
+</code></pre>
+<p><strong>Note:</strong> The exact device name may vary. Use <code>lsblk</code> to identify the correct partition.</p>
+<hr />
+<h2>Troubleshooting</h2>
+<p><strong>USB drive not showing in boot menu</strong>
+- Ensure Secure Boot is disabled in BIOS/UEFI settings
+- Try both UEFI and Legacy boot modes
+- Some older systems may require MBR instead of GPT</p>
+<p><strong>"Logical sector size is zero" error when renaming</strong>
+- The partition is exFAT, not FAT32
+- Use <code>exfatlabel</code> instead of <code>fatlabel</code></p>
+<p><strong>ISO won't boot</strong>
+- Verify the ISO is not corrupted (check SHA256 hash)
+- Try Ventoy's "memdisk" mode: Press F1 in Ventoy menu, select memdisk
+- Check Ventoy documentation for any ISO-specific requirements</p>
+<p><strong>Partition not recognized after creation</strong>
+- Unplug and replug the USB drive
+- On Linux, run: <code>sudo partprobe /dev/sdb</code></p>
+<p><strong>Slow performance</strong>
+- USB 3.0 drives in USB 3.0 ports perform significantly better
+- Consider a high-quality USB drive rated for sustained read/write speeds
+- For critical operations, permanent installation is recommended</p>
+<p>MBR alternative for older systems:</p>
+<pre><code class="language-bash">sudo ./Ventoy2Disk.sh -i -r 47000 /dev/sdb  # Without -g
+</code></pre>
+<p>exFAT label fix:</p>
+<pre><code class="language-bash">sudo exfatlabel /dev/sdb1 EMCOMM-ISO
+</code></pre>
+<hr />
+<h2>Quick Reference</h2>
+<h3>Linux Commands Summary</h3>
+<pre><code class="language-bash"># Identify USB drive
+lsblk
+
+# Install Ventoy (64 GB drive)
+sudo ./Ventoy2Disk.sh -i -g -r 47000 /dev/sdb
+
+# Create data partition
+sudo sgdisk -n 3:0:0 -t 3:8300 -c 3:&quot;EMCOMM-DATA&quot; /dev/sdb
+
+# Format data partition ext4
+sudo mkfs.ext4 -L EMCOMM-DATA /dev/sdb3
+
+# Set ownership
+sudo mount /dev/sdb3 /mnt &amp;&amp; sudo chown $USER:$USER /mnt &amp;&amp; sudo umount /mnt
+
+# Rename Ventoy partition
+sudo exfatlabel /dev/sdb1 EMCOMM-ISO
+
+# Copy ISO
+cp liaisonos.iso /media/$USER/EMCOMM-ISO/
+
+# Update Ventoy
+sudo ./Ventoy2Disk.sh -u /dev/sdb
+</code></pre>
+<h3>Final Partition Layout</h3>
+<pre><code>/dev/sdb (64 GB USB Drive)
+├── sdb1  EMCOMM-ISO  ~12 GB  exFAT   [Ventoy + ISOs]
+├── sdb2  (EFI)        ~32 MB  FAT16   [Boot system]
+└── sdb3  EMCOMM-DATA  ~46 GB  ext4    [Data]
+</code></pre>
+<hr />
+<h2>Summary: When to Use What</h2>
+<ul>
+<li><strong>Primary EmComm station</strong> → Permanent installation on dedicated hardware</li>
+<li><strong>24/7 BBS or gateway</strong> → Permanent installation</li>
+<li><strong>Testing new ISO builds</strong> → USB with Ventoy</li>
+<li><strong>Training sessions</strong> → USB with Ventoy</li>
+<li><strong>Demonstrations</strong> → USB with Ventoy</li>
+<li><strong>Backup deployment</strong> → USB with Ventoy</li>
+<li><strong>Emergency field deployment</strong> → Either — USB = flexibility, Permanent = reliability</li>
+</ul>
+<p><strong>Remember:</strong> A well-maintained USB boot drive is an excellent backup, but a dedicated EmComm computer with permanent installation remains the gold standard for serious emergency communications work.</p>
+<hr />
+<h2>Resources</h2>
+<ul>
+<li><strong>VA2OPS:</strong> <a href="https://va2ops.ca">https://va2ops.ca</a></li>
+<li><strong>LiaisonOS Project:</strong> <a href="https://liaisonos.ca">https://liaisonos.ca</a></li>
+<li>
+<p><strong>Email:</strong> info@liaisonos.com</p>
+</li>
+<li>
+<p><strong>Ventoy Official Site:</strong> <a href="https://ventoy.net">https://ventoy.net</a></p>
+</li>
+<li><strong>Ventoy GitHub:</strong> <a href="https://github.com/ventoy/Ventoy">https://github.com/ventoy/Ventoy</a></li>
+<li><strong>Ventoy Documentation:</strong> <a href="https://ventoy.net/en/doc_news.html">https://ventoy.net/en/doc_news.html</a></li>
+</ul>
+<hr />
+<p><em>Document version: 2.1.8</em>
+<em>Last updated: March 2026</em>
+<em>Created for LiaisonOS Debian Edition</em></p>
+</div>
+<footer>
+  <p>LiaisonOS &middot; <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a> &middot; Quebec, Canada &middot; 73</p>
+</footer>
+</body>
+</html>

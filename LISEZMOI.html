@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiaisonOS — Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'IBM Plex Sans', sans-serif; background: #0f1a13; color: #e8f5ee; min-height: 100vh; line-height: 1.7; }
+nav { display: flex; align-items: center; justify-content: space-between; padding: 1rem 2rem; border-bottom: 1px solid rgba(125,232,176,0.12); position: sticky; top: 0; background: rgba(15,26,19,0.96); backdrop-filter: blur(8px); z-index: 10; }
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #e8f5ee; }
+.nav-logo-icon { width: 32px; height: 32px; background: #1a3a2a; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(125,232,176,0.25); }
+.nav-logo-text { font-size: 15px; font-weight: 500; }
+.nav-links { display: flex; align-items: center; gap: 1.5rem; }
+.nav-links a { font-size: 13px; color: #9dbfad; text-decoration: none; }
+.nav-links a:hover { color: #7de8b0; }
+.lang-link { font-size: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid rgba(125,232,176,0.22); background: #1a3a2a; color: #7de8b0 !important; text-decoration: none; }
+.lang-link:hover { background: #1f4432; }
+.content { max-width: 860px; margin: 0 auto; padding: 3rem 2rem 5rem; }
+h1 { font-size: 28px; font-weight: 500; color: #7de8b0; margin-bottom: 0.5rem; margin-top: 0; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(125,232,176,0.2); }
+h2 { font-size: 18px; font-weight: 500; color: #e8f5ee; margin-top: 2.5rem; margin-bottom: 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid rgba(125,232,176,0.1); }
+h3 { font-size: 14px; font-weight: 500; color: #7de8b0; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+h4 { font-size: 13px; font-weight: 500; color: #9dbfad; margin-top: 1rem; margin-bottom: 0.4rem; }
+p { font-size: 14px; color: #9dbfad; margin-bottom: 0.75rem; }
+a { color: #5ab887; text-decoration: none; }
+a:hover { color: #7de8b0; }
+strong { color: #e8f5ee; font-weight: 500; }
+em { color: #6a9a7a; font-style: italic; }
+ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+li { font-size: 14px; color: #9dbfad; margin-bottom: 4px; }
+li strong { color: #e8f5ee; }
+code { font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: #1a3a2a; color: #7de8b0; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(125,232,176,0.15); }
+pre { background: #16231a; border: 1px solid rgba(125,232,176,0.15); border-radius: 8px; padding: 1rem 1.25rem; overflow-x: auto; margin-bottom: 1rem; }
+pre code { background: none; border: none; padding: 0; font-size: 12px; color: #9dbfad; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 13px; }
+thead tr { border-bottom: 1px solid rgba(125,232,176,0.25); }
+th { text-align: left; padding: 8px 12px 8px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: #6a9a7a; font-weight: 500; }
+tbody tr { border-bottom: 1px solid rgba(125,232,176,0.07); }
+tbody tr:last-child { border-bottom: none; }
+td { padding: 8px 12px 8px 0; color: #9dbfad; vertical-align: top; }
+td:first-child { color: #e8f5ee; font-weight: 500; }
+td code { font-size: 11px; }
+blockquote { border-left: 3px solid #5ab887; background: rgba(125,232,176,0.06); border-radius: 0 6px 6px 0; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+blockquote p { margin-bottom: 0; color: #9dbfad; font-size: 13px; }
+hr { border: none; border-top: 1px solid rgba(125,232,176,0.12); margin: 2rem 0; }
+footer { border-top: 1px solid rgba(125,232,176,0.1); padding: 1.5rem 2rem; text-align: center; font-size: 12px; color: #6a9a7a; }
+footer a { color: #6a9a7a; }
+footer a:hover { color: #7de8b0; }
+@media (max-width: 600px) { nav { padding: 0.875rem 1rem; } .content { padding: 2rem 1rem 3rem; } h1 { font-size: 22px; } }
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="https://liaisonos.com">
+    <div class="nav-logo-icon">
+      <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="10" stroke="#7de8b0" stroke-width="1.5"/>
+        <path d="M9 14 L14 9 L19 14 L14 19 Z" fill="#7de8b0" opacity="0.7"/>
+        <circle cx="14" cy="14" r="2.5" fill="#7de8b0"/>
+      </svg>
+    </div>
+    <span class="nav-logo-text">LiaisonOS</span>
+  </a>
+  <div class="nav-links">
+    <a href="index_fr.html">Accueil</a>
+    <a href="download_fr.html">Télécharger</a>
+    <a href="https://va2ops.ca">VA2OPS</a>
+    <a href="README.html" class="lang-link">🇨🇦 EN</a>
+  </div>
+</nav>
+<div class="content">
+<h1>LiaisonOS — Communications d'urgence pour radioamateurs</h1>
+<p>EmComm-Tools est une <strong>ISO Linux Debian 13 (Trixie) live et installable</strong> conçue pour les communications numériques d'urgence en radioamateur. Elle comprend une suite complète de logiciels de modes numériques préconfigurés, des cartes hors ligne et un tableau de bord web pour une utilisation en un clic. Deux modes de déploiement : <strong>USB Live Run</strong> (démarrer n'importe quel PC depuis une clé USB) ou <strong>installation sur disque dur</strong> (installation permanente avec Calamares). Interface bilingue anglais/français. Créé par Sylvain Deguire (VA2OPS), concept original de Gaston Gonzalez (KT7RUN).
+<em>Version 2.2.3 — Avril 2026</em>
+<em>ISO Debian 13 (Trixie) Live/Installable</em></p>
+<blockquote>
+<p>⚠️ <strong>Avis de développement continu</strong></p>
+<p>LiaisonOS est développé selon un modèle de <strong>publication continue et agile</strong> — les mises à jour sont publiées fréquemment au fur et à mesure des fonctionnalités et correctifs, plutôt que d'attendre une grande version "finale". Chaque version est pleinement fonctionnelle, mais des changements récents peuvent occasionnellement introduire des problèmes inattendus dans d'autres domaines.</p>
+<p><strong>Démarrez et testez toujours depuis USB en premier.</strong> Une installation permanente vous offre la meilleure expérience, mais installer un logiciel qui n'a pas été testé pour votre usage et votre matériel spécifique peut entraîner des problèmes de fonctionnement. Tester depuis USB avant de procéder à une installation permanente est toujours l'approche recommandée.</p>
+<p><strong>English?</strong> See <a href="README.md">README.md</a> for the English version.</p>
+</blockquote>
+<hr />
+<h2>Prévu dans la version 2.2.4</h2>
+<h3>QtTermTCP — Répertoire BBS</h3>
+<ul>
+<li><strong>Répertoire BBS</strong> — Liste filtrable des stations BBS connues (réseau TPRFN et autres). Filtrage automatique par bande courante (détectée via rigctld/FLRig), largeur de bande VARA et heures d'opération UTC</li>
+<li><strong>QSY à la sélection</strong> — La sélection d'une station effectue le QSY de la radio automatiquement via rigctld ou FLRig</li>
+<li><strong>Ajout automatique des stations inconnues</strong> — Lors d'une connexion à un indicatif absent du répertoire, QtTermTCP propose de l'ajouter avec la fréquence courante de la radio pré-remplie</li>
+<li><strong>Éditeur de stations</strong> — Ajout, modification et suppression de stations BBS directement depuis la fenêtre du répertoire. Supporte plusieurs bandes par station et plusieurs largeurs de bande (500/2300)</li>
+</ul>
+<hr />
+<h2>Nouveautés de la version 2.2.3</h2>
+<h3>Correctif — Scripts overlay</h3>
+<ul>
+<li><strong>Corrigé</strong> — Une erreur de script dans la v2.2.2 a corrompu plusieurs fichiers overlay (<code>wrapper-rigctld.sh</code>, <code>wrapper-gpsd.sh</code>, <code>et-audio</code>, <code>et-log</code>, profils audio radio, et autres), causant des problèmes de démarrage de rigctld, gpsd et et-supervisor. Tous les fichiers affectés ont été restaurés</li>
+</ul>
+<hr />
+<h2>Nouveautés de la version 2.2.2</h2>
+<h3>Pat Winlink — Mise à jour vers v1.0.0</h3>
+<ul>
+<li><strong>Mise à jour vers v1.0.0</strong> — Dernière version officielle du client Winlink Pat</li>
+</ul>
+<h3>QtTermTCP — Cache de sessions BBS</h3>
+<ul>
+<li><strong>Cache de sessions BBS</strong> — Les sessions avec les nœuds BBS packet sont maintenant mises en cache localement par indicatif via SQLite. Les listes de bulletins et les corps de messages sont enregistrés automatiquement pendant la session</li>
+<li><strong>Navigation hors ligne</strong> — Consultez les bulletins mis en cache et lisez les messages à tout moment via la fenêtre Cache BBS, même sans connexion radio</li>
+</ul>
+<hr />
+<h2>Qu'est-ce qu'LiaisonOS?</h2>
+<p>LiaisonOS est une <strong>ISO Linux Debian 13 (Trixie) live et installable</strong> conçue pour les communications numériques d'urgence en radioamateur. Elle comprend une suite complète de logiciels de modes numériques préconfigurés, des cartes hors ligne et un tableau de bord web pour une utilisation en un clic. Deux modes de déploiement : <strong>USB Live Run</strong> (démarrer n'importe quel PC depuis une clé USB) ou <strong>installation sur disque dur</strong> (installation permanente avec Calamares). Interface bilingue anglais/français. Créé par Sylvain Deguire (VA2OPS).</p>
+<hr />
+<h2>Préinstallé : VARA, VarAC et Wine</h2>
+<p><strong>LiaisonOS est la seule distribution Linux radioamateur qui livre VARA et VarAC prêts à l'emploi.</strong> Pas de configuration Wine manuelle, pas de téléchargement d'installateurs, pas de dépannage de DLL.</p>
+<ul>
+<li><strong>Wine 32 bits</strong> — Préfixe <code>.wine32</code> préconfiguré, prêt à lancer les applications radioamateurs Windows</li>
+<li><strong>VARA HF et VARA FM</strong> — Modems haute performance préinstallés (inclus avec la permission de EA5HVK)</li>
+<li><strong>VarAC</strong> — Client de chat HF pour VARA, préinstallé (accord de distribution limitée avec 4Z1AC — licence présentée au premier lancement)</li>
+<li><strong>ISO Complète vs Lite</strong> — Le système de compilation offre les deux : l'ISO Complète inclut Wine/VARA/VarAC, l'ISO Lite les omet pour un téléchargement plus léger</li>
+<li><strong>Zéro configuration</strong> — VARA et VarAC se lancent depuis le Tableau de bord comme n'importe quelle application Linux native</li>
+</ul>
+<hr />
+<h2>Logiciels inclus</h2>
+<h3>Contrôle radio</h3>
+<ul>
+<li><strong>Hamlib / rigctld</strong> — Contrôle CAT avec détection automatique udev pour 24+ radios</li>
+<li><strong>Direwolf</strong> — TNC logiciel (modem packet AX.25)</li>
+<li><strong>Flrig</strong> — Interface graphique de contrôle radio</li>
+</ul>
+<h3>Courriel Winlink</h3>
+<ul>
+<li><strong>Pat</strong> — Client Winlink (compilation personnalisée LiaisonOS)</li>
+<li><strong>Modem ARDOP</strong> — Transport Winlink HF</li>
+<li><strong>VARA HF / VARA FM</strong> — Modems Winlink haute performance (via Wine)</li>
+</ul>
+<h3>Chat HF</h3>
+<ul>
+<li><strong>VarAC</strong> — Client de chat HF via modem VARA (via Wine)</li>
+<li><strong>Chattervox</strong> — Chat texte AX.25 signé (compilé depuis les sources, fork LiaisonOS)</li>
+</ul>
+<h3>APRS</h3>
+<ul>
+<li><strong>YAAC</strong> — Client APRS avec cartographie</li>
+</ul>
+<h3>BBS (Babillard électronique)</h3>
+<ul>
+<li><strong>LinBPQ</strong> — Serveur BBS packet avec interface web d'administration</li>
+<li><strong>QtTermTCP</strong> — Client terminal BBS</li>
+<li><strong>Paracon</strong> — Client terminal BBS / Telnet</li>
+</ul>
+<h3>Modes numériques</h3>
+<ul>
+<li><strong>WSJT-X</strong> — FT8, FT4 et autres modes signaux faibles</li>
+<li><strong>JS8Call</strong> — Messagerie HF clavier à clavier</li>
+<li><strong>JS8Spotter</strong> — Moniteur d'activité JS8Call</li>
+<li><strong>Fldigi / Flmsg / Flamp / Flwrap</strong> — Suite multi-modes numériques (PSK, RTTY, CW, NBEMS)</li>
+</ul>
+<h3>Cartographie et navigation</h3>
+<ul>
+<li><strong>Navit</strong> — Navigation GPS hors ligne avec OpenStreetMap</li>
+<li><strong>Serveur MBTile</strong> — Serveur local de tuiles cartographiques hors ligne</li>
+<li><strong>Tuiles OpenStreetMap</strong> — Données cartographiques hors ligne préchargeables</li>
+</ul>
+<h3>Référence hors ligne</h3>
+<ul>
+<li><strong>Kiwix</strong> — Lecteur Wikipédia / encyclopédie hors ligne</li>
+<li><strong>Fichiers ZIM</strong> — Paquets de contenu hors ligne téléchargeables</li>
+</ul>
+<h3>Propagation HF</h3>
+<ul>
+<li><strong>ET-Predict</strong> — Prédiction de propagation HF avec moteur VOACAP et cartes interactives hors ligne</li>
+</ul>
+<h3>Applications générales</h3>
+<ul>
+<li><strong>QGIS</strong> — Système d'information géographique</li>
+<li><strong>Thunderbird</strong> — Client courriel</li>
+<li><strong>Firefox ESR</strong> — Navigateur web</li>
+<li><strong>Audacity</strong> — Éditeur audio</li>
+<li><strong>GnuPG</strong> — Chiffrement et signature</li>
+</ul>
+<h3>Système</h3>
+<ul>
+<li><strong>Calamares</strong> — Installateur graphique (USB live vers disque dur)</li>
+<li><strong>Mise à l'échelle automatique</strong> — Ajustement automatique de l'interface pour écrans 7" à 10"</li>
+</ul>
+<hr />
+<h2>Modes opérationnels</h2>
+<p>Le Tableau de bord offre 16 modes opérationnels en un clic :</p>
+<table>
+<thead>
+<tr>
+<th>Catégorie</th>
+<th>Mode</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Winlink</td>
+<td>Winlink (VARA HF)</td>
+<td>Courriel via modem VARA HF</td>
+</tr>
+<tr>
+<td>Winlink</td>
+<td>Winlink (VARA FM)</td>
+<td>Courriel via modem VARA FM</td>
+</tr>
+<tr>
+<td>Winlink</td>
+<td>Winlink (Packet)</td>
+<td>Courriel via radio packet AX.25</td>
+</tr>
+<tr>
+<td>Winlink</td>
+<td>Winlink (ARDOP)</td>
+<td>Courriel via modem ARDOP</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>JS8Call</td>
+<td>Messagerie HF clavier</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>VarAC</td>
+<td>Chat HF via modem VARA (Wine)</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>Fldigi</td>
+<td>Multi-modes numériques (SSB/CW/PSK/RTTY)</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>Chattervox</td>
+<td>Chat texte packet signé</td>
+</tr>
+<tr>
+<td>Chat</td>
+<td>Chattervox (BT)</td>
+<td>Chat signé via TNC Bluetooth</td>
+</tr>
+<tr>
+<td>BBS</td>
+<td>Client BBS (Paracon)</td>
+<td>Connexion aux BBS packet/Telnet</td>
+</tr>
+<tr>
+<td>BBS</td>
+<td>Client BBS (QtTermTCP)</td>
+<td>Connexion aux BBS packet</td>
+</tr>
+<tr>
+<td>BBS</td>
+<td>Serveur BBS</td>
+<td>Serveur LinBPQ avec interface web</td>
+</tr>
+<tr>
+<td>APRS</td>
+<td>Client APRS (YAAC)</td>
+<td>Suivi de position et messagerie</td>
+</tr>
+<tr>
+<td>APRS</td>
+<td>Client APRS (BT)</td>
+<td>APRS via TNC Bluetooth</td>
+</tr>
+<tr>
+<td>Autre</td>
+<td>FT8/FT4 (WSJT-X)</td>
+<td>Modes numériques signaux faibles</td>
+</tr>
+<tr>
+<td>Autre</td>
+<td>Direwolf KISS TNC</td>
+<td>TNC réseau sur TCP 8001</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Tableau de bord web et superviseur</h2>
+<ul>
+<li><strong>Lancement en un clic</strong> depuis un tableau de bord web intégré</li>
+<li><strong>État en temps réel</strong> : santé des processus, périphériques audio, contrôle CAT, GPS, TNC Bluetooth</li>
+<li><strong>Vérifications automatiques</strong> : indicatif, périphériques audio, connexion radio vérifiés avant le lancement</li>
+<li><strong>Sélection du modem</strong> : les modes BBS demandent le type de modem (1200/9600/300 bauds, VARA HF, VARA FM)</li>
+<li><strong>Démon superviseur unique</strong> (<code>et-supervisor</code>) remplace 12 services systemd individuels</li>
+<li><strong>Récupération après crash</strong> avec réessai automatique (gère le timing PulseAudio en USB Live Boot)</li>
+<li><strong>Arrêt propre</strong> : processus arrêtés dans l'ordre inverse lors du changement de mode</li>
+<li><strong>Interface bilingue EN/FR</strong> selon la préférence de langue</li>
+</ul>
+<hr />
+<h2>Système de persistance</h2>
+<p>En mode USB, le système de persistance sauvegarde et restaure votre environnement complet :</p>
+<ul>
+<li><strong>Fichiers utilisateur</strong> : ~/Documents, ~/Downloads (synchronisation incrémentale rsync)</li>
+<li><strong>Configurations d'applications</strong> : Pat Winlink, JS8Call, WSJT-X, Fldigi, VarAC, YAAC, Navit, Direwolf, Chattervox</li>
+<li><strong>Données du navigateur</strong> : profil Firefox, Thunderbird (profil complet compressé)</li>
+<li><strong>Paramètres système</strong> : réseaux WiFi, appairages Bluetooth, sélection radio active, licence VarAC</li>
+<li><strong>Menu Sauvegarder</strong> : Sauvegarder et Redémarrer / Éteindre / Suspendre avec barre de progression</li>
+<li><strong>Restauration matérielle</strong> : configurations WiFi et Bluetooth restaurables sur les installations disque dur via <code>et-restore-hw</code></li>
+</ul>
+<hr />
+<h2>Capacités hors ligne</h2>
+<p>LiaisonOS est conçu pour fonctionner sans connexion internet :</p>
+<ul>
+<li><strong>Navit</strong> — Navigation GPS hors ligne avec données OpenStreetMap</li>
+<li><strong>Kiwix</strong> — Lecteur Wikipédia et encyclopédie hors ligne</li>
+<li><strong>Serveur MBTile</strong> — Serveur local de tuiles cartographiques hors ligne</li>
+<li><strong>Système de correctifs hors ligne</strong> — Mises à jour par USB avec sauvegarde et restauration</li>
+<li><strong>ET-Predict</strong> — Prédiction de propagation HF avec VOACAP et cartes hors ligne (aucun internet requis)</li>
+</ul>
+<hr />
+<h2>Radios supportées</h2>
+<p>LiaisonOS inclut des profils radio préconfigurés avec détection automatique udev, intégration rigctld et notes de configuration documentées pour chaque modèle.</p>
+<h3>USB direct (port série USB intégré)</h3>
+<table>
+<thead>
+<tr>
+<th>Fabricant</th>
+<th>Modèle</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BG2FX</td>
+<td>FX-4CR</td>
+<td>CAT + audio USB</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-705</td>
+<td>CAT + audio USB</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-7100</td>
+<td>CAT + audio USB</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-7200</td>
+<td>CAT + audio USB</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-7300</td>
+<td>CAT + audio USB, CP210x double port</td>
+</tr>
+<tr>
+<td>Icom</td>
+<td>IC-9700</td>
+<td>CAT + audio USB, CP210x double port, VHF/UHF</td>
+</tr>
+<tr>
+<td>QRP Labs</td>
+<td>QMX</td>
+<td>CAT USB</td>
+</tr>
+<tr>
+<td>Xiegu</td>
+<td>X6100</td>
+<td>CAT + audio USB</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-710</td>
+<td>CAT + audio USB, CP2105 double port (meilleur effort)</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-891</td>
+<td>Via interface DigiRig DR-891</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-991A</td>
+<td>CAT + audio USB, CP2105 double port</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FTX-1</td>
+<td>Audio + PTT USB seulement (pas de CAT — Yaesu n'a pas publié la spec)</td>
+</tr>
+</tbody>
+</table>
+<h3>Via interface DigiRig</h3>
+<p>Ces radios nécessitent une interface audio externe <a href="https://digirig.net/">DigiRig</a> ou DigiRig Lite pour l'audio et le PTT.</p>
+<table>
+<thead>
+<tr>
+<th>Fabricant</th>
+<th>Modèle</th>
+<th>Interface</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Elecraft</td>
+<td>KX-2</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Lab599</td>
+<td>TX-500MP</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Xiegu</td>
+<td>G90</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-818ND</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-857D</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>Yaesu</td>
+<td>FT-897D</td>
+<td>DigiRig Mobile</td>
+</tr>
+<tr>
+<td>—</td>
+<td>(Toute radio)</td>
+<td>DigiRig Mobile (sans CAT)</td>
+</tr>
+<tr>
+<td>—</td>
+<td>(Toute radio)</td>
+<td>DigiRig Lite</td>
+</tr>
+</tbody>
+</table>
+<h3>TNC Bluetooth (KISS par Bluetooth)</h3>
+<p>Ces radios possèdent un TNC matériel intégré et se connectent via port série Bluetooth (rfcomm). Aucune carte son ni Direwolf nécessaire.</p>
+<table>
+<thead>
+<tr>
+<th>Fabricant</th>
+<th>Modèle</th>
+<th>Modes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BTECH</td>
+<td>UV-PRO</td>
+<td>YAAC, Chattervox</td>
+</tr>
+<tr>
+<td>Kenwood</td>
+<td>TH-D74</td>
+<td>YAAC, Chattervox</td>
+</tr>
+<tr>
+<td>Kenwood</td>
+<td>TH-D75</td>
+<td>YAAC, Chattervox</td>
+</tr>
+<tr>
+<td>VGC</td>
+<td>VR-N76</td>
+<td>YAAC, Chattervox</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Persistance (introduite en 1.5.2)</h2>
+<p>Lorsque vous démarrez LiaisonOS depuis une clé USB, tous vos changements — configurations radio, paramètres d'indicatif, identifiants Winlink, scripts personnalisés, préférences du bureau — sont normalement <strong>perdus à l'arrêt</strong>. Vous repartez à zéro à chaque fois.</p>
+<p><strong>La persistance change tout cela.</strong> Votre environnement utilisateur complet est sauvegardé sur une partition dédiée de la clé USB (EMCOMM-DATA). Au prochain démarrage, tout est exactement comme vous l'avez laissé : vos profils radio, votre boîte aux lettres Pat Winlink, vos paramètres JS8Call, vos signets — tout.</p>
+<h3>Trois façons d'utiliser la persistance</h3>
+<p><strong>1. Démarrage USB en mode live (cas d'utilisation principal)</strong></p>
+<p>Démarrez n'importe quel PC depuis votre clé USB et reprenez exactement où vous en étiez. Configurez votre station une seule fois, puis transportez-la dans votre poche. Branchez-la sur n'importe quel ordinateur — votre station EmComm complète est prête en quelques minutes.</p>
+<p><strong>2. Sauvegarder votre installation permanente</strong></p>
+<p>Même si vous utilisez LiaisonOS installé sur un PC dédié, vous pouvez exporter toute votre configuration sur une clé USB. Si votre système principal tombe en panne pendant une urgence, démarrez depuis la clé USB sur n'importe quel ordinateur disponible — vos paramètres, identifiants et profils radio sont tous là.</p>
+<p><strong>3. Migrer entre appareils</strong></p>
+<p>Vous configurez un nouveau laptop ou remplacez un Toughpad endommagé? Au lieu de tout reconfigurer à partir de zéro, exportez vos données de persistance depuis l'ancien appareil et importez-les sur le nouveau. Toute la configuration de votre station se déplace avec vous — indicatif, profils radio, configuration Winlink, paramètres des modes numériques, tout se transfère en une seule étape.</p>
+<h3>Pourquoi c'est important pour les communications d'urgence</h3>
+<p>En situation d'urgence réelle, vous n'avez pas le temps de reconfigurer vos logiciels. La persistance signifie que votre clé USB devient une <strong>station EmComm complète et portable</strong> qui fonctionne sur n'importe quel matériel disponible. Vous perdez votre laptop? Empruntez n'importe quel PC, branchez votre clé USB, et vous êtes de retour en ondes avec toute votre configuration.</p>
+<hr />
+<h2>Important : Choisir la bonne méthode d'installation</h2>
+<p>Avant de continuer, comprenez quand utiliser le démarrage USB versus l'installation permanente.</p>
+<h3>Installation permanente (recommandée pour les opérations)</h3>
+<p><strong>Un PC ou portable dédié avec LiaisonOS installé sur le disque interne est toujours la meilleure solution pour un travail sérieux de communications d'urgence.</strong></p>
+<ul>
+<li><strong>Fiabilité maximale</strong> — Pas de clé USB à perdre ou oublier</li>
+<li><strong>Performance maximale</strong> — Vitesse native du disque, aucun goulot USB</li>
+<li><strong>Persistance intégrée</strong> — Toutes les configurations sauvegardées automatiquement</li>
+<li><strong>Prêt quand nécessaire</strong> — Allumez et opérez immédiatement</li>
+<li><strong>Déploiements professionnels</strong> — Hôpitaux de campagne, centres d'urgence, refuges</li>
+</ul>
+<p><strong>Utilisez l'installation permanente quand :</strong>
+- Vous opérez une station EmComm fixe
+- Vous faites fonctionner des services BBS ou passerelle 24/7
+- Vous supportez des opérations d'urgence critiques
+- La fiabilité maximale est essentielle</p>
+<h3>Démarrage USB avec Ventoy (recommandé pour tests et sauvegarde)</h3>
+<p><strong>Le démarrage USB est idéal pour les tests, la formation, les démonstrations et comme option de déploiement de secours.</strong></p>
+<ul>
+<li><strong>Tests rapides</strong> — Testez de nouvelles ISO sans toucher à votre système principal</li>
+<li><strong>Portabilité</strong> — Transportez LiaisonOS dans votre poche</li>
+<li><strong>Multi-démarrage</strong> — Gardez plusieurs versions ISO sur une seule clé</li>
+<li><strong>Sauvegarde d'urgence</strong> — Démarrez n'importe quel PC disponible en situation de crise</li>
+<li><strong>Formation</strong> — Laissez les étudiants pratiquer sans changements permanents</li>
+</ul>
+<p><strong>Utilisez le démarrage USB quand :</strong>
+- Vous testez de nouvelles versions ISO avant déploiement
+- Vous formez de nouveaux opérateurs
+- Vous démontrez LiaisonOS lors d'événements
+- Option de secours si le système principal échoue
+- Conversion temporaire de n'importe quel PC en station EmComm</p>
+<blockquote>
+<p><strong>La vitesse USB compte :</strong> Utilisez une clé USB 3.x pour le démarrage Live. Les clés USB 2.0 causent des temps de démarrage, de lancement d'applications et de sauvegarde/restauration de persistance nettement plus lents. Une clé USB 3.0+ de qualité sur un port USB 3.0 fait une différence significative dans la réactivité globale.</p>
+</blockquote>
+<hr />
+<h2>Clé USB standard (méthode rapide)</h2>
+<p>La façon la plus simple de créer une clé USB démarrable est d'écrire l'ISO directement sur le disque. C'est la méthode recommandée pour la plupart des utilisateurs qui veulent simplement démarrer ou installer LiaisonOS.</p>
+<p>Le seul logiciel dont vous avez besoin est un créateur USB démarrable. Voici les options les plus fiables par plateforme :</p>
+<h3>Windows</h3>
+<ul>
+<li><strong>Rufus</strong> — Rapide, fiable, open-source. Le standard de référence pour Windows. <a href="https://rufus.ie">rufus.ie</a></li>
+<li><strong>balenaEtcher</strong> — Processus simple en 3 étapes, valide les écritures, multiplateforme. <a href="https://etcher.balena.io">etcher.balena.io</a></li>
+<li><strong>Ventoy</strong> — Multi-boot capable, mettez plusieurs ISO sur une USB. <a href="https://ventoy.net">ventoy.net</a></li>
+</ul>
+<h3>macOS</h3>
+<ul>
+<li><strong>balenaEtcher</strong> — Meilleur choix pour Mac, simple, fiable, application native. <a href="https://etcher.balena.io">etcher.balena.io</a></li>
+<li><strong>UNetbootin</strong> — Multiplateforme, fonctionne bien pour les ISO Linux. <a href="https://unetbootin.github.io">unetbootin.github.io</a></li>
+<li><strong>dd (Terminal)</strong> — Intégré, puissant mais requiert de la prudence. <code>sudo dd if=image.iso of=/dev/diskN bs=4M</code></li>
+</ul>
+<h3>Linux</h3>
+<ul>
+<li><strong>balenaEtcher</strong> — Même interface simple que les autres plateformes. AppImage disponible.</li>
+<li><strong>Ventoy</strong> — Installez une fois, puis copiez simplement les fichiers ISO. <a href="https://ventoy.net">ventoy.net</a></li>
+<li><strong>GNOME Disques</strong> — Intégré à la plupart des bureaux GNOME, fonction « Restaurer l'image disque ». Pré-installé.</li>
+<li><strong>dd</strong> — Outil Unix classique, rapide et fiable. <code>sudo dd if=image.iso of=/dev/sdX bs=4M status=progress</code></li>
+</ul>
+<h3>Recommandation</h3>
+<p><strong>Pour débutants :</strong> <strong>balenaEtcher</strong> — Fonctionne sur toutes les plateformes, impossible d'écraser accidentellement votre disque dur, valide l'écriture.</p>
+<p><strong>Pour utilisateurs avancés :</strong> <strong>Ventoy</strong> — Installez-le une fois sur votre clé USB, puis copiez simplement les fichiers ISO dessus. Vous pouvez avoir LiaisonOS, un installateur Windows et des outils de récupération sur une même USB. Voir le guide Ventoy détaillé ci-dessous.</p>
+<hr />
+<h2>Pourquoi Ventoy? La stratégie USB recommandée</h2>
+<p>Les méthodes traditionnelles de démarrage USB (dd, Rufus, balenaEtcher) écrivent l'ISO directement sur le disque, ce qui présente des limitations importantes.</p>
+<p><strong>Traditionnel vs Ventoy :</strong>
+- Une ISO par clé → Plusieurs ISO sur la même clé
+- Reflash complet pour les mises à jour → Simple copie/suppression de fichiers ISO
+- Tout l'espace utilisé pour le démarrage → Partition de données dédiée disponible
+- Données perdues à chaque reflash → La partition de données survit aux mises à jour
+- Processus complexe à chaque fois → Simple copie de fichier</p>
+<h3>L'avantage Ventoy</h3>
+<p><strong>Ventoy transforme votre clé USB en gestionnaire de démarrage</strong> qui peut lancer n'importe quel fichier ISO simplement en le copiant sur le disque. C'est révolutionnaire pour les utilisateurs d'LiaisonOS :</p>
+<ol>
+<li><strong>Testez de nouvelles versions instantanément</strong> — Téléchargez une nouvelle ISO, copiez-la sur USB, redémarrez. Pas de reflash, aucune perte de données.</li>
+<li><strong>Gardez plusieurs versions</strong> — Maintenez la version stable aux côtés des versions bêta pour les tests.</li>
+<li><strong>Séparez le démarrage des données</strong> — Vos cartes, fichiers ZIM et configurations résident sur une partition séparée qui survit aux mises à jour ISO.</li>
+<li><strong>Flexibilité d'urgence</strong> — En situation d'urgence réelle, démarrez l'ISO stable éprouvée. Pour les tests, essayez la dernière version.</li>
+</ol>
+<hr />
+<h2>Aperçu de la stratégie de partitionnement</h2>
+<p>Ce guide crée une clé USB optimisée pour LiaisonOS avec la disposition suivante :</p>
+<pre><code>┌─────────────────────────────────────────────────────────────────────┐
+│                  Disposition clé USB 64 Go                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────┐  ┌──────┐  ┌────────────────────────────────┐  │
+│  │  EMCOMM-ISO     │  │ EFI  │  │        EMCOMM-DATA             │  │
+│  │    ~12 Go       │  │ 32Mo │  │          ~46 Go                │  │
+│  │                 │  │      │  │                                │  │
+│  │  • Fichiers ISO │  │ Sys  │  │  • Cartes (.mbtiles)           │  │
+│  │  • Ventoy       │  │ boot │  │  • Wikipédia (.zim)            │  │
+│  │                 │  │      │  │  • Documents                   │  │
+│  │  exFAT          │  │FAT16 │  │  • Sauvegardes config          │  │
+│  └─────────────────┘  └──────┘  └────────────────────────────────┘  │
+│       Partition 1      Part 2           Partition 3                 │
+└─────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Partition 1</strong> — EMCOMM-ISO, ~12 Go, exFAT — ISO amorçables via Ventoy</li>
+<li><strong>Partition 2</strong> — (EFI), 32 Mo, FAT16 — Système de démarrage (automatique)</li>
+<li><strong>Partition 3</strong> — EMCOMM-DATA, ~46 Go, ext4/exFAT — Cartes, fichiers ZIM, données hors ligne</li>
+</ul>
+<h3>Pourquoi cette disposition?</h3>
+<ul>
+<li><strong>Partition ISO dimensionnée pour plusieurs versions</strong> — 12 Go contient 3-4 ISO LiaisonOS</li>
+<li><strong>Partition de données maximisée</strong> — Les cartes et fichiers Wikipédia peuvent atteindre plusieurs Go chacun</li>
+<li><strong>Compatible multiplateforme</strong> — exFAT sur la partition de démarrage fonctionne avec Windows/Mac/Linux</li>
+<li><strong>Données optimisées Linux</strong> — ext4 offre une meilleure fiabilité (ou exFAT si accès Windows nécessaire)</li>
+</ul>
+<hr />
+<h2>Prérequis</h2>
+<ul>
+<li>Clé USB 64 Go (ou plus)</li>
+<li>Fichier ISO LiaisonOS</li>
+<li>Accès administrateur/root</li>
+</ul>
+<p><strong>AVERTISSEMENT :</strong> Ce processus effacera toutes les données sur la clé USB. Sauvegardez vos fichiers importants d'abord!</p>
+<hr />
+<h2>Étape 1 : Télécharger Ventoy</h2>
+<p>Téléchargez la dernière version de Ventoy :
+- <strong>Site officiel :</strong> <a href="https://ventoy.net">https://ventoy.net</a>
+- <strong>GitHub :</strong> <a href="https://github.com/ventoy/Ventoy/releases">https://github.com/ventoy/Ventoy/releases</a></p>
+<p>Téléchargements :
+- <strong>Windows :</strong> <code>ventoy-x.x.xx-windows.zip</code>
+- <strong>Linux :</strong> <code>ventoy-x.x.xx-linux.tar.gz</code>
+- <strong>macOS :</strong> Voir la section macOS ci-dessous</p>
+<hr />
+<h2>Étape 2 : Identifier votre clé USB</h2>
+<p><strong>CRITIQUE :</strong> Identifier le bon disque est essentiel. Utiliser le mauvais périphérique détruira les données!</p>
+<h3>Windows</h3>
+<ol>
+<li>Ouvrez <strong>Gestion des disques</strong> (appuyez sur <code>Win + X</code>, sélectionnez « Gestion des disques »)</li>
+<li>Repérez votre clé USB par sa taille (~58 Go pour une clé de 64 Go)</li>
+<li>Notez le numéro du disque (ex. : « Disque 2 »)</li>
+</ol>
+<p>Ou utilisez l'invite de commandes :</p>
+<pre><code class="language-cmd">diskpart
+list disk
+exit
+</code></pre>
+<h3>Linux</h3>
+<pre><code class="language-bash">lsblk
+</code></pre>
+<p>Cherchez votre clé USB par sa taille. Elle sera typiquement <code>/dev/sdb</code> ou <code>/dev/sdc</code>.</p>
+<pre><code>NAME   SIZE TYPE MOUNTPOINTS
+sda    500G disk
+├─sda1 512M part /boot/efi
+└─sda2 499G part /
+sdb   58.2G disk              ← Votre clé USB 64 Go
+└─sdb1 58.2G part /media/user/USB
+</code></pre>
+<h3>macOS</h3>
+<pre><code class="language-bash">diskutil list
+</code></pre>
+<p>Cherchez votre clé USB (ex. : <code>/dev/disk2</code>). Vérifiez par la taille (~58 Go pour une clé de 64 Go).</p>
+<hr />
+<h2>Étape 3 : Sauvegarder les données existantes</h2>
+<p>Si votre clé USB contient des données importantes, copiez-les dans un endroit sûr d'abord.</p>
+<h3>Windows</h3>
+<p>Utilisez l'Explorateur de fichiers pour copier les fichiers sur votre ordinateur.</p>
+<h3>Linux</h3>
+<pre><code class="language-bash">mkdir -p ~/usb-backup
+cp -av /media/$USER/YOUR_USB/* ~/usb-backup/
+</code></pre>
+<h3>macOS</h3>
+<pre><code class="language-bash">mkdir -p ~/usb-backup
+cp -av /Volumes/YOUR_USB/* ~/usb-backup/
+</code></pre>
+<hr />
+<h2>Étape 4 : Installer Ventoy</h2>
+<h3>Windows</h3>
+<ol>
+<li>Extraire <code>ventoy-x.x.xx-windows.zip</code></li>
+<li>Exécutez <code>Ventoy2Disk.exe</code> en tant qu'administrateur</li>
+<li>Sélectionnez votre clé USB dans le menu déroulant</li>
+<li>Cliquez sur <strong>Options</strong> → <strong>Configuration des partitions</strong></li>
+<li>Cochez « Préserver de l'espace à la fin du disque »</li>
+<li>Entrez <code>47000</code> Mo (47 Go pour votre partition de données)</li>
+<li>Cliquez sur <strong>Installer</strong></li>
+<li>Confirmez l'avertissement (ceci effacera le disque)</li>
+<li>Attendez la fin de l'opération</li>
+</ol>
+<h3>Linux</h3>
+<ol>
+<li>Extraire et naviguer vers Ventoy :</li>
+</ol>
+<pre><code class="language-bash">cd ~/Downloads
+tar -xzf ventoy-x.x.xx-linux.tar.gz
+cd ventoy-x.x.xx
+</code></pre>
+<ol>
+<li>Démonter la clé USB :</li>
+</ol>
+<pre><code class="language-bash">sudo umount /dev/sdb1 2&gt;/dev/null
+sudo umount /dev/sdb2 2&gt;/dev/null
+</code></pre>
+<ol>
+<li>(Optionnel) Effacer la table de partitions existante :</li>
+</ol>
+<pre><code class="language-bash">sudo wipefs -a /dev/sdb
+</code></pre>
+<ol>
+<li>Installer Ventoy avec espace réservé pour la partition de données :</li>
+</ol>
+<pre><code class="language-bash">sudo ./Ventoy2Disk.sh -i -g -r 47000 /dev/sdb
+</code></pre>
+<p><strong>Explication des options :</strong>
+- <code>-i</code> : Installer Ventoy
+- <code>-g</code> : Utiliser la table de partitions GPT (recommandé pour UEFI)
+- <code>-r 47000</code> : Réserver 47000 Mo (47 Go) pour la partition de données</p>
+<ol>
+<li>Confirmez avec <code>y</code> lorsque demandé.</li>
+</ol>
+<p><strong>Exemple de sortie :</strong></p>
+<pre><code>Ventoy: /dev/sdb will be formatted as GPT style.
+Reserve 47000 MB disk space at the end of the disk.
+Disk: /dev/sdb Size: 58.2 GB
+Partition Style: GPT
+Install Ventoy to /dev/sdb? (y/n) y
+...
+Install Ventoy to /dev/sdb successfully finished.
+</code></pre>
+<h3>macOS</h3>
+<p>Ventoy n'a pas d'interface graphique native pour macOS. Utilisez l'une de ces méthodes :</p>
+<p><strong>Option A :</strong> Démarrez dans un environnement Linux (VM ou Live USB) et suivez les instructions Linux.</p>
+<p><strong>Option B :</strong> Utilisez l'interface Web de Ventoy (expérimentale) :</p>
+<pre><code class="language-bash">cd ventoy-x.x.xx
+sudo ./VentoyWeb.sh
+</code></pre>
+<p>Puis ouvrez <code>http://127.0.0.1:24680</code> dans votre navigateur.</p>
+<p><strong>Option C :</strong> Préparez la clé USB sur un ordinateur Windows ou Linux.</p>
+<hr />
+<h2>Étape 5 : Créer la partition EMCOMM-DATA</h2>
+<p>Après l'installation de Ventoy, vous aurez deux partitions et un bloc d'<strong>espace libre</strong> à la fin du disque :</p>
+<ul>
+<li><code>sdb1</code> : Partition de démarrage Ventoy (~12 Go, exFAT)</li>
+<li><code>sdb2</code> : Partition système EFI (32 Mo, FAT16)</li>
+<li><strong>Espace libre : ~47 Go — aucune partition n'existe encore!</strong></li>
+</ul>
+<p>Vous devez <strong>créer une nouvelle partition</strong> dans cet espace libre, puis la formater. Exécuter simplement <code>mkfs</code> ne fonctionnera pas — la partition doit être créée d'abord.</p>
+<h3>Windows</h3>
+<ol>
+<li>Ouvrez <strong>Gestion des disques</strong> (appuyez sur <code>Win + X</code>, sélectionnez « Gestion des disques »)</li>
+<li>Trouvez votre clé USB — vous verrez les partitions Ventoy et un bloc <strong>Non alloué</strong></li>
+<li>Clic droit sur l'espace <strong>Non alloué</strong> → <strong>Nouveau volume simple</strong></li>
+<li>Cliquez sur <strong>Suivant</strong>, utilisez tout l'espace disponible</li>
+<li>Assignez une lettre de lecteur, cliquez sur <strong>Suivant</strong></li>
+<li>Formatez en <strong>exFAT</strong>, nom du volume : <code>EMCOMM-DATA</code></li>
+<li>Cliquez sur <strong>Terminer</strong></li>
+</ol>
+<h3>Linux — GNOME Disques (Recommandé)</h3>
+<p>GNOME Disques est la façon la plus simple de créer la partition sous Linux. Il est pré-installé sur la plupart des bureaux, y compris LiaisonOS.</p>
+<ol>
+<li>Ouvrez <strong>Disques</strong> depuis le menu des applications (ou exécutez <code>gnome-disks</code> dans un terminal)</li>
+<li>Sélectionnez votre clé USB dans le panneau de gauche (identifiez-la par sa taille, ex. 64 Go)</li>
+<li>Vous verrez une barre visuelle montrant les partitions. Cherchez le grand bloc d'<strong>Espace libre</strong> à la fin (~47 Go)</li>
+<li>Cliquez sur le bloc <strong>Espace libre</strong> pour le sélectionner</li>
+<li>Cliquez sur le bouton <strong>+</strong> (plus) sous la barre de partitions</li>
+<li>Dans le dialogue qui apparaît :</li>
+<li><strong>Taille de la partition</strong> : Utilisez tout l'espace disponible (par défaut)</li>
+<li><strong>Nom du volume</strong> : <code>EMCOMM-DATA</code></li>
+<li><strong>Type</strong> : Sélectionnez <strong>Ext4</strong> (recommandé) ou <strong>Autre → exFAT</strong> si vous avez besoin d'un accès Windows</li>
+<li>Cliquez sur <strong>Créer</strong></li>
+<li>La partition est créée et formatée — c'est terminé!</li>
+</ol>
+<h3>Linux — Ligne de commande (Alternative)</h3>
+<p>Si vous préférez la ligne de commande, suivez ces deux étapes — d'abord créer la partition, puis la formater :</p>
+<pre><code class="language-bash"># Étape 1 : Créer la partition 3 dans l'espace libre
+sudo sgdisk -n 3:0:0 -t 3:8300 -c 3:&quot;EMCOMM-DATA&quot; /dev/sdb
+
+# Étape 2 : Formater en ext4 (recommandé)
+sudo mkfs.ext4 -L EMCOMM-DATA /dev/sdb3
+</code></pre>
+<p><strong>Explication des options :</strong>
+- <code>sgdisk -n 3:0:0</code> : Créer la partition 3 avec tout l'espace restant
+- <code>-t 3:8300</code> : Définir le type comme système de fichiers Linux
+- <code>-c 3:"EMCOMM-DATA"</code> : Définir le nom de la partition</p>
+<p><strong>Pour exFAT</strong> (si vous avez besoin d'un accès Windows) :</p>
+<pre><code class="language-bash">sudo mkfs.exfat -n EMCOMM-DATA /dev/sdb3
+</code></pre>
+<p>Vérifiez la disposition finale :</p>
+<pre><code class="language-bash">lsblk /dev/sdb
+</code></pre>
+<pre><code>NAME   SIZE TYPE
+sdb   58.2G disk
+├─sdb1 12.3G part    ← Ventoy (EMCOMM-ISO)
+├─sdb2   32M part    ← EFI
+└─sdb3 45.9G part    ← EMCOMM-DATA (nouveau!)
+</code></pre>
+<p><strong>Important :</strong> Après avoir créé la partition, définissez le propriétaire pour pouvoir y écrire :</p>
+<pre><code class="language-bash"># Monter, définir le propriétaire, puis c'est prêt
+sudo mount /dev/sdb3 /mnt
+sudo chown $USER:$USER /mnt
+sudo umount /mnt
+</code></pre>
+<h3>macOS</h3>
+<ol>
+<li>Ouvrez <strong>Utilitaire de disque</strong></li>
+<li>Sélectionnez votre clé USB dans la barre latérale</li>
+<li>Cliquez sur <strong>Partitionner</strong></li>
+<li>Cliquez sur le bouton <strong>+</strong> pour ajouter une partition dans l'espace libre</li>
+<li>Nom : <code>EMCOMM-DATA</code></li>
+<li>Format : <strong>ExFAT</strong></li>
+<li>Cliquez sur <strong>Appliquer</strong></li>
+</ol>
+<hr />
+<h2>Étape 6 : Renommer la partition Ventoy (optionnel)</h2>
+<p>Renommez « Ventoy » en « EMCOMM-ISO » pour plus de clarté :</p>
+<h3>Windows</h3>
+<p>Clic droit sur le lecteur Ventoy dans l'Explorateur → <strong>Renommer</strong> → <code>EMCOMM-ISO</code></p>
+<h3>Linux</h3>
+<pre><code class="language-bash">sudo umount /dev/sdb1
+sudo exfatlabel /dev/sdb1 EMCOMM-ISO
+</code></pre>
+<h3>macOS</h3>
+<p>Clic droit dans le Finder → <strong>Renommer</strong></p>
+<hr />
+<h2>Étape 7 : Copier vos fichiers</h2>
+<h3>Copier l'ISO sur la partition de démarrage</h3>
+<p>Copiez simplement votre fichier ISO sur la partition <code>EMCOMM-ISO</code> :</p>
+<p><strong>Windows / macOS :</strong> Glissez-déposez le fichier ISO avec l'Explorateur / Finder.</p>
+<p><strong>Linux :</strong></p>
+<pre><code class="language-bash">cp liaisonos-debian.iso /media/$USER/EMCOMM-ISO/
+</code></pre>
+<p><strong>Astuce :</strong> Vous pouvez garder plusieurs ISO sur la même partition. Ventoy affichera un menu pour choisir laquelle démarrer.</p>
+<h3>Copier les fichiers sur la partition de données</h3>
+<p>Copiez vos cartes, fichiers ZIM et autres ressources hors ligne sur <code>EMCOMM-DATA</code>.</p>
+<p><strong>Structure de dossiers recommandée :</strong></p>
+<pre><code>EMCOMM-DATA/
+├── Maps/
+│   ├── osm-ca-zoom0to10-20251120.mbtiles
+│   ├── osm-us-zoom0to11-20251120.mbtiles
+│   └── osm-world-zoom0to7-20251121.mbtiles
+├── Wikipedia/
+│   ├── wikipedia_en_simple_all_nopic.zim
+│   ├── wikipedia_en_medicine_nopic.zim
+│   └── wikipedia_fr_simple_all_nopic.zim
+├── Documents/
+│   ├── emergency-procedures.pdf
+│   └── frequency-plans.pdf
+├── HamRadioEncyclopedia/
+│   └── ham-radio-encyclopedia.zim
+└── Backups/
+    └── config-backup.tar.gz
+</code></pre>
+<hr />
+<h2>Étape 8 : Démarrer depuis USB</h2>
+<ol>
+<li>Insérez la clé USB dans votre ordinateur</li>
+<li>Redémarrez et accédez au menu de démarrage :</li>
+<li><strong>Touches courantes :</strong> F12, F2, F10, ESC ou DEL (varie selon le fabricant)</li>
+<li><strong>Mac :</strong> Maintenez la touche Option au démarrage</li>
+<li>Sélectionnez votre clé USB dans le menu de démarrage</li>
+<li>Ventoy affichera un menu des ISO disponibles</li>
+<li>Sélectionnez votre ISO LiaisonOS et appuyez sur Entrée</li>
+</ol>
+<h3>Paramètres BIOS/UEFI</h3>
+<p>Si le démarrage USB ne fonctionne pas, vérifiez ces paramètres :</p>
+<ul>
+<li><strong>Secure Boot</strong> — Désactivé</li>
+<li><strong>Boot Mode</strong> — UEFI (ou essayez Legacy/CSM)</li>
+<li><strong>Fast Boot</strong> — Désactivé</li>
+<li><strong>USB Boot</strong> — Activé</li>
+</ul>
+<hr />
+<h2>Mettre à jour votre ISO</h2>
+<p>L'un des plus grands avantages de Ventoy : pour tester une nouvelle version ISO, il suffit de :</p>
+<ol>
+<li>Supprimer l'ancienne ISO de <code>EMCOMM-ISO</code> (optionnel — vous pouvez garder les deux)</li>
+<li>Copier la nouvelle ISO sur <code>EMCOMM-ISO</code></li>
+<li>Redémarrer et sélectionner la nouvelle ISO dans le menu Ventoy</li>
+</ol>
+<p><strong>Vos données sur <code>EMCOMM-DATA</code> restent intactes!</strong></p>
+<hr />
+<h2>Mettre à jour Ventoy</h2>
+<p>Pour mettre à jour Ventoy sans perdre vos ISO ou données :</p>
+<h3>Windows</h3>
+<ol>
+<li>Exécutez le nouveau <code>Ventoy2Disk.exe</code></li>
+<li>Sélectionnez votre clé USB</li>
+<li>Cliquez sur <strong>Update</strong> (pas Install)</li>
+</ol>
+<h3>Linux</h3>
+<pre><code class="language-bash">cd ventoy-x.x.xx
+sudo ./Ventoy2Disk.sh -u /dev/sdb
+</code></pre>
+<hr />
+<h2>Lier la partition de données à LiaisonOS</h2>
+<p>Une fois démarré dans LiaisonOS, vous pouvez créer des liens symboliques pour utiliser les données de votre partition USB :</p>
+<pre><code class="language-bash"># Monter la partition de données (si pas montée automatiquement)
+sudo mount /dev/sdb3 /mnt/usb-data
+
+# Liens symboliques vers les cartes
+ln -s /mnt/usb-data/Maps/*.mbtiles ~/.local/share/liaisonos/mbtileserver/tilesets/
+
+# Liens symboliques vers Wikipédia
+ln -s /mnt/usb-data/Wikipedia/*.zim ~/wikipedia/
+</code></pre>
+<p><strong>Note :</strong> Le nom exact du périphérique peut varier. Utilisez <code>lsblk</code> pour identifier la bonne partition.</p>
+<hr />
+<h2>Dépannage</h2>
+<p><strong>La clé USB n'apparaît pas dans le menu de démarrage</strong>
+- Assurez-vous que le Secure Boot est désactivé dans les paramètres BIOS/UEFI
+- Essayez les modes de démarrage UEFI et Legacy
+- Certains systèmes plus anciens peuvent nécessiter MBR au lieu de GPT</p>
+<p><strong>Erreur « Logical sector size is zero » lors du renommage</strong>
+- La partition est en exFAT, pas FAT32
+- Utilisez <code>exfatlabel</code> au lieu de <code>fatlabel</code></p>
+<p><strong>L'ISO ne démarre pas</strong>
+- Vérifiez que l'ISO n'est pas corrompue (vérifiez le hash SHA256)
+- Essayez le mode « memdisk » de Ventoy : Appuyez sur F1 dans le menu Ventoy
+- Consultez la documentation Ventoy pour les exigences spécifiques</p>
+<p><strong>Partition non reconnue après création</strong>
+- Débranchez et rebranchez la clé USB
+- Sous Linux, exécutez : <code>sudo partprobe /dev/sdb</code></p>
+<p><strong>Performance lente</strong>
+- Les clés USB 3.0 dans des ports USB 3.0 offrent de bien meilleures performances
+- Considérez une clé USB de qualité avec des vitesses soutenues
+- Pour les opérations critiques, l'installation permanente est recommandée</p>
+<p>Alternative MBR pour les systèmes plus anciens :</p>
+<pre><code class="language-bash">sudo ./Ventoy2Disk.sh -i -r 47000 /dev/sdb  # Sans -g
+</code></pre>
+<p>Correction du label exFAT :</p>
+<pre><code class="language-bash">sudo exfatlabel /dev/sdb1 EMCOMM-ISO
+</code></pre>
+<hr />
+<h2>Référence rapide</h2>
+<h3>Résumé des commandes Linux</h3>
+<pre><code class="language-bash"># Identifier la clé USB
+lsblk
+
+# Installer Ventoy (clé 64 Go)
+sudo ./Ventoy2Disk.sh -i -g -r 47000 /dev/sdb
+
+# Créer la partition de données
+sudo sgdisk -n 3:0:0 -t 3:8300 -c 3:&quot;EMCOMM-DATA&quot; /dev/sdb
+
+# Formater partition données ext4
+sudo mkfs.ext4 -L EMCOMM-DATA /dev/sdb3
+
+# Définir le propriétaire
+sudo mount /dev/sdb3 /mnt &amp;&amp; sudo chown $USER:$USER /mnt &amp;&amp; sudo umount /mnt
+
+# Renommer la partition Ventoy
+sudo exfatlabel /dev/sdb1 EMCOMM-ISO
+
+# Copier l'ISO
+cp liaisonos.iso /media/$USER/EMCOMM-ISO/
+
+# Mettre à jour Ventoy
+sudo ./Ventoy2Disk.sh -u /dev/sdb
+</code></pre>
+<h3>Disposition finale des partitions</h3>
+<pre><code>/dev/sdb (Clé USB 64 Go)
+├── sdb1  EMCOMM-ISO  ~12 Go  exFAT   [Ventoy + ISOs]
+├── sdb2  (EFI)        ~32 Mo  FAT16   [Système boot]
+└── sdb3  EMCOMM-DATA  ~46 Go  ext4    [Données]
+</code></pre>
+<hr />
+<h2>Résumé : Quand utiliser quoi</h2>
+<ul>
+<li><strong>Station EmComm principale</strong> → Installation permanente sur matériel dédié</li>
+<li><strong>BBS ou passerelle 24/7</strong> → Installation permanente</li>
+<li><strong>Tester de nouvelles ISO</strong> → USB avec Ventoy</li>
+<li><strong>Sessions de formation</strong> → USB avec Ventoy</li>
+<li><strong>Démonstrations</strong> → USB avec Ventoy</li>
+<li><strong>Déploiement de secours</strong> → USB avec Ventoy</li>
+<li><strong>Déploiement d'urgence terrain</strong> → Les deux — USB = flexibilité, Permanent = fiabilité</li>
+</ul>
+<p><strong>Rappelez-vous :</strong> Une clé USB de démarrage bien entretenue est une excellente sauvegarde, mais un ordinateur EmComm dédié avec installation permanente reste la norme d'excellence pour le travail sérieux de communications d'urgence.</p>
+<hr />
+<h2>Ressources</h2>
+<ul>
+<li><strong>VA2OPS :</strong> <a href="https://va2ops.ca">https://va2ops.ca</a></li>
+<li><strong>Projet LiaisonOS :</strong> <a href="https://liaisonos.ca">https://liaisonos.ca</a></li>
+<li>
+<p><strong>Courriel :</strong> info@liaisonos.com</p>
+</li>
+<li>
+<p><strong>Site officiel Ventoy :</strong> <a href="https://ventoy.net">https://ventoy.net</a></p>
+</li>
+<li><strong>Ventoy GitHub :</strong> <a href="https://github.com/ventoy/Ventoy">https://github.com/ventoy/Ventoy</a></li>
+<li><strong>Documentation Ventoy :</strong> <a href="https://ventoy.net/en/doc_news.html">https://ventoy.net/en/doc_news.html</a></li>
+</ul>
+<hr />
+<p><em>Version du document : 2.1.8</em>
+<em>Dernière mise à jour : Mars 2026</em>
+<em>Créé pour LiaisonOS Édition Debian</em></p>
+</div>
+<footer>
+  <p>LiaisonOS &middot; <a href="https://va2ops.ca">Sylvain Deguire (VA2OPS)</a> &middot; Quebec, Canada &middot; 73</p>
+</footer>
+</body>
+</html>
