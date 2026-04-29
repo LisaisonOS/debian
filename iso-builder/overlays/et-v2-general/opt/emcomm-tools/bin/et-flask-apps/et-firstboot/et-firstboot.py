@@ -1550,13 +1550,27 @@ def api_download_tile():
             return jsonify({'success': True, 'skipped': True})
         # If downloading to USB, still need to actually download for USB portability
 
-    try:
-        subprocess.run(['curl', '-L', '-f', '-o', str(dest_file), f"{TILE_BASE_URL}/{filename}/download"], check=True, capture_output=True)
-        # Fix ownership of downloaded file
-        fix_ownership(dest_file, recursive=False)
-        return jsonify({'success': True})
-    except subprocess.CalledProcessError as e:
-        return jsonify({'success': False, 'error': {6:'No internet',7:'Server error',22:'Not found',23:'Disk full',28:'Timeout'}.get(e.returncode, f'Error {e.returncode}')})
+    # Try Cloudflare R2 first, failover to SourceForge
+    cf_url = f"https://releases.liaisonos.com/MAPS/{filename}"
+    sf_url = f"{TILE_BASE_URL}/{filename}/download"
+    sources = [
+        (cf_url, ['-H', 'User-Agent: LiaisonOS-MapClient/2.2']),
+        (sf_url, []),
+    ]
+    last_returncode = 0
+    for url, extra_args in sources:
+        try:
+            subprocess.run(
+                ['curl', '-L', '-f', '-o', str(dest_file)] + extra_args + [url],
+                check=True, capture_output=True
+            )
+            fix_ownership(dest_file, recursive=False)
+            return jsonify({'success': True})
+        except subprocess.CalledProcessError as e:
+            last_returncode = e.returncode
+            if dest_file.exists():
+                dest_file.unlink()
+    return jsonify({'success': False, 'error': {6:'No internet',7:'Server error',22:'Not found',23:'Disk full',28:'Timeout'}.get(last_returncode, f'Error {last_returncode}')})
 
 @app.route('/download/osm', methods=['GET', 'POST'])
 def download_osm():

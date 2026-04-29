@@ -211,6 +211,8 @@ body {
 /* Progress */
 .progress-container {
     padding: 12px 16px;
+    width: 90%;
+    margin: 0 auto;
 }
 
 .progress-bar {

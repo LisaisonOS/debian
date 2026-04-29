@@ -10,7 +10,7 @@ INSTALL_BIN_DIR="${INSTALL_DIR}/bin"
 LINK_PATH="/opt/qttermtcp"
 
 # Qt5 libs (also in package list, but ensure they're present)
-apt-get install -y libqt5core5t64 libqt5gui5t64 libqt5widgets5t64 libqt5network5t64 libqt5multimedia5 libqt5serialport5
+apt-get install -y libqt5core5t64 libqt5gui5t64 libqt5widgets5t64 libqt5network5t64 libqt5multimedia5 libqt5serialport5 libqt5sql5
 
 rm -rf ${INSTALL_DIR}
 mkdir -p ${INSTALL_BIN_DIR}
@@ -22,6 +22,7 @@ cp "/tmp/${BIN_FILE}" "${INSTALL_BIN_DIR}/${BIN_FILE}"
 chmod 755 ${INSTALL_BIN_DIR}/${BIN_FILE}
 rm -f "/tmp/${BIN_FILE}"
 [ -f ${INSTALL_BIN_DIR}/${BIN_FILE} ] || { echo "ERROR: QtTermTCP binary not found after copy"; exit 1; }
+
 
 rm -rf ${LINK_PATH}
 ln -s ${INSTALL_DIR} ${LINK_PATH}

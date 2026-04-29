@@ -19,7 +19,8 @@ import json
 import subprocess
 import logging
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify
+import urllib.request
+from flask import Flask, render_template, request, jsonify, Response
 
 # Suppress Flask development server warning
 log = logging.getLogger('werkzeug')
@@ -196,69 +197,89 @@ def index():
                            storage_info=storage_info)
 
 
-@app.route('/api/download/tile', methods=['POST'])
-def api_download_tile():
-    """Download a single tile file."""
+@app.route('/api/download/tile/stream')
+def api_download_tile_stream():
+    """Download a tile file with SSE byte-level progress streaming."""
     base_url, tile_files = load_tile_config()
-    filename = request.json.get('file')
+    filename = request.args.get('file')
+
+    def sse(payload):
+        return f"data: {json.dumps(payload)}\n\n"
+
+    def err_stream(msg):
+        yield sse({'done': True, 'success': False, 'error': msg})
 
     if not filename or filename not in tile_files:
-        return jsonify({'success': False, 'error': 'Invalid file'})
+        return Response(err_stream('Invalid file'), mimetype='text/event-stream')
 
     download_dir, is_usb = get_download_dir()
 
-    # Live Run but no USB — block download
     if is_live_boot() and not is_usb:
-        return jsonify({'success': False, 'error': 'No EMCOMM-DATA USB found. Plug in your USB drive.'})
+        return Response(err_stream('No EMCOMM-DATA USB found. Plug in your USB drive.'),
+                        mimetype='text/event-stream')
 
     download_dir.mkdir(parents=True, exist_ok=True)
     dest_file = download_dir / filename
+    local_file = TILESET_DIR / filename
+    skel_file = SKEL_TILESET_DIR / filename
 
-    # Already exists at download destination
+    # Already exists
     if dest_file.exists():
         if is_usb:
             _ensure_symlink(filename, dest_file)
-        return jsonify({'success': True, 'skipped': True})
+        def _skip():
+            yield sse({'done': True, 'success': True, 'skipped': True})
+        return Response(_skip(), mimetype='text/event-stream')
 
-    # Check TILESET_DIR (local) — already there and not a symlink
-    local_file = TILESET_DIR / filename
     if local_file.exists() and not local_file.is_symlink():
-        return jsonify({'success': True, 'skipped': True})
+        def _skip():
+            yield sse({'done': True, 'success': True, 'skipped': True})
+        return Response(_skip(), mimetype='text/event-stream')
 
     # Available in skel — symlink instead of downloading
-    skel_file = SKEL_TILESET_DIR / filename
     if skel_file.exists():
         TILESET_DIR.mkdir(parents=True, exist_ok=True)
         if not local_file.exists():
             local_file.symlink_to(skel_file)
-        return jsonify({'success': True, 'skipped': True})
+        def _skip():
+            yield sse({'done': True, 'success': True, 'skipped': True})
+        return Response(_skip(), mimetype='text/event-stream')
 
-    # Download
-    url = f"{base_url}/{filename}/download"
-    try:
-        subprocess.run(
-            ['curl', '-L', '-f', '-o', str(dest_file), url],
-            check=True, capture_output=True
-        )
-        # Create symlink for mbtileserver
-        if is_usb:
-            _ensure_symlink(filename, dest_file)
-        return jsonify({'success': True})
-    except subprocess.CalledProcessError as e:
-        # Clean up partial file
-        if dest_file.exists():
-            dest_file.unlink()
-        error_map = {
-            6: 'No internet connection',
-            7: 'Server error',
-            22: 'File not found on server',
-            23: 'Disk full',
-            28: 'Download timed out',
-        }
-        return jsonify({
-            'success': False,
-            'error': error_map.get(e.returncode, f'curl error {e.returncode}')
-        })
+    cf_url = f"https://releases.liaisonos.com/MAPS/{filename}"
+    sf_url = f"{base_url}/{filename}/download"
+    sources = [
+        (cf_url, {'User-Agent': 'LiaisonOS-MapClient/2.2'}),
+        (sf_url, {}),
+    ]
+
+    def generate():
+        chunk_size = 131072  # 128 KB
+        for url, headers in sources:
+            try:
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    total = int(resp.headers.get('Content-Length') or 0)
+                    downloaded = 0
+                    with open(dest_file, 'wb') as f:
+                        while True:
+                            chunk = resp.read(chunk_size)
+                            if not chunk:
+                                break
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            pct = int(downloaded * 100 / total) if total > 0 else -1
+                            yield sse({'pct': pct, 'bytes': downloaded, 'total': total})
+                if is_usb:
+                    _ensure_symlink(filename, dest_file)
+                yield sse({'done': True, 'success': True})
+                return
+            except Exception:
+                if dest_file.exists():
+                    dest_file.unlink()
+        yield sse({'done': True, 'success': False, 'error': 'Download failed from all sources'})
+
+    return Response(generate(), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
 @app.route('/api/status')

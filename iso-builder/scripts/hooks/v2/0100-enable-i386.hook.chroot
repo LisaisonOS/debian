@@ -75,7 +75,8 @@ apt-get install -y \
   libqt5widgets5t64:i386 \
   libqt5network5t64:i386 \
   libqt5multimedia5:i386 \
-  libqt5serialport5:i386
+  libqt5serialport5:i386 \
+  libqt5sql5:i386
 
 # LinBPQ 32-bit dependencies
 echo "=== Installing LinBPQ i386 dependencies ==="

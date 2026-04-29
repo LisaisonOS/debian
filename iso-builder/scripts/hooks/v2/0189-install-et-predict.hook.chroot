@@ -4,7 +4,7 @@ set -e
 echo "Installing ET-Predict..."
 
 APP="et-predict-app"
-VERSION="1.5.4"
+VERSION="1.5.5"
 DOWNLOAD_FILE="${APP}_${VERSION}_amd64.deb"
 
 echo "Downloading ET-Predict from local cache..."

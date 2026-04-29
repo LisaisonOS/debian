@@ -106,6 +106,9 @@ plymouth_msg "LiaisonOS: Saving your configuration..."
 # Create directories
 mkdir -p "${PERSISTENCE_PATH}/configs/pat"
 mkdir -p "${PERSISTENCE_PATH}/configs/js8call"
+mkdir -p "${PERSISTENCE_PATH}/configs/qttermtcp"
+mkdir -p "${PERSISTENCE_PATH}/configs/qttermtcp/bbs-cache"
+mkdir -p "${PERSISTENCE_PATH}/configs/qttermtcp/bbs-directory"
 mkdir -p "${PERSISTENCE_PATH}/configs/wsjtx"
 mkdir -p "${PERSISTENCE_PATH}/configs/fldigi"
 mkdir -p "${PERSISTENCE_PATH}/configs/vara"
@@ -525,6 +528,15 @@ fi
 
 # --- JS8Call ---
 save_file "${HOME}/.config/JS8Call.ini" "${PERSISTENCE_PATH}/configs/js8call/JS8Call.ini" "JS8Call"
+
+# --- QtTermTCP ---
+save_file "${HOME}/.config/QtTermTCP.ini" "${PERSISTENCE_PATH}/configs/qttermtcp/QtTermTCP.ini" "QtTermTCP"
+if [[ -f "${HOME}/.config/QtTermTCP/bbs-cache/bbscache.db" ]]; then
+    cp "${HOME}/.config/QtTermTCP/bbs-cache/bbscache.db" "${PERSISTENCE_PATH}/configs/qttermtcp/bbs-cache/" 2>/dev/null && log "✓ Saved: QtTermTCP BBS Cache"
+fi
+if [[ -f "${HOME}/.config/QtTermTCP/bbs-directory/bbs-directory.db" ]]; then
+    cp "${HOME}/.config/QtTermTCP/bbs-directory/bbs-directory.db" "${PERSISTENCE_PATH}/configs/qttermtcp/bbs-directory/" 2>/dev/null && log "✓ Saved: QtTermTCP BBS Directory"
+fi
 
 # --- WSJT-X ---
 save_file "${HOME}/.config/WSJT-X.ini" "${PERSISTENCE_PATH}/configs/wsjtx/WSJT-X.ini" "WSJT-X"
